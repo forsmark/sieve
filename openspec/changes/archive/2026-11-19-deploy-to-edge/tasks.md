@@ -19,7 +19,7 @@
 
 ## 4. Deploy
 
-- [ ] 4.1 After the user approves the diff, merge to `main` and push. Run `portal app add sieve --name "Sieve" --src ~/development/sieve --description "Job aggregator"` and set `EDGE_ALLOWED_USER`. The user sets `CLAUDE_CODE_OAUTH_TOKEN` themselves. Then run `portal app deploy sieve`, `portal app status sieve` and `portal app logs sieve -n 50`. Verify that the deploy reports healthy, and that "Save and test" for the Claude Code provider passes at `https://olympus.tailf4d52f.ts.net/sieve/`.
+- [x] 4.1 After the user approves the diff, merge to `main` and push. Run `portal app add sieve --name "Sieve" --src ~/development/sieve --description "Job aggregator"` and set `EDGE_ALLOWED_USER`. The user sets `CLAUDE_CODE_OAUTH_TOKEN` themselves. Then run `portal app deploy sieve`, `portal app status sieve` and `portal app logs sieve -n 50`. Verify that the deploy reports healthy, and that "Save and test" for the Claude Code provider passes at `https://olympus.tailf4d52f.ts.net/sieve/`.
 
 ## Workflow follow-up
 
