@@ -1,0 +1,27 @@
+{
+  "Cover letter generation": {
+    "User generates a letter": {
+      "unit": "src/server/http/app.test.ts › writes a letter from the CV, the posting, and the instruction, and shows it in the detail"
+    },
+    "No CV and no profile exist": {
+      "unit": "src/server/http/app.test.ts › refuses a letter before a CV exists, and for an unknown posting"
+    },
+    "Matching is paused": {
+      "unit": "src/server/letters/letters.test.ts › runs a letter at once while matching is paused and the match queue holds work"
+    },
+    "Generation fails": {
+      "unit": "src/server/letters/letters.test.ts › keeps the earlier letter and reports the cause when a new generation fails"
+    }
+  },
+  "Cover letter storage and export": {
+    "User edits the letter": {
+      "unit": "src/server/http/app.test.ts › stores an edit, and keeps the earlier letter when a new generation fails"
+    },
+    "User regenerates the letter": {
+      "unit": "src/server/http/app.test.ts › replaces the stored text with the new text when a second generation succeeds"
+    },
+    "User downloads the letter": {
+      "unit": "src/server/http/app.test.ts › serves the letter as a PDF file, with Danish letters"
+    }
+  }
+}

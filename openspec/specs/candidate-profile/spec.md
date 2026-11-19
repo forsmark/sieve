@@ -1,10 +1,9 @@
-# Spec Delta
+# candidate-profile Specification
 
 ## Purpose
-
 Holds what the system knows about the user: the CV, a structured profile derived from it, and the preferences that constrain and weight the match.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: CV import
 The system SHALL accept the user's CV as a PDF file, a Markdown file, or pasted text. The system SHALL keep the original text of the current CV.
@@ -57,6 +56,15 @@ The system SHALL let the user mark each location, language, and work arrangement
 - **WHEN** the user marks the location preference as hard
 - **THEN** jobs outside the accepted and commutable locations that are not remote become excluded
 
+#### Scenario: User marks language as hard
+- **WHEN** the user marks the language preference as hard and saves the preferences
+- **THEN** the system saves the language preference as hard
+- **AND** the location and work arrangement preferences keep their own marks
+
+#### Scenario: Excluded company while the other constraints are soft
+- **WHEN** the user lists a company as excluded and marks every other constraint as soft
+- **THEN** postings from that company are excluded
+
 ### Requirement: Scoring weights
 The system SHALL let the user set the relative weight of each score dimension. The default weights SHALL be 40 for skills, 25 for experience, 20 for preferences, and 15 for location.
 
@@ -92,3 +100,13 @@ The system SHALL NOT score postings while no structured profile exists. The syst
 - **WHEN** the user opens the application before importing a CV
 - **THEN** the system shows a setup step that asks for the CV
 - **AND** collected postings stay unscored
+
+#### Scenario: Posting arrives before the profile
+- **WHEN** the system collects a posting while no structured profile exists
+- **THEN** the posting stays unscored
+- **AND** the system scores it once a profile exists
+
+#### Scenario: CV without a profile
+- **WHEN** a CV is stored but no structured profile exists
+- **THEN** the profile page says that no profile exists yet
+- **AND** the page offers to build the profile from the CV

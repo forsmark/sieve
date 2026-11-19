@@ -1,10 +1,9 @@
-# Spec Delta
+# job-sources Specification
 
 ## Purpose
-
 Collects job postings from external job boards on a schedule and on request, and records what each fetch run did.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Source catalog
 The system SHALL expose a catalog of supported job sources. Each source SHALL have a stable identifier, a display name, an enabled flag, and a statement of which search inputs it supports.
@@ -24,6 +23,14 @@ The system SHALL let the user enable or disable each source. A fetch run SHALL s
 - **WHEN** a fetch run starts and one source is disabled
 - **THEN** the run makes no request to that source
 - **AND** the run history shows the source as skipped
+
+#### Scenario: User disables and enables a source
+- **WHEN** the user turns a source off in the source settings and later turns it on
+- **THEN** the system stores the source as disabled, and then as enabled again
+
+#### Scenario: Postings of a disabled source stay
+- **WHEN** the user disables a source that delivered postings in earlier runs
+- **THEN** the system keeps those postings stored
 
 ### Requirement: Search configuration
 The system SHALL let the user define search terms and a target region. The system SHALL pass these inputs to every enabled source that supports them.
@@ -65,6 +72,14 @@ The system SHALL let the user pause and resume scheduled fetching. The paused st
 - **WHEN** fetching is paused and the interval passes
 - **THEN** the system starts no fetch run
 
+#### Scenario: Restart while paused
+- **WHEN** the system restarts while fetching is paused
+- **THEN** fetching stays paused and the system starts no fetch run at startup
+
+#### Scenario: User resumes fetching
+- **WHEN** the user resumes fetching after the interval passed
+- **THEN** the system starts a fetch run at its next schedule check
+
 ### Requirement: Source failure isolation
 A failure in one source SHALL NOT stop or delay the other sources in the same run. The system SHALL record the failure with its cause.
 
@@ -84,6 +99,10 @@ The system SHALL limit the request rate for each source separately. When a sourc
 - **WHEN** a source responds with a rate limit signal
 - **THEN** the system delays later requests to that source
 - **AND** requests to other sources continue at their own rate
+
+#### Scenario: Several requests to one source
+- **WHEN** the system sends several requests to one source
+- **THEN** the system starts them at least the minimum delay of that source apart
 
 ### Requirement: Fetch run history
 The system SHALL record each fetch run with its start time, end time, and trigger. For each source in the run, the system SHALL record the outcome, the number of postings found, and the number of new postings.

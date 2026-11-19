@@ -1,0 +1,72 @@
+{
+  "Notification channel": {
+    "User enables notifications for the first time": {
+      "unit": "src/server/notifications/notifications.test.ts › generates the topic and the subscribe link when the user enables notifications for the first time"
+    },
+    "Generated names differ": {
+      "unit": "src/server/notifications/notifications.test.ts › generates a topic with 120 random bits behind a fixed prefix"
+    },
+    "Notification goes to the topic": {
+      "unit": "src/server/notifications/notifications.test.ts › sends one notification with title, company, score, and a link to the posting"
+    }
+  },
+  "Topic regeneration": {
+    "User regenerates the topic": {
+      "unit": "src/server/notifications/notifications.test.ts › sends only to the new topic after the user regenerates it"
+    },
+    "Topic changes during the batching window": {
+      "unit": "src/server/notifications/notifications.test.ts › sends a notification that waits in the window to the new topic when the user regenerates the topic"
+    }
+  },
+  "Notification server setting": {
+    "User sets a self-hosted server": {
+      "unit": "src/server/notifications/notifications.test.ts › sends to the server address that the user saved"
+    }
+  },
+  "High score notification": {
+    "New posting scores above the threshold": {
+      "unit": "src/server/notifications/notifications.test.ts › sends one notification with title, company, score, and a link to the posting"
+    },
+    "Posting scores below the threshold": {
+      "unit": "src/server/notifications/notifications.test.ts › sends no notification for a first score below the threshold"
+    },
+    "Rescore raises a score": {
+      "unit": "src/server/notifications/notifications.test.ts › sends no notification when a rescore moves a scored posting above the threshold"
+    },
+    "Notifications are disabled": {
+      "unit": "src/server/notifications/notifications.test.ts › sends no notification while notifications are disabled"
+    }
+  },
+  "Notification batching": {
+    "Several postings qualify together": {
+      "unit": "src/server/notifications/notifications.test.ts › sends one notification that states six new matches when six postings qualify in the window"
+    },
+    "Combined notification lists the highest scores": {
+      "unit": "src/server/notifications/notifications.test.ts › lists the highest-scored postings first and states how many more qualified"
+    }
+  },
+  "Notification content": {
+    "Notification for one posting": {
+      "unit": "src/server/notifications/notifications.test.ts › sends one notification with title, company, score, and a link to the posting"
+    },
+    "Personal data stays out": {
+      "unit": "src/server/notifications/notifications.test.ts › holds only title, company, score, and link, and no CV, profile, or assessment text"
+    }
+  },
+  "Test notification": {
+    "Test succeeds": {
+      "unit": "src/server/notifications/notifications.test.ts › reports success for a test message that the server accepts"
+    },
+    "Server is unreachable": {
+      "unit": "src/server/notifications/notifications.test.ts › reports the cause when the test message fails"
+    }
+  },
+  "Delivery failure handling": {
+    "Server fails during matching": {
+      "unit": "src/server/notifications/notifications.test.ts › continues matching while the server fails, and retries the delivery later"
+    },
+    "Delivery fails after the last retry": {
+      "unit": "src/server/notifications/notifications.test.ts › records the failure after the retry limit and does not notify about the posting again"
+    }
+  }
+}

@@ -123,6 +123,10 @@ describe('jobs list with 2000 postings', () => {
     // The second page is the last one, so no further request follows.
     await waitFor(() => expect(list()).not.toHaveAttribute('aria-busy'));
     expect(api.calls.filter((c) => c.path === '/api/postings')).toHaveLength(2);
+    // The list stays responsive: it renders only the cards near the viewport, not every loaded posting.
+    expect(cards().length).toBeGreaterThan(0);
+    expect(cards().length).toBeLessThan(all.length);
+    expect(screen.queryByText('Job 1')).not.toBeInTheDocument();
   });
 
   /** Scrolls into the middle of 2000 postings, opens a rendered card, and reports the list before and after. */
@@ -195,6 +199,37 @@ describe('jobs list with 2000 postings', () => {
     const weak = within(cardOf('Job 3'));
     expect(weak.getByText('31')).toBeInTheDocument();
     expect(weak.getByText('Weak match')).toBeInTheDocument();
+  });
+
+  it('shows the score as a number in the color of its band', async () => {
+    setup(makePostings());
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    const scoreOf = (title: string, score: string) => within(cardOf(title)).getByText(score);
+    // High: a filled yellow block. Medium: yellow digits in a yellow frame. Low: plain digits in a grey frame.
+    expect(scoreOf('Job 1', '90')).toHaveClass('bg-field-yellow', 'text-ink');
+    expect(scoreOf('Job 2', '62')).toHaveClass('text-field-yellow');
+    expect(scoreOf('Job 2', '62')).not.toHaveClass('bg-field-yellow');
+    expect(scoreOf('Job 3', '31')).toHaveClass('text-fg');
+    expect(scoreOf('Job 3', '31')).not.toHaveClass('bg-field-yellow');
+    expect(scoreOf('Job 3', '31')).not.toHaveClass('text-field-yellow');
+  });
+
+  it('marks a stale score on the card and keeps the score', async () => {
+    setup([
+      makeItem('1', null, { match: match('scored', 81, { stale: true }) }),
+      makeItem('2', 64),
+    ]);
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    const stale = within(cardOf('Job 1'));
+    expect(stale.getByText('81')).toBeInTheDocument();
+    expect(stale.getByText('Stale')).toHaveAttribute('title', 'This score comes from an older profile or preferences');
+    const fresh = within(cardOf('Job 2'));
+    expect(fresh.getByText('64')).toBeInTheDocument();
+    expect(fresh.queryByText('Stale')).not.toBeInTheDocument();
   });
 
   it('shows the state of a posting that has no score', async () => {

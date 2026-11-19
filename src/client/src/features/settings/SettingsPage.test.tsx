@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { LlmSettingsDto, SourceDto } from '../../../../shared/api';
 import { STATUS, mockApi, renderApp } from '../../test-utils';
@@ -64,6 +64,20 @@ describe('settings', () => {
     expect(section.getByText('Your data leaves this machine.')).toBeInTheDocument();
   });
 
+  it('warns the user when no search terms are saved', async () => {
+    mockApi({
+      'GET /api/auth/me': () => ({ authRequired: false, authenticated: true }),
+      'GET /api/status': () => STATUS,
+      'GET /api/sources': () => [],
+      'GET /api/llm': () => ({ settings: LLM, available: true }),
+      'GET /api/search': () => ({ terms: [], region: 'Denmark' }),
+    });
+    renderApp('/settings');
+    const section = within(await screen.findByRole('region', { name: 'Search' }));
+    expect(await section.findByText(/^No search terms yet\./)).toBeInTheDocument();
+    expect(section.queryByRole('list', { name: 'Search terms' })).not.toBeInTheDocument();
+  });
+
   it('shows that a source without keyword search ignores the search terms', async () => {
     setup(LLM, [source('remoteok', 'Remote OK', false), source('jobindex', 'Jobindex', true)]);
     const section = within(await screen.findByRole('region', { name: 'Sources' }));
@@ -78,5 +92,40 @@ describe('settings', () => {
     expect(rowOf(/Remote OK/).queryByText(/Uses search terms/)).not.toBeInTheDocument();
     expect(rowOf(/Jobindex/).getByText(/^Uses search terms\b/)).toBeInTheDocument();
     expect(rowOf(/Jobindex/).queryByText(/Ignores search terms/)).not.toBeInTheDocument();
+  });
+
+  it('tests a provider with the settings the user entered and reports whether it responds and whether the model is available', async () => {
+    const api = mockApi({
+      'GET /api/auth/me': () => ({ authRequired: false, authenticated: true }),
+      'GET /api/status': () => STATUS,
+      'GET /api/sources': () => [],
+      'GET /api/llm': () => ({ settings: { ...LLM, provider: 'claude-code' }, available: true }),
+      'PUT /api/llm': (c) => ({
+        saved: true,
+        health: { reachable: true, modelAvailable: false, detail: 'The model qwen3 is not installed.' },
+        settings: { ...LLM, ...(c.body as object) },
+      }),
+    });
+    const user = userEvent.setup();
+    renderApp('/settings');
+    const section = within(await screen.findByRole('region', { name: 'Language model' }));
+    await user.click(await section.findByRole('radio', { name: 'Local endpoint' }));
+    const address = section.getByLabelText('Endpoint address');
+    await user.clear(address);
+    await user.type(address, 'http://gpu-box:11434');
+    const model = section.getByLabelText('Model');
+    await user.clear(model);
+    await user.type(model, 'qwen3');
+    await user.click(section.getByRole('button', { name: 'Save and test' }));
+
+    // The request carries the entered settings, and the result names both checks.
+    await waitFor(() =>
+      expect(api.calls.find((c) => c.method === 'PUT' && c.path === '/api/llm')?.body).toMatchObject({
+        provider: 'local', baseUrl: 'http://gpu-box:11434', model: 'qwen3',
+      }),
+    );
+    const result = await section.findByText(/Provider:/);
+    expect(result.closest('[role="status"]')).toHaveTextContent('Provider: responds. Model: not available.');
+    expect(section.getByText('The model qwen3 is not installed.')).toBeInTheDocument();
   });
 });

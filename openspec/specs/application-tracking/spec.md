@@ -1,10 +1,9 @@
-# Spec Delta
+# application-tracking Specification
 
 ## Purpose
-
 Tracks the jobs that the user applied to, from the first application to the final outcome.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Application record
 The system SHALL keep one application for each posting that the user marks as applied. The application SHALL hold a stage, notes, an applied date, and an optional interview date.
@@ -23,6 +22,11 @@ An application SHALL be in exactly one stage: applied, interview, offer, rejecte
 #### Scenario: User moves an application
 - **WHEN** the user moves an application from "applied" to "interview"
 - **THEN** the application shows in the "interview" stage
+
+#### Scenario: Unknown stage
+- **WHEN** the user moves an application to a stage that is not applied, interview, offer, rejected, or withdrawn
+- **THEN** the system refuses the change
+- **AND** the application keeps its earlier stage
 
 ### Requirement: Application board
 The system SHALL show applications on a board with one column for each stage. The system SHALL let the user move a card between columns by drag and by keyboard.
@@ -43,12 +47,21 @@ The system SHALL let the user edit the notes and the interview date of an applic
 - **WHEN** the user sets an interview date
 - **THEN** the card shows the date
 
+#### Scenario: User edits the notes
+- **WHEN** the user changes the notes of an application and saves
+- **THEN** the system stores the notes
+- **AND** the application shows the new notes when the user opens it again
+
 ### Requirement: Stage history
 The system SHALL record every stage change with the earlier stage, the new stage, and the time. The system SHALL show this history on the application.
 
 #### Scenario: User reviews an application
 - **WHEN** the user opens an application that changed stage twice
 - **THEN** the system shows both changes in time order
+
+#### Scenario: Stage change is recorded
+- **WHEN** the user moves an application from "applied" to "interview"
+- **THEN** the history holds an entry with the earlier stage "applied", the new stage "interview", and the time of the change
 
 ### Requirement: Posting snapshot
 When an application is created, the system SHALL keep a copy of the posting's title, company, description, and extracted facts. The copy SHALL stay readable after the original posting expires or is deleted.
@@ -57,6 +70,14 @@ When an application is created, the system SHALL keep a copy of the posting's ti
 - **WHEN** the link of an applied posting expires
 - **THEN** the application still shows the full description from the copy
 
+#### Scenario: Application keeps a copy
+- **WHEN** the user marks a posting as applied
+- **THEN** the application holds a copy of the posting's title, company, description, and extracted facts
+
+#### Scenario: Original posting is deleted
+- **WHEN** the original posting of an application is deleted
+- **THEN** the application stays and still shows the title, the company, and the description from the copy
+
 ### Requirement: Remove an application
 The system SHALL let the user remove an application. The posting SHALL return to the triage status "saved".
 
@@ -64,3 +85,7 @@ The system SHALL let the user remove an application. The posting SHALL return to
 - **WHEN** the user removes an application and confirms
 - **THEN** the application and its history are deleted
 - **AND** the posting appears in the job list as saved
+
+#### Scenario: Posting was new before
+- **WHEN** the user removes an application of a posting that had the triage status "new" before the user applied
+- **THEN** the posting has the triage status "saved", not "new"

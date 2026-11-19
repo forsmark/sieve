@@ -1,13 +1,25 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createApp } from '../http/app';
+import { setPasswordForTests } from '../http/auth';
 import { whenIdle } from '../kernel/tasks';
+import { ingestPosting } from '../ingestion/ingest';
+import { registerMatchingHandlers } from '../matching/handlers';
+import { planRescore } from '../matching/rescore';
 import { updateSchedule } from '../sources/schedule';
-import { PROFILE, resetAll, stubLlm } from '../testing/helpers';
-import { DEFAULT_PREFERENCES } from '../../shared/schemas';
+import { FACTS, JUDGMENT, PROFILE, matchOf, raw, resetAll, stubLlm } from '../testing/helpers';
+import { DEFAULT_PREFERENCES, type Preferences } from '../../shared/schemas';
 import { CvImportError, cleanCvText, extractCvText } from './cv-import';
 import { registerDeriveHandler } from './derive';
 import {
   computeVersions, currentVersions, discardEdits, getPreferences, getProfile, importCv, requestDerive, saveProfileEdits, savePreferences,
 } from './service';
+
+/** Collects one posting and returns its id. */
+function add(overrides: Parameters<typeof raw>[0] = {}): string {
+  const result = ingestPosting('a', raw(overrides));
+  if (result.status === 'invalid') throw new Error('invalid');
+  return result.id;
+}
 
 const CV = 'Jane Doe. Frontend developer with six years of TypeScript and React experience in Copenhagen.';
 
@@ -131,6 +143,23 @@ describe('manual edits', () => {
     expect(p.effective!.totalYears).toBe(9);
   });
 
+  it('uses a corrected skill level for later matches', async () => {
+    const stub = stubLlm();
+    registerMatchingHandlers();
+    let seen = '';
+    stub.judgment = (user) => ((seen = user), JUDGMENT);
+    saveProfileEdits(PROFILE);
+    add();
+    await whenIdle();
+    expect(JSON.parse(seen).profile.skills).toEqual([{ name: 'TypeScript', level: 'strong', years: 5 }]);
+
+    saveProfileEdits({ ...PROFILE, skills: [{ name: 'TypeScript', level: 'expert', years: 5 }] });
+    expect(getProfile().effective!.skills).toEqual([{ name: 'TypeScript', level: 'expert', years: 5 }]);
+    expect(planRescore()).toMatchObject({ judge: 1 });
+    await whenIdle();
+    expect(JSON.parse(seen).profile.skills).toEqual([{ name: 'TypeScript', level: 'expert', years: 5 }]);
+  });
+
   it('drops the edits when the user chooses to discard them', async () => {
     const stub = stubLlm();
     registerDeriveHandler();
@@ -149,14 +178,62 @@ describe('manual edits', () => {
 });
 
 describe('preferences', () => {
-  it('uses the default weights 40, 25, 20, and 15 until the user changes them', () => {
+  it('uses the default weights 40, 25, 20, and 15 until the user changes them', async () => {
     expect(getPreferences().weights).toEqual({ skills: 40, experience: 25, preferences: 20, location: 15 });
+    stubLlm();
+    registerMatchingHandlers();
+    saveProfileEdits(PROFILE);
+    const id = add();
+    await whenIdle();
+    // (80 * 40 + 70 * 25 + 60 * 20 + 100 * 15) / 100 = 76.5
+    expect(matchOf(id)).toMatchObject({ skills_score: 80, experience_score: 70, preference_score: 60, location_score: 100, total_score: 77 });
   });
 
   it('stores valid preferences and removes empty and repeated list entries', () => {
     const saved = savePreferences({ ...DEFAULT_PREFERENCES, locations: [' Copenhagen ', '', 'Copenhagen'], locationMode: 'hard', minSalary: 50000 });
     expect(saved.locations).toEqual(['Copenhagen']);
     expect(getPreferences()).toMatchObject({ locations: ['Copenhagen'], locationMode: 'hard', minSalary: 50000 });
+  });
+
+  it('stores saved preferences and reports the postings whose scores are now out of date', async () => {
+    stubLlm();
+    registerMatchingHandlers();
+    setPasswordForTests(undefined);
+    saveProfileEdits(PROFILE);
+    add();
+    add({ externalId: 'job-2', title: 'Data Engineer' });
+    await whenIdle();
+    const next: Preferences = { ...DEFAULT_PREFERENCES, excludedCompanies: ['Beta Corp'], notes: 'No consulting.' };
+    const res = await createApp().request('/api/preferences', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(next),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { preferences: Preferences; plan: unknown };
+    // The notes go to the judge, so both stored scores are out of date and need a new judgment.
+    expect(body.plan).toEqual({ rulesOnly: 0, judge: 2, extract: 0 });
+    expect(body.preferences).toEqual(next);
+    expect(getPreferences()).toEqual(next);
+  });
+
+  it('computes the total without location when its weight is 0, and a hard location still excludes', async () => {
+    const stub = stubLlm();
+    registerMatchingHandlers();
+    saveProfileEdits(PROFILE);
+    stub.facts = (user) => (user.includes('Aalborg') ? { ...FACTS, location: { city: 'Aalborg', country: 'Denmark' }, workArrangement: 'onsite' } : FACTS);
+    savePreferences({
+      ...DEFAULT_PREFERENCES,
+      locations: ['Copenhagen'],
+      locationMode: 'hard',
+      weights: { ...DEFAULT_PREFERENCES.weights, location: 0 },
+    });
+    const inside = add();
+    const outside = add({ externalId: 'job-2', title: 'Developer in Aalborg', location: 'Aalborg' });
+    await whenIdle();
+    // (80 * 40 + 70 * 25 + 60 * 20) / 85 = 72.4. With location counted at 15 the total would be 77.
+    expect(matchOf(inside)).toMatchObject({ state: 'scored', location_score: 100, total_score: 72 });
+    expect(matchOf(outside)).toMatchObject({ state: 'excluded', excluded_reason: 'location: Aalborg, Denmark', total_score: null });
   });
 
   it.each([

@@ -1,0 +1,75 @@
+{
+  "CV import": {
+    "User uploads a PDF": {
+      "unit": "src/server/http/app.test.ts › extracts the text of an uploaded text-based PDF and stores it as the current CV"
+    },
+    "File has no readable text": {
+      "unit": "src/server/profile/profile.test.ts › rejects a PDF without text and explains what the system needs"
+    }
+  },
+  "Structured profile": {
+    "Profile is derived": {
+      "unit": "src/server/profile/profile.test.ts › produces a structured profile from the CV"
+    },
+    "Derivation fails": {
+      "unit": "src/server/profile/profile.test.ts › keeps the CV text, reports the failure, and lets the user retry or fill the profile by hand"
+    }
+  },
+  "Profile review and edit": {
+    "User corrects a skill": {
+      "unit": "src/server/profile/profile.test.ts › uses a corrected skill level for later matches"
+    },
+    "CV is imported again": {
+      "unit": "src/client/src/features/profile/ProfilePage.test.tsx › asks whether to keep or discard the manual edits and sends \"discard\" when the user selects it"
+    }
+  },
+  "Job preferences": {
+    "User saves preferences": {
+      "unit": "src/server/profile/profile.test.ts › stores saved preferences and reports the postings whose scores are now out of date"
+    },
+    "Invalid preference value": {
+      "unit": "src/server/http/app.test.ts › rejects a negative minimum salary and keeps the earlier preferences"
+    }
+  },
+  "Hard and soft constraints": {
+    "User makes location hard": {
+      "unit": "src/server/matching/matching.test.ts › excludes a job outside the accepted and commutable locations when location is hard, unless it is remote"
+    },
+    "User marks language as hard": {
+      "unit": "src/client/src/features/profile/ProfilePage.test.tsx › saves the language rule as hard and keeps the marks of the location and work arrangement rules"
+    },
+    "Excluded company while the other constraints are soft": {
+      "unit": "src/server/matching/matching.test.ts › excludes a company on the excluded list with the reason \"excluded company\""
+    }
+  },
+  "Scoring weights": {
+    "User raises one weight": {
+      "unit": "src/server/matching/matching.test.ts › recomputes every total with new weights and makes no model call"
+    },
+    "User has set no weights": {
+      "unit": "src/server/profile/profile.test.ts › uses the default weights 40, 25, 20, and 15 until the user changes them"
+    },
+    "User removes location from the score": {
+      "unit": "src/server/profile/profile.test.ts › computes the total without location when its weight is 0, and a hard location still excludes"
+    }
+  },
+  "Profile versions": {
+    "Match-relevant change": {
+      "unit": "src/server/profile/profile.test.ts › changes only the judge version when a skill is added"
+    },
+    "Unrelated setting changes": {
+      "unit": "src/server/profile/profile.test.ts › keeps both versions when a setting changes that the match does not use"
+    }
+  },
+  "Profile required for matching": {
+    "First start": {
+      "unit": "src/client/src/app/FirstRunGuide.test.tsx › shows a setup step that asks for the CV while collected postings stay unscored"
+    },
+    "Posting arrives before the profile": {
+      "unit": "src/server/matching/matching.test.ts › keeps postings unscored until a profile exists, and scores them after the CV import"
+    },
+    "CV without a profile": {
+      "unit": "src/client/src/features/profile/ProfilePage.test.tsx › says that no profile exists yet and offers to build it from the CV"
+    }
+  }
+}

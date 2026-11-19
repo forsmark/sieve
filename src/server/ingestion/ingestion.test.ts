@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sqlite } from '../kernel/db';
-import { recoverRunningTasks, registerHandler, whenIdle } from '../kernel/tasks';
-import type { HttpResult, RateLimitedClient } from '../sources/adapter';
-import { fakeClock, postingOf, raw, resetAll, tasksOf } from '../testing/helpers';
+import { setSetting } from '../kernel/settings';
+import { recoverRunningTasks, registerHandler, setLaneBlocked, whenIdle } from '../kernel/tasks';
+import { getPostingDetail, listPostings } from '../http/postings';
+import { registerMatchingHandlers } from '../matching/handlers';
+import { rescorePostings } from '../matching/rescore';
+import { saveProfileEdits } from '../profile/service';
+import type { HttpResult, RateLimitedClient, SourceAdapter } from '../sources/adapter';
+import { listRuns, startFetchRun } from '../sources/runner';
+import { FACTS, PROFILE, fakeClock, matchOf, postingOf, raw, resetAll, stubLlm, tasksOf } from '../testing/helpers';
 import {
   classifyLiveness, extractJobText, mergeDescription, queueLivenessChecks, registerEnrichHandler, registerLivenessHandler, setEnrichClientForTests, setLivenessFetchForTests,
 } from './enrich';
@@ -34,6 +40,24 @@ describe('normalization', () => {
   it('stores a description without tags', () => {
     const n = normalizePosting(raw({ description: '<div><h2>About</h2><p>Hello</p></div>' }))!;
     expect(n.description).toBe('About\n\nHello');
+    const id = idOf(ingestPosting('a', raw({ description: '<div><h2>About</h2><p>Hello <b>you</b></p><p>Second</p></div>' })));
+    expect(postingOf(id).description).toBe('About\n\nHello you\n\nSecond');
+  });
+
+  it('discards a posting without a title, a company, or a valid link and counts it as invalid in the run history', async () => {
+    setSetting('search', { terms: [], region: '' });
+    const board: SourceAdapter = {
+      id: 'board', name: 'Board', supports: { keywords: false, region: false }, rate: { minDelayMs: 0, maxConcurrent: 1 },
+      async *search() {
+        yield raw({ externalId: 'ok' });
+        yield raw({ externalId: 'no-title', title: '' });
+        yield raw({ externalId: 'no-company', company: ' ' });
+        yield raw({ externalId: 'no-link', url: 'not a link' });
+      },
+    };
+    await startFetchRun('manual', { adapters: [board] })!.done;
+    expect(sqlite.prepare('SELECT external_id FROM postings').all()).toEqual([{ external_id: 'ok' }]);
+    expect(listRuns()[0]!.sources[0]).toMatchObject({ source: 'board', state: 'completed', found: 4, added: 1, invalid: 3 });
   });
 
   it.each([
@@ -131,6 +155,29 @@ describe('duplicates', () => {
     const dup = idOf(ingestPosting('linkedin', raw({ externalId: 'x' })));
     expect(sqlite.prepare('SELECT 1 FROM matches WHERE posting_id = ?').get(dup)).toBeUndefined();
     expect(tasksOf().filter((t) => t.subject_id === dup)).toHaveLength(0);
+  });
+
+  it('keeps a duplicate out of the match queue and shows its source and link on the primary record', () => {
+    const primary = idOf(ingestPosting('jobindex', raw()));
+    const dup = idOf(ingestPosting('linkedin', raw({ externalId: 'li-9', url: 'https://linkedin.test/9' })));
+    expect(postingOf(dup).duplicate_of).toBe(primary);
+    expect(matchOf(dup)).toBeUndefined();
+    expect(tasksOf().filter((t) => t.subject_id === dup)).toEqual([]);
+    const detail = getPostingDetail(primary)!;
+    expect(detail.sources).toEqual(['jobindex', 'linkedin']);
+    expect(detail.sourceLinks).toEqual([
+      { id: primary, source: 'jobindex', url: 'https://jobs.test/job-1', primary: true },
+      { id: dup, source: 'linkedin', url: 'https://linkedin.test/9', primary: false },
+    ]);
+  });
+
+  it('shows a job on two boards as one row in the ranked list', () => {
+    const primary = idOf(ingestPosting('jobindex', raw()));
+    ingestPosting('linkedin', raw({ externalId: 'li-9', url: 'https://linkedin.test/9' }));
+    const list = listPostings({});
+    expect(list.total).toBe(1);
+    expect(list.items.map((i) => i.id)).toEqual([primary]);
+    expect(list.items[0]!.sources).toEqual(['jobindex', 'linkedin']);
   });
 
   it('makes a separated duplicate a primary record with match tasks, and does not join it again', () => {
@@ -237,6 +284,28 @@ describe('enrichment', () => {
     expect(stored).toMatchObject({ lacks_description: 0 });
     expect(stored.enriched_at).toBeTruthy();
     expect(needsEnrichment({ id, description: stored.description })).toBe(false);
+    // The teaser goes to scoring, and no second enrich task follows.
+    expect(tasksOf('extract').map((t) => t.subject_id)).toEqual([id]);
+    expect(tasksOf('enrich')).toHaveLength(1);
+  });
+
+  it('fetches the full text first when the user rescores a posting that has only the teaser of its source', async () => {
+    const id = idOf(ingestPosting('jobindex', raw({ externalId: 'r2', url: 'https://www.jobindex.dk/vis-job/r2' })));
+    // The posting was scored from its teaser, and its full text was never fetched.
+    sqlite.prepare('DELETE FROM tasks').run();
+    expect(postingOf(id).enriched_at).toBeNull();
+    registerEnrichHandler();
+    const urls: string[] = [];
+    const jobPage = '<a class="btn seejobdesktop" href="https://www.jobindex.dk/jobannonce/r2/dev">Se jobbet</a>';
+    const ad = `<div class="jobtext-jobad__body"><p>${'The full advertisement text names Kubernetes. '.repeat(10)}</p></div>`;
+    setEnrichClientForTests(() => client((url) => (urls.push(url), { status: 200, body: url.includes('/jobannonce/') ? ad : jobPage })));
+    expect(rescorePostings([id])).toBe(1);
+    expect(tasksOf().map((t) => t.kind)).toEqual(['enrich']);
+    await whenIdle();
+    expect(urls).toEqual(['https://www.jobindex.dk/vis-job/r2', 'https://www.jobindex.dk/jobannonce/r2/dev']);
+    expect(postingOf(id).description).toContain('names Kubernetes');
+    // Scoring follows the fetch.
+    expect(tasksOf('extract').map((t) => t.subject_id)).toEqual([id]);
   });
 
   it('does not repeat a teaser that the fetched text already holds', () => {
@@ -254,6 +323,23 @@ describe('enrichment', () => {
     expect(postingOf(id)).toMatchObject({ lacks_description: 1, description: null });
     expect(tasksOf('enrich')[0]).toMatchObject({ state: 'done' });
     expect(tasksOf('extract').map((t) => t.subject_id)).toEqual([id]);
+  });
+
+  it('keeps enrichment that waits at shutdown and runs it after startup without user action', async () => {
+    // The process stops before the queue takes the task, so the task waits in the database.
+    setLaneBlocked('network', true);
+    registerEnrichHandler();
+    setEnrichClientForTests(() => client(() => ({ status: 200, body: PAGE })));
+    const id = idOf(ingestPosting('a', raw({ description: null })));
+    await whenIdle();
+    expect(tasksOf('enrich')).toMatchObject([{ subject_id: id, state: 'pending' }]);
+    expect(postingOf(id).description).toBeNull();
+    // Startup: a new process has only the stored queue, and no lane is blocked.
+    recoverRunningTasks();
+    setLaneBlocked('network', false);
+    await whenIdle();
+    expect(tasksOf('enrich')).toMatchObject([{ subject_id: id, state: 'done' }]);
+    expect(postingOf(id).description).toContain('TypeScript skills');
   });
 
   it('resumes enrichment after a restart without user action', async () => {
@@ -331,5 +417,27 @@ describe('link liveness', () => {
     expect(postingOf(id).link_status).toBe('expired');
     clock.advance(30 * 86_400_000);
     expect(queueLivenessChecks()).toBe(0);
+  });
+});
+
+describe('scoring after failed enrichment', () => {
+  it('scores a posting whose page gives no text from its title, company, and location, and flags that it lacks a description', async () => {
+    const stub = stubLlm();
+    registerMatchingHandlers();
+    registerEnrichHandler();
+    saveProfileEdits(PROFILE);
+    await whenIdle();
+    let factsInput = '';
+    stub.facts = (user) => ((factsInput = user), FACTS);
+    setEnrichClientForTests(() => client(() => ({ status: 403, body: '' })));
+    const id = idOf(ingestPosting('a', raw({ description: null })));
+    await whenIdle();
+    expect(postingOf(id)).toMatchObject({ lacks_description: 1, description: null });
+    expect(factsInput).toContain('Title: Frontend Developer');
+    expect(factsInput).toContain('Company: Acme A/S');
+    expect(factsInput).toContain('Location: Copenhagen');
+    expect(factsInput).toContain('No description is available');
+    expect(matchOf(id)!.state).toBe('scored');
+    expect(getPostingDetail(id)).toMatchObject({ lacksDescription: true, match: { state: 'scored' } });
   });
 });

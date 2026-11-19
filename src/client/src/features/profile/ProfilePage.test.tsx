@@ -25,13 +25,14 @@ function profile(extra: Partial<ProfileDto> = {}): ProfileDto {
 const NEW_CV = 'Jane Doe. Senior frontend developer with eight years of TypeScript.';
 
 /** Opens the profile page. `imports()` holds the fields of every CV import request, for JSON and for file uploads. */
-async function setup(initial: ProfileDto) {
+async function setup(initial: ProfileDto, routes: Parameters<typeof mockApi>[0] = {}) {
   const api = mockApi({
     'GET /api/auth/me': () => ({ authRequired: false, authenticated: true }),
     'GET /api/status': () => STATUS,
     'GET /api/profile': () => initial,
     'GET /api/preferences': () => DEFAULT_PREFERENCES,
     'POST /api/profile/cv': () => ({ ...initial, deriveState: 'pending' }),
+    ...routes,
   });
   const user = userEvent.setup();
   renderApp('/profile');
@@ -121,5 +122,66 @@ describe('Location in the score', () => {
     expect(weight).toHaveValue(0);
     await user.click(toggle);
     expect(weight).toHaveValue(DEFAULT_PREFERENCES.weights.location);
+  });
+});
+
+describe('Structured profile', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('shows the derived profile for review in the editor', async () => {
+    await setup(profile());
+    const section = within(await screen.findByRole('region', { name: 'Structured profile' }));
+    expect(section.getByLabelText('Headline')).toHaveValue('Frontend developer');
+    expect(section.getByLabelText('Total years of experience')).toHaveValue(6);
+    expect(section.getByLabelText('Skill 1 name')).toHaveValue('TypeScript');
+    expect(section.getByLabelText('Skill 1 level')).toHaveValue('strong');
+    expect(section.getByDisplayValue('Developer')).toBeInTheDocument();
+  });
+
+  it('says that no profile exists yet and offers to build it from the CV', async () => {
+    let derives = 0;
+    const { user } = await setup(profile({ derived: null, effective: null }), {
+      'POST /api/profile/derive': () => {
+        derives++;
+        return profile({ derived: null, effective: null, deriveState: 'pending' });
+      },
+    });
+    expect(await screen.findByText('No profile exists yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Structured profile' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Build profile from CV' }));
+    await waitFor(() => expect(derives).toBe(1));
+  });
+});
+
+describe('Hard and soft rules', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetToastsForTests();
+  });
+
+  it('saves the language rule as hard and keeps the marks of the location and work arrangement rules', async () => {
+    const puts: Array<{ dryRun: boolean; body: Record<string, unknown> }> = [];
+    const { user } = await setup(profile(), {
+      'PUT /api/preferences': (c, url) => {
+        puts.push({ dryRun: url.searchParams.has('dryRun'), body: c.body as Record<string, unknown> });
+        return { preferences: c.body, plan: { rulesOnly: 2, judge: 0, extract: 0 } };
+      },
+    });
+    const rule = (name: string) => within(screen.getByRole('group', { name }));
+    await screen.findByRole('group', { name: 'Language rule' });
+    // Each of the three rules offers a hard and a soft choice. Excluded companies have no such choice.
+    for (const name of ['Location rule', 'Language rule', 'Work arrangement rule']) {
+      expect(rule(name).getByRole('radio', { name: 'Soft: lowers the score' })).toBeChecked();
+      expect(rule(name).getByRole('radio', { name: 'Hard: excludes the posting' })).not.toBeChecked();
+    }
+
+    await user.click(rule('Language rule').getByRole('radio', { name: 'Hard: excludes the posting' }));
+    await user.click(screen.getByRole('button', { name: 'Review and save' }));
+    await user.click(await screen.findByRole('button', { name: 'Save preferences' }));
+
+    await waitFor(() => expect(puts.filter((p) => !p.dryRun)).toHaveLength(1));
+    const saved = puts.find((p) => !p.dryRun)!.body;
+    expect(saved).toMatchObject({ languageMode: 'hard', locationMode: 'soft', workArrangementMode: 'soft' });
+    expect(await screen.findByText(/Preferences saved/)).toBeInTheDocument();
   });
 });

@@ -1,0 +1,61 @@
+{
+  "Application record": {
+    "Application is created": {
+      "unit": "src/server/http/app.test.ts › creates one application with a copy of the posting, also when the user applies twice"
+    },
+    "Posting already has an application": {
+      "unit": "src/server/http/app.test.ts › creates one application with a copy of the posting, also when the user applies twice"
+    }
+  },
+  "Application stages": {
+    "User moves an application": {
+      "unit": "src/server/http/app.test.ts › moves an application between stages and records each change in time order"
+    },
+    "Unknown stage": {
+      "unit": "src/server/applications/applications.test.ts › refuses a stage outside the five stages and keeps the earlier stage"
+    }
+  },
+  "Application board": {
+    "User drags a card": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › moves a card with the stage menu and with a drop"
+    },
+    "Move fails": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › returns the card to its column and reports the error when the move fails"
+    }
+  },
+  "Notes and dates": {
+    "User sets an interview date": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › sets an interview date in the panel and shows it on the card"
+    },
+    "User edits the notes": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › saves the notes and shows them when the application is opened again"
+    }
+  },
+  "Stage history": {
+    "User reviews an application": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › shows the stage history of an application in time order"
+    },
+    "Stage change is recorded": {
+      "unit": "src/server/applications/applications.test.ts › records a stage change with the earlier stage, the new stage, and the time"
+    }
+  },
+  "Posting snapshot": {
+    "Original posting expires": {
+      "unit": "src/server/http/app.test.ts › still shows the full description from the copy when the link expired"
+    },
+    "Application keeps a copy": {
+      "unit": "src/server/applications/applications.test.ts › copies the title, company, description, and facts of the posting when the application is created"
+    },
+    "Original posting is deleted": {
+      "unit": "src/server/applications/applications.test.ts › keeps the application and its copy when the original posting is deleted"
+    }
+  },
+  "Remove an application": {
+    "User removes an application": {
+      "unit": "src/server/http/app.test.ts › deletes the application and its history, and returns the posting to \"saved\""
+    },
+    "Posting was new before": {
+      "unit": "src/server/applications/applications.test.ts › returns a posting that was new to \"saved\", not \"new\", when the application is removed"
+    }
+  }
+}

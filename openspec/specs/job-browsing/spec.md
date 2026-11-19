@@ -1,17 +1,16 @@
-# Spec Delta
+# job-browsing Specification
 
 ## Purpose
-
 Gives the user one interface to read the ranked postings, understand each score, and decide quickly which jobs to keep.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Ranked job list
-The system SHALL show primary postings as a list in ranking order. Each row SHALL show the title, company, location, work arrangement, total score, source, age, and match state.
+The system SHALL show primary postings as a list in ranking order. Each row SHALL show the posting's title, company, and location as *Posting normalization* in `job-ingestion` stores them, and the source, work arrangement, total score, age, and match state.
 
 #### Scenario: User opens the application
 - **WHEN** the user opens the job list
-- **THEN** the highest-scored untriaged postings appear first
+- **THEN** the new and saved postings appear in the order that *Ranking order* in `job-matching` defines, highest score first
 
 #### Scenario: Long list
 - **WHEN** the list has more postings than fit on the screen
@@ -23,6 +22,14 @@ The system SHALL show the total score as a number with a color band for high, me
 #### Scenario: Stale score
 - **WHEN** a posting's score comes from an older profile version
 - **THEN** the row shows the score with a stale marker
+
+#### Scenario: Score in its color band
+- **WHEN** a row shows a total score
+- **THEN** the score appears as a number in the color of its band: high, medium, or low
+
+#### Scenario: Band named in text
+- **WHEN** a row shows a total score
+- **THEN** the row also names the band in text, so the band reads without its color
 
 ### Requirement: Job detail view
 The system SHALL show a detail view for a selected posting next to the list on wide screens and as a full screen on narrow screens. The detail view SHALL show the score breakdown by dimension, matched skills, missing skills, the assessment, the extracted facts, the full description, and links to every source.
@@ -72,12 +79,28 @@ By default the list SHALL hide dismissed postings, excluded postings, and duplic
 - **WHEN** the user enables the excluded group
 - **THEN** excluded postings appear with the reason for each
 
+#### Scenario: Default list
+- **WHEN** the user opens the job list without filters
+- **THEN** dismissed postings, excluded postings, and duplicates do not appear
+
+#### Scenario: User shows a hidden group
+- **WHEN** the user enables the dismissed status, the excluded group, or the duplicate group
+- **THEN** the postings of that group appear in the list
+
 ### Requirement: Unread tracking
 The system SHALL mark a posting as unread until the user opens it. The system SHALL let the user filter by unread.
 
 #### Scenario: New postings since the last visit
 - **WHEN** a fetch run adds postings
 - **THEN** the new postings appear as unread
+
+#### Scenario: User opens an unread posting
+- **WHEN** the user opens a posting that is marked as unread
+- **THEN** the posting is no longer marked as unread
+
+#### Scenario: User filters by unread
+- **WHEN** the user enables the unread filter
+- **THEN** the list shows only unread postings
 
 ### Requirement: Bulk actions
 The system SHALL let the user select several postings and apply one triage action or one rescore request to all of them.
@@ -92,6 +115,14 @@ The system SHALL let the user move through the list and apply every triage actio
 #### Scenario: User triages with the keyboard
 - **WHEN** the user moves to the next posting and presses the save shortcut
 - **THEN** the system saves that posting and keeps focus in the list
+
+#### Scenario: Every triage action has a key
+- **WHEN** the user presses the dismiss, applied, restore, or undo shortcut on a posting
+- **THEN** the system applies that action to the posting
+
+#### Scenario: User reads the shortcut list
+- **WHEN** the user opens the shortcut list from the job list
+- **THEN** the interface lists the keys that move through the list and the key of each triage action
 
 ### Requirement: Live progress
 The system SHALL update the list and the status display without a page reload when a fetch run changes state, when a score arrives, or when the language model endpoint changes availability.

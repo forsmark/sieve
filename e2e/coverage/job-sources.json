@@ -1,0 +1,80 @@
+{
+  "Source catalog": {
+    "User views the sources": {
+      "unit": "src/server/http/app.test.ts › lists every source with its name, enabled state, inputs, and last result"
+    },
+    "Source does not support keywords": {
+      "unit": "src/client/src/features/settings/SettingsPage.test.tsx › shows that a source without keyword search ignores the search terms"
+    }
+  },
+  "Enable and disable sources": {
+    "Disabled source is skipped": {
+      "unit": "src/server/sources/sources.test.ts › makes no request to a disabled source and shows it as skipped"
+    },
+    "User disables and enables a source": {
+      "unit": "src/server/http/app.test.ts › disables and enables a source"
+    },
+    "Postings of a disabled source stay": {
+      "unit": "src/server/sources/sources.test.ts › keeps the postings of a source after the source is disabled"
+    }
+  },
+  "Search configuration": {
+    "Search terms change": {
+      "unit": "src/server/sources/sources.test.ts › uses new search terms in the next run"
+    },
+    "No search terms": {
+      "unit": "src/server/sources/sources.test.ts › fetches only from sources that need no keywords when the user saved no search terms"
+    }
+  },
+  "Scheduled fetch runs": {
+    "Interval passes": {
+      "unit": "src/server/sources/sources.test.ts › starts a run when the interval passes after the last completed run"
+    },
+    "Restart with an overdue run": {
+      "unit": "src/server/sources/sources.test.ts › starts a run at once at startup when the last completed run is older than the interval"
+    }
+  },
+  "Manual fetch runs": {
+    "User starts a run": {
+      "unit": "src/server/sources/sources.test.ts › records found and new postings for each source"
+    },
+    "Run already active": {
+      "unit": "src/server/http/app.test.ts › shows an active run and starts no second run on request"
+    }
+  },
+  "Pause fetching": {
+    "Schedule is paused": {
+      "unit": "src/server/sources/sources.test.ts › starts no run while fetching is paused, and keeps the pause after a restart"
+    },
+    "Restart while paused": {
+      "unit": "src/server/sources/sources.test.ts › keeps fetching paused after a restart and starts no run at startup"
+    },
+    "User resumes fetching": {
+      "unit": "src/server/sources/sources.test.ts › starts no run while fetching is paused, and keeps the pause after a restart"
+    }
+  },
+  "Source failure isolation": {
+    "One source fails": {
+      "unit": "src/server/sources/sources.test.ts › completes the other sources when one source fails"
+    },
+    "Source times out": {
+      "unit": "src/server/sources/sources.test.ts › marks a source that passes its time limit as failed and keeps its earlier postings"
+    }
+  },
+  "Polite request rate": {
+    "Source signals rate limiting": {
+      "unit": "src/server/sources/sources.test.ts › waits for the Retry-After time after a 429, and delays later requests of the same source"
+    },
+    "Several requests to one source": {
+      "unit": "src/server/sources/sources.test.ts › starts two requests at least the minimum delay apart"
+    }
+  },
+  "Fetch run history": {
+    "Run completes": {
+      "unit": "src/server/sources/sources.test.ts › records found and new postings for each source"
+    },
+    "Restart during a run": {
+      "unit": "src/server/sources/sources.test.ts › shows a run that was active at a restart as interrupted"
+    }
+  }
+}

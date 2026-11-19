@@ -85,6 +85,85 @@ describe('application board', () => {
     expect(within(other).queryByText(/^Interview (was )?\S/)).not.toBeInTheDocument();
   });
 
+  it('sets an interview date in the panel and shows it on the card', async () => {
+    let stored = app('1', 'interview');
+    const api = mockApi({
+      ...base,
+      'GET /api/applications': () => [stored],
+      'GET /api/applications/1/events': () => [],
+      'PATCH /api/applications/1': (c) => {
+        stored = { ...stored, ...(c.body as Partial<ApplicationDto>) };
+        return stored;
+      },
+    });
+    const user = userEvent.setup();
+    renderApp('/board?app=1');
+    const panel = await screen.findByRole('complementary', { name: 'Application details' });
+    const when = new Date(Date.now() + 14 * 86_400_000);
+    when.setHours(10, 30, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const local = `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}T10:30`;
+    fireEvent.change(await within(panel).findByLabelText('Interview date and time'), { target: { value: local } });
+    await user.click(within(panel).getByRole('button', { name: 'Save date' }));
+    await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toEqual({ interviewAt: when.toISOString() }));
+    const card = within(column('Interview')).getByRole('listitem');
+    const date = when.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }).replace(/\s+/g, ' ');
+    await waitFor(() => expect(within(card).getByText(`Interview ${date}`)).toBeInTheDocument());
+  });
+
+  it('saves the notes and shows them when the application is opened again', async () => {
+    let stored = app('1', 'applied');
+    const api = mockApi({
+      ...base,
+      'GET /api/applications': () => [stored],
+      'GET /api/applications/1/events': () => [],
+      'PATCH /api/applications/1': (c) => {
+        stored = { ...stored, ...(c.body as Partial<ApplicationDto>) };
+        return stored;
+      },
+    });
+    const user = userEvent.setup();
+    const { unmount } = renderApp('/board?app=1');
+    const panel = await screen.findByRole('complementary', { name: 'Application details' });
+    const notes = await within(panel).findByLabelText('Notes');
+    expect(notes).toHaveValue('');
+    await user.type(notes, 'Call with Mia on Friday.');
+    await user.click(within(panel).getByRole('button', { name: 'Save notes' }));
+    await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toEqual({ notes: 'Call with Mia on Friday.' }));
+    expect(await screen.findByText('Saved.')).toBeInTheDocument();
+
+    // The page starts again and the panel reads the notes from the server.
+    unmount();
+    renderApp('/board?app=1');
+    const again = await screen.findByRole('complementary', { name: 'Application details' });
+    expect(await within(again).findByLabelText('Notes')).toHaveValue('Call with Mia on Friday.');
+  });
+
+  it('shows the stage history of an application in time order', async () => {
+    mockApi({
+      ...base,
+      'GET /api/applications': () => [app('1', 'offer')],
+      'GET /api/applications/1/events': () => [
+        { id: 1, fromStage: null, toStage: 'applied', createdAt: '2026-11-01T10:00:00Z' },
+        { id: 2, fromStage: 'applied', toStage: 'interview', createdAt: '2026-11-05T09:00:00Z' },
+        { id: 3, fromStage: 'interview', toStage: 'offer', createdAt: '2026-11-12T15:00:00Z' },
+      ],
+    });
+    renderApp('/board?app=1');
+    const panel = await screen.findByRole('complementary', { name: 'Application details' });
+    const heading = await within(panel).findByRole('heading', { name: 'Stage history' });
+    const history = heading.parentElement!;
+    const items = await within(history).findAllByRole('listitem');
+    const at = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    expect(items.map((li) => li.textContent?.replace(/\s+/g, ' '))).toEqual(
+      [
+        `${at('2026-11-01T10:00:00Z')}Created in Applied`,
+        `${at('2026-11-05T09:00:00Z')}Applied to Interview`,
+        `${at('2026-11-12T15:00:00Z')}Interview to Offer`,
+      ].map((t) => t.replace(/\s+/g, ' ')),
+    );
+  });
+
   it('returns the card to its column and reports the error when the move fails', async () => {
     mockApi({
       ...base,

@@ -6,7 +6,7 @@ import type { FetchContext, RawPosting, SearchQuery, SourceAdapter } from './ada
 import { createRateLimitedClient, type HttpClientDeps } from './http';
 import { listAdapters } from './registry';
 import { isRunActive, listRuns, markInterruptedRuns, startFetchRun } from './runner';
-import { checkSchedule, getSchedule, updateSchedule } from './schedule';
+import { checkSchedule, getSchedule, startScheduleTimer, stopScheduleTimer, updateSchedule } from './schedule';
 
 beforeEach(resetAll);
 
@@ -154,6 +154,18 @@ describe('fetch runner', () => {
     expect(on.queries).toHaveLength(1);
   });
 
+  it('keeps the postings of a source after the source is disabled', async () => {
+    const board = adapter('board', [raw({ externalId: '1' }), raw({ externalId: '2', title: 'Data Engineer' })]);
+    await startFetchRun('manual', { adapters: [board] })!.done;
+    setSetting('sources.disabled', ['board']);
+    await startFetchRun('manual', { adapters: [board] })!.done;
+    expect(listRuns()[0]!.sources[0]).toMatchObject({ source: 'board', state: 'skipped' });
+    expect(sqlite.prepare('SELECT source, external_id FROM postings ORDER BY external_id').all()).toEqual([
+      { source: 'board', external_id: '1' },
+      { source: 'board', external_id: '2' },
+    ]);
+  });
+
   it('fetches only from sources that need no keywords when the user saved no search terms', async () => {
     setSetting('search', { terms: [], region: '' });
     const keyword = adapter('keyword', [raw()]);
@@ -166,10 +178,12 @@ describe('fetch runner', () => {
 
   it('uses new search terms in the next run', async () => {
     const a = adapter('a', []);
-    await startFetchRun('manual', { adapters: [a] })!.done;
+    const b = adapter('b', []);
+    await startFetchRun('manual', { adapters: [a, b] })!.done;
     setSetting('search', { terms: ['vue', 'svelte'], region: 'Aarhus' });
-    await startFetchRun('manual', { adapters: [a] })!.done;
+    await startFetchRun('manual', { adapters: [a, b] })!.done;
     expect(a.queries).toEqual([{ terms: ['react'], region: '' }, { terms: ['vue', 'svelte'], region: 'Aarhus' }]);
+    expect(b.queries).toEqual(a.queries);
   });
 
   it('starts no second run while a run is active', async () => {
@@ -241,6 +255,21 @@ describe('schedule', () => {
     const result = checkSchedule(opts());
     expect(result.started).toBe(true);
     await result.done;
+  });
+
+  it('keeps fetching paused after a restart and starts no run at startup', async () => {
+    const clock = fakeClock();
+    // Every real source is disabled, so a wrong start would make no network request.
+    setSetting('sources.disabled', listAdapters().map((a) => a.id));
+    await startFetchRun('manual', opts())!.done;
+    updateSchedule({ paused: true });
+    clock.advance(48 * HOUR);
+    // The paused state lives in the database. Startup reads it from there and checks the schedule at once.
+    startScheduleTimer();
+    stopScheduleTimer();
+    expect(getSchedule().paused).toBe(true);
+    expect(isRunActive()).toBe(false);
+    expect(listRuns()).toHaveLength(1);
   });
 
   it('stores the interval and limits it to a valid range', () => {

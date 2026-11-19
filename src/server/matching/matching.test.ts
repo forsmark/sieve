@@ -6,7 +6,11 @@ import { ingestPosting } from '../ingestion/ingest';
 import { listPostings, getPostingDetail, setTriage } from '../http/postings';
 import { InvalidOutputError, ProviderUnavailableError, probe } from '../llm';
 import { registerDeriveHandler } from '../profile/derive';
-import { getPreferences, saveProfileEdits, savePreferences } from '../profile/service';
+import { currentVersions, getPreferences, saveProfileEdits, savePreferences } from '../profile/service';
+import { createOpenAiClient } from '../llm/openai';
+import { setLlmClientForTests } from '../llm';
+import { createApp } from '../http/app';
+import { setPasswordForTests } from '../http/auth';
 import { FACTS, JUDGMENT, PROFILE, fakeClock, matchOf, postingOf, raw, resetAll, stubLlm, tasksOf, type StubLlm } from '../testing/helpers';
 import { DEFAULT_PREFERENCES, type PostingFacts, type Preferences } from '../../shared/schemas';
 import { getFacts, registerMatchingHandlers } from './handlers';
@@ -133,6 +137,8 @@ describe('pipeline', () => {
       skillsScore: 80, experienceScore: 70, preferenceScore: 60, locationScore: 100,
     });
     expect(stub.calls).toMatchObject({ extract: 1, judge: 1 });
+    // The same posting in the list now has its score.
+    expect(listPostings({}).items.map((i) => [i.id, i.match])).toEqual([[id, { state: 'scored', totalScore: 77, stale: false, excludedReason: null }]]);
   });
 
   it('stores an unknown fact as unknown', async () => {
@@ -231,6 +237,25 @@ describe('ranking', () => {
     expect(listPostings({ sort: 'newest' }).items.map((i) => i.id)).toEqual([waiting, newer, older, top]);
     expect(listPostings({ minScore: 80 }).items.map((i) => i.id)).toEqual([top]);
   });
+
+  it('puts an excluded posting and a waiting posting after every scored posting', async () => {
+    stub.judgment = () => ({ ...JUDGMENT, skillsFit: 5, experienceFit: 5, preferenceFit: 5 });
+    savePreferences(prefs({ excludedCompanies: ['Gamma'] }));
+    const low = add({ externalId: '1', title: 'Backend Developer', postedAt: '2026-04-01T00:00:00Z' });
+    const excluded = add({ externalId: '2', title: 'Data Engineer', company: 'Gamma', postedAt: '2026-05-29T00:00:00Z' });
+    await whenIdle();
+    setSetting('matching.paused', true);
+    const waiting = add({ externalId: '3', title: 'Platform Architect', postedAt: '2026-05-30T00:00:00Z' });
+    await whenIdle();
+    const items = listPostings({ showExcluded: true }).items;
+    expect(items.map((i) => [i.id, i.match?.state])).toEqual([
+      [low, 'scored'],
+      [waiting, 'waiting'],
+      [excluded, 'excluded'],
+    ]);
+    // The scored posting has a low score, and still ranks before the newer postings without a score.
+    expect(items[0]!.match!.totalScore).toBeLessThan(20);
+  });
 });
 
 describe('rescore planner', () => {
@@ -304,6 +329,45 @@ describe('rescore planner', () => {
     expect(stub.calls).toMatchObject({ extract: 0, judge: 1 });
     expect(matchOf(ids[0]!)!.total_score).toBe(15);
     expect(matchOf(ids[1]!)!.total_score).toBe(77);
+  });
+
+  it('stores the version of the profile and preferences with each score', async () => {
+    const [id] = await seed();
+    const before = currentVersions()!;
+    expect(matchOf(id!)).toMatchObject({ state: 'scored', judge_version: before.judgeVersion, rule_version: before.ruleVersion });
+    saveProfileEdits({ ...PROFILE, skills: [...PROFILE.skills, { name: 'Go', level: 'working', years: 1 }] });
+    const after = currentVersions()!;
+    expect(after.judgeVersion).not.toBe(before.judgeVersion);
+    // The stored score keeps the version that it used until a new judgment replaces it.
+    expect(matchOf(id!)!.judge_version).toBe(before.judgeVersion);
+    planRescore();
+    await whenIdle();
+    expect(matchOf(id!)!.judge_version).toBe(after.judgeVersion);
+  });
+
+  it('shows the stale score while the new judgment waits, and replaces it when the judgment is done', async () => {
+    const [id] = await seed();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const original = stub.client.generateObject.bind(stub.client);
+    stub.client.generateObject = (async (schema: any, messages: any, opts: any) => {
+      if (opts?.name === 'judgment') await gate;
+      return original(schema, messages, opts);
+    }) as typeof stub.client.generateObject;
+    stub.judgment = () => ({ ...JUDGMENT, skillsFit: 100 });
+    saveProfileEdits({ ...PROFILE, skills: [...PROFILE.skills, { name: 'React', level: 'strong', years: 4 }] });
+    planRescore();
+    await new Promise((r) => setTimeout(r, 10));
+    try {
+      // The new judgment runs and has not returned.
+      expect(tasksOf('judge').filter((t) => t.state === 'running').length).toBeGreaterThan(0);
+      expect(getPostingDetail(id!)!.match).toMatchObject({ state: 'scored', totalScore: 77, stale: true });
+      expect(listPostings({}).items.find((i) => i.id === id)!.match).toMatchObject({ totalScore: 77, stale: true });
+    } finally {
+      release();
+    }
+    await whenIdle();
+    expect(getPostingDetail(id!)!.match).toMatchObject({ state: 'scored', totalScore: 85, stale: false });
   });
 });
 
@@ -384,6 +448,30 @@ describe('states, pause, and failures', () => {
     expect(matchOf(bad)!.state).toBe('scored');
   });
 
+  it('rejects a judgment with a score outside 0 to 100 and stores no score from it', async () => {
+    const clock = fakeClock();
+    let judgment: unknown = { ...JUDGMENT, skillsFit: 150 };
+    const sent: string[] = [];
+    // The real client of the local endpoint validates the answers. Only the HTTP answer is fake.
+    const fakeFetch = (async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      const name = body.response_format.json_schema.name as string;
+      sent.push(name);
+      const content = JSON.stringify(name === 'posting_facts' ? FACTS : judgment);
+      return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    setLlmClientForTests(createOpenAiClient({ baseUrl: 'http://llm.test', model: 'm', fetch: fakeFetch }));
+    const id = add();
+    await whenIdle();
+    expect(sent.filter((n) => n === 'judgment')).toHaveLength(3);
+    expect(matchOf(id)).toMatchObject({ state: 'waiting', skills_score: null, total_score: null });
+
+    judgment = JUDGMENT;
+    clock.advance(10 * 60_000);
+    await whenIdle();
+    expect(matchOf(id)).toMatchObject({ state: 'scored', skills_score: 80, total_score: 77 });
+  });
+
   it('keeps queued postings in "waiting" while the endpoint is down, and resumes when it returns', async () => {
     stub.facts = () => {
       throw new ProviderUnavailableError('endpoint is down');
@@ -394,6 +482,10 @@ describe('states, pause, and failures', () => {
     expect(tasksOf('extract').every((t) => t.state === 'pending' && t.attempts === 0)).toBe(true);
     const { isLlmAvailable } = await import('../llm');
     expect(isLlmAvailable()).toBe(false);
+    // The status that the interface shows reports the outage.
+    setPasswordForTests(undefined);
+    const status = await (await createApp().request('/api/status')).json();
+    expect(status).toMatchObject({ llmAvailable: false, queueTotal: 2 });
     stub.facts = () => FACTS;
     await probe();
     await whenIdle();
@@ -465,5 +557,33 @@ describe('automatic dismissal', () => {
     rescorePostings([id]);
     await whenIdle();
     expect(postingOf(id)).toMatchObject({ triage_status: 'new', triage_origin: 'user' });
+  });
+
+  it('does not dismiss an untriaged posting that scores low after a manual rescore', async () => {
+    // A posting that scored before and a posting whose first score comes from the manual rescore.
+    const clock = fakeClock();
+    const scored = add({ externalId: '1' });
+    stub.facts = (user) => {
+      if (user.includes('Data Engineer')) throw new InvalidOutputError('bad output');
+      return FACTS;
+    };
+    const failed = add({ externalId: '2', title: 'Data Engineer' });
+    for (let i = 0; i < 8; i++) {
+      await whenIdle();
+      clock.advance(10 * 60_000);
+    }
+    await whenIdle();
+    expect(matchOf(failed)!.state).toBe('failed');
+    expect(matchOf(scored)).toMatchObject({ state: 'scored', total_score: 77 });
+    expect(postingOf(scored).triage_status).toBe('new');
+
+    stub.facts = () => FACTS;
+    stub.judgment = low;
+    rescorePostings([scored, failed]);
+    await whenIdle();
+    for (const id of [scored, failed]) {
+      expect(matchOf(id)).toMatchObject({ state: 'scored', total_score: 24 });
+      expect(postingOf(id)).toMatchObject({ triage_status: 'new', triage_origin: null });
+    }
   });
 });

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryHistory } from '@tanstack/react-router';
 import { QueryClient } from '@tanstack/react-query';
-import type { ServerEvent, StatusDto } from '../../../shared/api';
+import type { RunDto, ServerEvent, StatusDto } from '../../../shared/api';
 import { STATUS, mockApi } from '../test-utils';
 import { resetToastsForTests } from '../lib/toast';
 import { App } from './App';
@@ -92,5 +92,42 @@ describe('status bar', () => {
     server.status = { ...STATUS, llmAvailable: false };
     act(() => FakeEventSource.instances[0]!.send({ type: 'llm.status', available: false }));
     expect(await footer.findByText('Model unavailable')).toBeInTheDocument();
+  });
+
+  it('shows an active fetch run and the progress of each source when a run.progress event arrives', async () => {
+    const server: { status: StatusDto; runs: RunDto[] } = { status: { ...STATUS, activeRunId: null }, runs: [] };
+    mockApi({
+      'GET /api/auth/me': () => ({ authRequired: false, authenticated: true }),
+      'GET /api/status': () => server.status,
+      'GET /api/sources': () => [],
+      'GET /api/postings': () => ({ items: [], total: 0, nextOffset: null }),
+      'GET /api/runs': () => server.runs,
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    render(<App queryClient={queryClient} history={createMemoryHistory({ initialEntries: ['/jobs'] })} />);
+    const footer = within(await bar());
+    expect(await footer.findByText(/^Last fetch/)).toBeInTheDocument();
+    expect(footer.queryByText('Fetching')).not.toBeInTheDocument();
+
+    // A run starts. The server reports it, and the bar follows without a reload.
+    server.status = { ...STATUS, activeRunId: 3 };
+    server.runs = [
+      {
+        id: 3, trigger: 'manual', state: 'running', startedAt: '2026-11-10T14:00:00Z', endedAt: null,
+        sources: [
+          { source: 'jobindex', state: 'completed', found: 41, added: 7, invalid: 0, error: null },
+          { source: 'remoteok', state: 'running', found: 13, added: 4, invalid: 0, error: null },
+        ],
+      },
+    ];
+    act(() => FakeEventSource.instances[0]!.send({ type: 'run.progress', runId: 3 }));
+    expect(await footer.findByText('Fetching')).toBeInTheDocument();
+    expect(await footer.findByText('Jobindex 41 found, Remote OK running')).toBeInTheDocument();
+    expect(footer.getByRole('button', { name: 'Fetch now' })).toBeDisabled();
+
+    // The next event reports progress of the running source.
+    server.runs = [{ ...server.runs[0]!, sources: [server.runs[0]!.sources[0]!, { ...server.runs[0]!.sources[1]!, state: 'completed', found: 20 }] }];
+    act(() => FakeEventSource.instances[0]!.send({ type: 'run.progress', runId: 3 }));
+    expect(await footer.findByText('Jobindex 41 found, Remote OK 20 found')).toBeInTheDocument();
   });
 });

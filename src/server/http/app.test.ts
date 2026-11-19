@@ -335,6 +335,8 @@ describe('postings', () => {
     const top = add({ externalId: '3', title: 'Data Engineer', postedAt: '2026-04-01T00:00:00Z' });
     expect((await call('GET', '/api/status')).json.queue).toEqual({ extract: 3 });
     await whenIdle();
+    // A saved posting stays in the default list and ranks by its score among the new ones.
+    expect((await call('PATCH', `/api/postings/${top}`, { action: 'save' })).status).toBe(200);
 
     const page1 = (await call('GET', '/api/postings?limit=2')).json;
     expect(page1.total).toBe(3);
@@ -708,8 +710,11 @@ describe('expanded match analysis', () => {
     expect(stub.calls.analysis).toBe(1);
     expect(stub.lastAnalysisInput).toContain('Frontend Engineer');
     expect(stub.lastAnalysisInput).toContain('Jane Doe');
+    expect(stub.lastAnalysisInput).toContain('STRUCTURED PROFILE');
+    expect(stub.lastAnalysisInput).toContain(PROFILE.headline);
     expect(stub.lastAnalysisInput).toContain('CANDIDATE PREFERENCES');
     expect(stub.lastAnalysisInput).toContain('EARLIER SCORE');
+    expect(stub.lastAnalysisInput).toContain(JUDGMENT.assessment);
     const detail = (await call('GET', `/api/postings/${id}`)).json;
     expect(detail.matchAnalysis).toMatchObject({ state: 'ready', error: null, model: 'stub-model' });
     expect(detail.matchAnalysis.content).toMatchObject({ verdict: 'consider', unknowns: ['What is the salary range?'] });
@@ -723,10 +728,28 @@ describe('expanded match analysis', () => {
     const a = add({ externalId: 'a1', title: 'Role A', company: 'Alpha', url: 'https://jobs.test/a1' });
     const b = add({ externalId: 'b1', title: 'Role B', company: 'Beta', url: 'https://jobs.test/b1' });
     await whenIdle();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const original = stub.client.generateObject.bind(stub.client);
+    stub.client.generateObject = (async (schema: any, messages: any, opts: any) => {
+      if (opts?.name === 'match_analysis') await gate;
+      return original(schema, messages, opts);
+    }) as typeof stub.client.generateObject;
+    const cards = async () => {
+      const items = (await call('GET', '/api/postings')).json.items as Array<{ id: string; analysis: unknown }>;
+      return [a, b].map((id) => items.find((i) => i.id === id)!.analysis);
+    };
     const first = await call('POST', '/api/postings/bulk', { ids: [a, b, a, 'nope'], action: 'analyze' });
-    expect(first.json.queued).toBe(2);
+    try {
+      expect(first.json.queued).toBe(2);
+      // Each card shows that the analysis runs, and then its verdict.
+      expect(await cards()).toEqual([{ state: 'pending', verdict: null }, { state: 'pending', verdict: null }]);
+    } finally {
+      release();
+    }
     await whenIdle();
     expect(stub.calls.analysis).toBe(2);
+    expect(await cards()).toEqual([{ state: 'ready', verdict: 'consider' }, { state: 'ready', verdict: 'consider' }]);
     const tooMany = await call('POST', '/api/postings/bulk', { ids: Array.from({ length: 21 }, (_, i) => `x${i}`), action: 'analyze' });
     expect(tooMany.status).toBe(400);
     expect(tooMany.json.error).toBe('Select at most 20 postings for one analysis request.');
@@ -747,6 +770,7 @@ describe('expanded match analysis', () => {
     expect(kept.content.verdict).toBe('consider');
     expect((await call('DELETE', `/api/postings/${id}/analysis`)).status).toBe(200);
     expect((await call('GET', `/api/postings/${id}`)).json.matchAnalysis).toBeNull();
+    expect((await call('GET', '/api/postings')).json.items.find((i: { id: string }) => i.id === id).analysis).toBeNull();
     expect((await call('DELETE', `/api/postings/${id}/analysis`)).status).toBe(404);
   });
 
@@ -786,6 +810,68 @@ describe('expanded match analysis', () => {
     const failed = (await call('GET', `/api/postings/${id}`)).json.matchAnalysis;
     expect(failed.state).toBe('failed');
     expect((await call('POST', `/api/postings/${id}/analysis/apply-score`)).json.error).toBe('This analysis has no scores. Run the analysis again.');
+  });
+
+  it('keeps the earlier analysis readable while the new one runs, and replaces it when the new one is ready', async () => {
+    await withCv();
+    const id = add();
+    await call('POST', `/api/postings/${id}/analysis`);
+    await whenIdle();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const original = stub.client.generateObject.bind(stub.client);
+    stub.client.generateObject = (async (schema: any, messages: any, opts: any) => {
+      if (opts?.name === 'match_analysis') await gate;
+      return original(schema, messages, opts);
+    }) as typeof stub.client.generateObject;
+    const base = stub.analysis() as object;
+    stub.analysis = () => ({ ...base, verdict: 'apply', summary: 'You should apply.' });
+    const started = await call('POST', `/api/postings/${id}/analysis`);
+    try {
+      expect(started.json).toMatchObject({ state: 'pending', content: { verdict: 'consider' } });
+      const during = (await call('GET', `/api/postings/${id}`)).json.matchAnalysis;
+      expect(during).toMatchObject({ state: 'pending', content: { verdict: 'consider', summary: 'You meet the main requirements. One gap decides the outcome.' } });
+    } finally {
+      release();
+    }
+    await whenIdle();
+    expect((await call('GET', `/api/postings/${id}`)).json.matchAnalysis).toMatchObject({ state: 'ready', content: { verdict: 'apply', summary: 'You should apply.' } });
+  });
+
+  it('stores one analysis for each posting with the model and the date', async () => {
+    const clock = fakeClock(Date.parse('2026-11-12T08:00:00Z'));
+    await withCv();
+    const id = add();
+    await call('POST', `/api/postings/${id}/analysis`);
+    await whenIdle();
+    expect((await call('GET', `/api/postings/${id}`)).json.matchAnalysis).toMatchObject({
+      state: 'ready', model: 'stub-model', generatedAt: '2026-11-12T08:00:00.000Z',
+    });
+    clock.advance(24 * 3600_000);
+    (stub.client as { model: string }).model = 'claude-fable-5-2';
+    const base = stub.analysis() as object;
+    stub.analysis = () => ({ ...base, verdict: 'skip' });
+    await call('POST', `/api/postings/${id}/analysis`);
+    await whenIdle();
+    expect((await call('GET', `/api/postings/${id}`)).json.matchAnalysis).toMatchObject({
+      state: 'ready', model: 'claude-fable-5-2', generatedAt: '2026-11-13T08:00:00.000Z', content: { verdict: 'skip' },
+    });
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM match_analyses WHERE posting_id = ?').get(id)).toEqual({ n: 1 });
+  });
+
+  it('runs an analysis at once while matching is paused and the match queue holds work', async () => {
+    await withCv();
+    await call('POST', '/api/matching/pause');
+    const id = add();
+    await whenIdle();
+    expect((await call('GET', '/api/status')).json).toMatchObject({ matchingPaused: true, queueTotal: 1 });
+    await call('POST', `/api/postings/${id}/analysis`);
+    await whenIdle();
+    expect(stub.calls.analysis).toBe(1);
+    expect((await call('GET', `/api/postings/${id}`)).json.matchAnalysis).toMatchObject({ state: 'ready', content: { verdict: 'consider' } });
+    // The match work still waits.
+    expect(stub.calls.extract).toBe(0);
+    expect((await call('GET', '/api/status')).json.queueTotal).toBe(1);
   });
 
   it('reports a failure when no earlier analysis exists', async () => {

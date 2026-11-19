@@ -1,0 +1,44 @@
+{
+  "Expanded match analysis": {
+    "User analyzes one posting": {
+      "unit": "src/server/http/app.test.ts › analyzes one posting from the posting, the CV, the preferences, and the earlier score"
+    },
+    "User analyzes selected postings": {
+      "unit": "src/server/http/app.test.ts › queues the selected postings once each with the bulk action, and refuses more than 20"
+    },
+    "Too many postings are selected": {
+      "unit": "src/server/http/app.test.ts › queues the selected postings once each with the bulk action, and refuses more than 20"
+    },
+    "No CV and no profile exist": {
+      "unit": "src/server/http/app.test.ts › refuses an analysis before a CV exists, and for an unknown posting"
+    },
+    "Matching is paused": {
+      "unit": "src/server/http/app.test.ts › runs an analysis at once while matching is paused and the match queue holds work"
+    },
+    "Analysis fails": {
+      "unit": "src/server/http/app.test.ts › keeps the earlier analysis when a new one fails, and deletes on request"
+    }
+  },
+  "Analysis content": {
+    "Analysis is ready": {
+      "unit": "src/client/src/features/jobs/MatchAnalysis.test.tsx › shows the verdict, each part of the analysis, and the severity of a gap"
+    },
+    "Model returns another form": {
+      "unit": "src/server/http/app.test.ts › reports a failure when no earlier analysis exists"
+    }
+  },
+  "Analysis storage": {
+    "User runs the analysis again": {
+      "unit": "src/server/http/app.test.ts › keeps the earlier analysis readable while the new one runs, and replaces it when the new one is ready"
+    },
+    "User removes the analysis": {
+      "unit": "src/server/http/app.test.ts › keeps the earlier analysis when a new one fails, and deletes on request"
+    },
+    "Analysis is stored with model and date": {
+      "unit": "src/server/http/app.test.ts › stores one analysis for each posting with the model and the date"
+    },
+    "Data notice": {
+      "unit": "src/client/src/features/jobs/MatchAnalysis.test.tsx › offers the analysis and says that the CV goes to Anthropic"
+    }
+  }
+}

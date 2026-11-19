@@ -1,0 +1,144 @@
+{
+  "Posting fact extraction": {
+    "Facts are extracted": {
+      "unit": "src/server/matching/matching.test.ts › shows a new posting as \"waiting\", then stores facts, one score for each dimension, and the explanation"
+    },
+    "Posting does not state a fact": {
+      "unit": "src/server/matching/matching.test.ts › stores an unknown fact as unknown"
+    }
+  },
+  "Hard constraint evaluation": {
+    "Excluded company": {
+      "unit": "src/server/matching/matching.test.ts › excludes a company on the excluded list with the reason \"excluded company\""
+    },
+    "Required language is missing": {
+      "unit": "src/server/matching/matching.test.ts › excludes a posting that requires a language the profile lacks, and names the language, when language is hard"
+    },
+    "Fact is unknown": {
+      "unit": "src/server/matching/matching.test.ts › never excludes and never adds a penalty for an unknown fact"
+    }
+  },
+  "Dimension scores": {
+    "Posting is scored": {
+      "unit": "src/server/matching/matching.test.ts › shows a new posting as \"waiting\", then stores facts, one score for each dimension, and the explanation"
+    },
+    "Soft constraint is violated": {
+      "unit": "src/server/matching/matching.test.ts › gives a low location fit and no exclusion when location is soft and the job is outside"
+    },
+    "Soft language constraint is violated": {
+      "unit": "src/server/matching/matching.test.ts › lowers the total by the penalty when a soft language constraint is violated"
+    }
+  },
+  "Total score": {
+    "Weights change": {
+      "unit": "src/server/matching/matching.test.ts › recomputes every total with new weights and makes no model call"
+    },
+    "Total with a violated soft constraint": {
+      "unit": "src/server/matching/matching.test.ts › subtracts a fixed penalty for each violated soft constraint and stays in the range 0 to 100"
+    },
+    "Same inputs give the same total": {
+      "unit": "src/server/matching/matching.test.ts › computes the weighted mean and always gives the same total for the same input"
+    }
+  },
+  "Match explanation": {
+    "User reads why a job ranks high": {
+      "unit": "src/client/src/features/jobs/DetailPanel.match.test.tsx › shows the matched skills, the missing skills, and the assessment of a scored posting"
+    }
+  },
+  "Ranking order": {
+    "Two postings have the same score": {
+      "unit": "src/server/matching/matching.test.ts › ranks by total score, then by posted date with the newer posting first, and puts unscored postings last"
+    },
+    "Higher score ranks first": {
+      "unit": "src/server/matching/matching.test.ts › ranks by total score, then by posted date with the newer posting first, and puts unscored postings last"
+    },
+    "Excluded and unscored postings rank last": {
+      "unit": "src/server/matching/matching.test.ts › puts an excluded posting and a waiting posting after every scored posting"
+    }
+  },
+  "Asynchronous matching": {
+    "New posting before scoring": {
+      "unit": "src/server/matching/matching.test.ts › shows a new posting as \"waiting\", then stores facts, one score for each dimension, and the explanation"
+    },
+    "Score arrives later": {
+      "unit": "src/server/matching/matching.test.ts › shows a new posting as \"waiting\", then stores facts, one score for each dimension, and the explanation"
+    },
+    "Posting without a score shows its state": {
+      "unit": "src/client/src/features/jobs/JobsList.test.tsx › shows the state of a posting that has no score"
+    }
+  },
+  "Durable match queue": {
+    "Restart with queued postings": {
+      "unit": "src/server/matching/matching.test.ts › continues with queued postings after a restart"
+    },
+    "Matching is paused": {
+      "unit": "src/server/matching/matching.test.ts › finishes the posting in progress when the user pauses"
+    }
+  },
+  "Language model provider selection": {
+    "Default provider": {
+      "unit": "src/server/llm/llm.test.ts › uses the local endpoint when the user selected no provider"
+    },
+    "User selects Claude Code": {
+      "unit": "src/server/llm/llm.test.ts › runs later match work through the command with Haiku 5.5 at medium effort after the user saves that selection"
+    },
+    "Claude Code is not installed": {
+      "unit": "src/server/llm/llm.test.ts › keeps the earlier provider and reports the cause when the new provider does not respond"
+    },
+    "Provider change keeps scores": {
+      "unit": "src/server/matching/matching.test.ts › keeps facts and scores valid when the provider changes, and uses the new provider for later work"
+    }
+  },
+  "Language model outage handling": {
+    "Endpoint goes down": {
+      "unit": "src/server/matching/matching.test.ts › keeps queued postings in \"waiting\" while the endpoint is down, and resumes when it returns"
+    },
+    "Endpoint returns": {
+      "unit": "src/server/matching/matching.test.ts › keeps queued postings in \"waiting\" while the endpoint is down, and resumes when it returns"
+    }
+  },
+  "Invalid model output": {
+    "Response is malformed": {
+      "unit": "src/server/matching/matching.test.ts › marks a posting as failed with the reason after the retry limit, and continues with the next posting"
+    },
+    "Score outside the allowed range": {
+      "unit": "src/server/matching/matching.test.ts › rejects a judgment with a score outside 0 to 100 and stores no score from it"
+    },
+    "Other postings continue": {
+      "unit": "src/server/matching/matching.test.ts › marks a posting as failed with the reason after the retry limit, and continues with the next posting"
+    }
+  },
+  "Stale score detection": {
+    "Profile changes": {
+      "unit": "src/server/matching/matching.test.ts › judges each posting again and does not extract again when a skill is added"
+    },
+    "Score records the profile version": {
+      "unit": "src/server/matching/matching.test.ts › stores the version of the profile and preferences with each score"
+    },
+    "Stale score until replaced": {
+      "unit": "src/server/matching/matching.test.ts › shows the stale score while the new judgment waits, and replaces it when the judgment is done"
+    }
+  },
+  "Selective rescoring": {
+    "Only an excluded company is added": {
+      "unit": "src/server/matching/matching.test.ts › updates the affected postings without a model call when a company is excluded"
+    },
+    "Skills change": {
+      "unit": "src/server/matching/matching.test.ts › judges each posting again and does not extract again when a skill is added"
+    },
+    "User requests a rescore": {
+      "unit": "src/server/matching/matching.test.ts › queues a full new judgment for selected postings on request and reuses the facts"
+    }
+  },
+  "Automatic dismissal of low scores": {
+    "Low score with the option enabled": {
+      "unit": "src/server/matching/matching.test.ts › dismisses a new posting that scores below the threshold and records that the dismissal was automatic"
+    },
+    "Saved posting scores low after a rescore": {
+      "unit": "src/server/matching/matching.test.ts › keeps a saved posting that scores low after a rescore"
+    },
+    "Manual rescore of an untriaged posting": {
+      "unit": "src/server/matching/matching.test.ts › does not dismiss an untriaged posting that scores low after a manual rescore"
+    }
+  }
+}

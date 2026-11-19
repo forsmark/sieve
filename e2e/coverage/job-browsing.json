@@ -1,0 +1,128 @@
+{
+  "Ranked job list": {
+    "User opens the application": {
+      "unit": "src/server/http/app.test.ts › returns the ranked list with paging, the detail, and the queue status"
+    },
+    "Long list": {
+      "unit": "src/client/src/features/jobs/JobsList.test.tsx › loads the next page when the list scrolls to its end"
+    }
+  },
+  "Score presentation": {
+    "Stale score": {
+      "unit": "src/client/src/features/jobs/JobsList.test.tsx › marks a stale score on the card and keeps the score"
+    },
+    "Score in its color band": {
+      "unit": "src/client/src/features/jobs/JobsList.test.tsx › shows the score as a number in the color of its band"
+    },
+    "Band named in text": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › shows the score with a text label, not only a color"
+    }
+  },
+  "Job detail view": {
+    "User selects a posting": {
+      "unit": "src/client/src/features/jobs/JobsList.test.tsx › keeps the scroll position and the rendered cards when a posting opens"
+    },
+    "Posting is expired": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › opens the detail from ?id= and marks the posting as read"
+    }
+  },
+  "Shareable view state": {
+    "User reloads the page": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › shows the same filters and the same posting after a reload of the address"
+    }
+  },
+  "Triage actions": {
+    "User dismisses a posting": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › dismisses with d, removes the row, and undo posts the previous statuses to /api/postings/restore"
+    },
+    "User marks a posting as applied": {
+      "unit": "src/server/http/app.test.ts › creates one application with a copy of the posting, also when the user applies twice"
+    }
+  },
+  "Filters and search": {
+    "User combines filters": {
+      "unit": "src/server/http/app.test.ts › returns only the postings that meet both the work arrangement filter and the minimum score"
+    },
+    "No posting matches": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › shows an empty state that clears the filters"
+    }
+  },
+  "Default visibility": {
+    "User shows excluded postings": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › shows excluded postings with the reason for each when the user enables them"
+    },
+    "Default list": {
+      "unit": "src/server/http/postings.test.ts › hides dismissed, excluded, and duplicate postings by default"
+    },
+    "User shows a hidden group": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › asks for each hidden group when the user enables it and shows its postings"
+    }
+  },
+  "Unread tracking": {
+    "New postings since the last visit": {
+      "unit": "src/server/http/postings.test.ts › marks the postings that a fetch run adds as unread"
+    },
+    "User opens an unread posting": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › marks an unread posting as read when the user opens it"
+    },
+    "User filters by unread": {
+      "unit": "src/server/http/app.test.ts › filters by text, source, work arrangement, tag, age, and unread state"
+    }
+  },
+  "Bulk actions": {
+    "User dismisses a selection": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › dismisses a selection with one undo for the group"
+    }
+  },
+  "Keyboard operation": {
+    "User triages with the keyboard": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › moves through the list with j and k and saves with s, keeping focus in the list"
+    },
+    "Every triage action has a key": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › applies dismiss, applied, restore, and undo with their keys"
+    },
+    "User reads the shortcut list": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › lists the keys for moving through the list and for each triage action"
+    }
+  },
+  "Live progress": {
+    "Score arrives": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › shows an arriving score in the row, moves the row to its rank, and keeps the cursor on its posting"
+    },
+    "Fetch run is active": {
+      "unit": "src/client/src/app/StatusBar.test.tsx › shows an active fetch run and the progress of each source when a run.progress event arrives"
+    }
+  },
+  "Settings screens": {
+    "User tests the language model provider": {
+      "unit": "src/client/src/features/settings/SettingsPage.test.tsx › tests a provider with the settings the user entered and reports whether it responds and whether the model is available"
+    },
+    "Provider sends data off the machine": {
+      "unit": "src/client/src/features/settings/SettingsPage.test.tsx › states that data leaves the machine when the user selects the Claude Code provider, and not for the local provider"
+    }
+  },
+  "Activity view": {
+    "User inspects a failure": {
+      "unit": "src/client/src/features/activity/ActivityPage.test.tsx › lists failed work with its error and a link to the posting"
+    },
+    "User retries failed work": {
+      "unit": "src/server/http/app.test.ts › lists failed tasks and retries one on request"
+    }
+  },
+  "Database backups": {
+    "Scheduled backup": {
+      "unit": "src/server/http/app.test.ts › creates scheduled backups at the interval and keeps only the newest ones"
+    },
+    "User downloads a backup": {
+      "unit": "src/server/http/app.test.ts › creates a backup that downloads as a valid database with the stored data"
+    }
+  },
+  "Access control": {
+    "Password is configured": {
+      "unit": "src/client/src/app/Login.test.tsx › shows only the login form on %s to a visitor without a session"
+    },
+    "Restart": {
+      "unit": "src/server/http/app.test.ts › rejects requests without a session, accepts the password, and keeps the session until logout"
+    }
+  }
+}

@@ -52,12 +52,20 @@ The system SHALL NOT score a duplicate posting and SHALL NOT show it as a separa
 - **THEN** the posting does not enter the match queue
 - **AND** the primary record shows the extra source and its link
 
+#### Scenario: Job on two boards in the ranked list
+- **WHEN** the user views the ranked list and a job has a primary record and a duplicate
+- **THEN** the list shows the job as one row, the primary record
+
 ### Requirement: Manual duplicate correction
 The system SHALL let the user separate a posting that was wrongly marked as a duplicate. A separated posting SHALL become a primary record and enter the match queue.
 
 #### Scenario: User separates a duplicate
 - **WHEN** the user separates a duplicate from its primary record
 - **THEN** the posting appears as its own row and the system scores it
+
+#### Scenario: Separated posting stays separate
+- **WHEN** a later fetch run returns the separated posting and its former primary record again
+- **THEN** the system keeps both as primary records
 
 ### Requirement: Description enrichment
 When a posting has no description or a very short one, the system SHALL try to fetch the full text from the posting's page before it scores the posting. When a source gives only a teaser of the job text, the system SHALL fetch the full text for each posting of that source, whatever the length of the teaser.
@@ -101,3 +109,7 @@ The system SHALL keep pending ingestion work across restarts. Work that was pend
 #### Scenario: Restart with pending work
 - **WHEN** the system restarts while postings wait for enrichment
 - **THEN** the system resumes enrichment for those postings without user action
+
+#### Scenario: Restart while enrichment runs
+- **WHEN** the system restarts while it fetches the description of a posting
+- **THEN** the system runs the enrichment of that posting again after startup

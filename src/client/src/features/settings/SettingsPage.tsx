@@ -232,11 +232,13 @@ function ScheduleForm({ initial }: { initial: ScheduleDto }) {
 
 function LlmSection() {
   const q = useQuery({ queryKey: qk.llm, queryFn: api.llm });
+  // The result of the last test lives here. A save stores new settings, which mounts a new form, and the result stays in view.
+  const [health, setHealth] = useState<HealthDto | null>(null);
   return (
     <Section id="model" title="Language model" description="The model that reads postings and scores each one. The CV digest and cover letters use a fixed model.">
       {q.isPending && <LoadingState />}
       {q.isError && <ErrorState error={q.error} onRetry={() => void q.refetch()} />}
-      {q.data && <LlmForm key={JSON.stringify(q.data.settings)} initial={q.data.settings} available={q.data.available} />}
+      {q.data && <LlmForm key={JSON.stringify(q.data.settings)} initial={q.data.settings} available={q.data.available} health={health} setHealth={setHealth} />}
     </Section>
   );
 }
@@ -253,7 +255,17 @@ function HealthResult({ health }: { health: HealthDto }) {
   );
 }
 
-function LlmForm({ initial, available }: { initial: LlmSettingsDto; available: boolean | null }) {
+function LlmForm({
+  initial,
+  available,
+  health,
+  setHealth,
+}: {
+  initial: LlmSettingsDto;
+  available: boolean | null;
+  health: HealthDto | null;
+  setHealth: (h: HealthDto | null) => void;
+}) {
   const qc = useQueryClient();
   const [draft, setDraft] = useState<LlmSaveInput>({
     provider: initial.provider,
@@ -262,7 +274,6 @@ function LlmForm({ initial, available }: { initial: LlmSettingsDto; available: b
     apiKey: initial.apiKey,
     claudeEffort: initial.claudeEffort,
   });
-  const [health, setHealth] = useState<HealthDto | null>(null);
   const [notSaved, setNotSaved] = useState(false);
   const set = <K extends keyof LlmSaveInput>(k: K, v: LlmSaveInput[K]) => setDraft((d) => ({ ...d, [k]: v }));
   const dirty = JSON.stringify(draft) !== JSON.stringify({ provider: initial.provider, baseUrl: initial.baseUrl, model: initial.model, apiKey: initial.apiKey, claudeEffort: initial.claudeEffort });

@@ -1,0 +1,78 @@
+{
+  "Posting normalization": {
+    "Posting has markup": {
+      "unit": "src/server/ingestion/ingestion.test.ts › stores a description without tags"
+    },
+    "Posting lacks a required field": {
+      "unit": "src/server/ingestion/ingestion.test.ts › discards a posting without a title, a company, or a valid link and counts it as invalid in the run history"
+    }
+  },
+  "Idempotent ingestion": {
+    "Same posting appears again": {
+      "unit": "src/server/ingestion/ingestion.test.ts › keeps one record, its status, its score, and its first-seen time when a posting appears again"
+    },
+    "Posting gains a description": {
+      "unit": "src/server/ingestion/ingestion.test.ts › adds a description that a later fetch returns"
+    }
+  },
+  "Cross-source duplicate detection": {
+    "Same job on two boards": {
+      "unit": "src/server/ingestion/ingestion.test.ts › marks the same job on a second board as a duplicate of the first"
+    },
+    "Titles differ only by seniority or legal suffix": {
+      "unit": "src/server/ingestion/ingestion.test.ts › treats titles that differ by a seniority word or a legal suffix as the same job"
+    },
+    "Different roles at one company": {
+      "unit": "src/server/ingestion/ingestion.test.ts › keeps different roles at one company as primary records"
+    }
+  },
+  "Duplicates stay out of ranking": {
+    "Duplicate arrives": {
+      "unit": "src/server/ingestion/ingestion.test.ts › keeps a duplicate out of the match queue and shows its source and link on the primary record"
+    },
+    "Job on two boards in the ranked list": {
+      "unit": "src/server/ingestion/ingestion.test.ts › shows a job on two boards as one row in the ranked list"
+    }
+  },
+  "Manual duplicate correction": {
+    "User separates a duplicate": {
+      "unit": "src/server/http/app.test.ts › rescoring and duplicate separation work through the API"
+    },
+    "Separated posting stays separate": {
+      "unit": "src/server/ingestion/ingestion.test.ts › makes a separated duplicate a primary record with match tasks, and does not join it again"
+    }
+  },
+  "Description enrichment": {
+    "Missing description is fetched": {
+      "unit": "src/server/ingestion/ingestion.test.ts › fetches the posting page for a posting without a description and stores the text"
+    },
+    "Source gives only a teaser": {
+      "unit": "src/server/ingestion/ingestion.test.ts › fetches the full text for a source that gives only a teaser, also when the teaser is long"
+    },
+    "Full text of a teaser source is not reachable": {
+      "unit": "src/server/ingestion/ingestion.test.ts › keeps the teaser when the full text is not reachable, and does not try again"
+    },
+    "User rescores a posting that has only a teaser": {
+      "unit": "src/server/ingestion/ingestion.test.ts › fetches the full text first when the user rescores a posting that has only the teaser of its source"
+    },
+    "Enrichment fails": {
+      "unit": "src/server/ingestion/ingestion.test.ts › scores a posting whose page gives no text from its title, company, and location, and flags that it lacks a description"
+    }
+  },
+  "Link liveness": {
+    "Posting was removed": {
+      "unit": "src/server/ingestion/ingestion.test.ts › checks old untriaged postings, stores the result, and checks an unknown link again later"
+    },
+    "Check is inconclusive": {
+      "unit": "src/server/ingestion/ingestion.test.ts › checks old untriaged postings, stores the result, and checks an unknown link again later"
+    }
+  },
+  "Durable pipeline work": {
+    "Restart with pending work": {
+      "unit": "src/server/ingestion/ingestion.test.ts › keeps enrichment that waits at shutdown and runs it after startup without user action"
+    },
+    "Restart while enrichment runs": {
+      "unit": "src/server/ingestion/ingestion.test.ts › resumes enrichment after a restart without user action"
+    }
+  }
+}

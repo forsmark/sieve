@@ -1,10 +1,9 @@
-# Spec Delta
+# match-analysis Specification
 
 ## Purpose
-
 Gives the user a deeper comparison of selected postings with the CV than the score gives, so that the user can decide whether to apply.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Expanded match analysis
 The system SHALL write an expanded match analysis for a posting when the user asks for one. The system SHALL use the Claude Code command line with Fable 5.2 at medium effort, whatever provider the user selected for matching. The analysis SHALL NOT change the score of the posting.
@@ -56,3 +55,12 @@ The system SHALL store one expanded analysis for each posting, with the model an
 #### Scenario: User removes the analysis
 - **WHEN** the user removes the analysis of a posting
 - **THEN** the posting and its card show no analysis
+
+#### Scenario: Analysis is stored with model and date
+- **WHEN** the analysis of a posting is ready
+- **THEN** the system stores it with the model and the date it was written
+- **AND** a new analysis of the same posting replaces it, so the posting holds one analysis
+
+#### Scenario: Data notice
+- **WHEN** the user views the analysis section of a posting
+- **THEN** the interface states that the CV text and the posting text are sent to Anthropic

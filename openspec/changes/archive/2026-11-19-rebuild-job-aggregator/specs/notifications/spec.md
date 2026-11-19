@@ -17,6 +17,10 @@ The system SHALL send notifications through an ntfy topic. The system SHALL gene
 - **WHEN** two installations each generate a topic name
 - **THEN** the two names are different and neither contains a fixed guessable part alone
 
+#### Scenario: Notification goes to the topic
+- **WHEN** the system sends a notification
+- **THEN** the system posts it to the user's ntfy topic on the configured server
+
 ### Requirement: Topic regeneration
 The system SHALL let the user replace the topic with a newly generated one. After the replacement the system SHALL send nothing to the old topic.
 
@@ -24,6 +28,11 @@ The system SHALL let the user replace the topic with a newly generated one. Afte
 - **WHEN** the user regenerates the topic
 - **THEN** the system shows the new topic name
 - **AND** later notifications go only to the new topic
+
+#### Scenario: Topic changes during the batching window
+- **WHEN** a posting qualifies and the user regenerates the topic before the batching window ends
+- **THEN** the notification for that posting goes to the new topic
+- **AND** the old topic receives nothing
 
 ### Requirement: Notification server setting
 The system SHALL use the public ntfy server by default and SHALL let the user set another ntfy server address.
@@ -58,6 +67,11 @@ The system SHALL combine postings that qualify within a short window into one no
 - **WHEN** six postings qualify within the batching window
 - **THEN** the system sends one notification that states six new matches
 
+#### Scenario: Combined notification lists the highest scores
+- **WHEN** more postings qualify within the batching window than one notification lists
+- **THEN** the notification lists the highest-scored postings, the highest first
+- **AND** the notification states how many more postings qualified
+
 ### Requirement: Notification content
 A notification SHALL contain only the posting title, the company, the total score, and a link that opens the posting in the application. A notification SHALL NOT contain text from the CV, the profile, the preferences, or the assessment.
 
@@ -88,3 +102,8 @@ A failed notification SHALL NOT stop or delay matching. The system SHALL retry a
 - **WHEN** the ntfy server returns an error for a notification
 - **THEN** matching continues
 - **AND** the system retries the delivery later
+
+#### Scenario: Delivery fails after the last retry
+- **WHEN** the ntfy server still returns an error after the last retry
+- **THEN** the system stops retrying the delivery
+- **AND** the activity view lists the notification as failed with the error
