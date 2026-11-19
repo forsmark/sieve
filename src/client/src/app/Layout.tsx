@@ -1,0 +1,97 @@
+import { Link, Outlet } from '@tanstack/react-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '../api/endpoints';
+import { qk } from '../api/keys';
+import { useServerEvents } from '../api/events';
+import { Button, ErrorState, LoadingState } from '../components/ui';
+import { Toaster } from '../lib/toast';
+import { LoginScreen } from './Login';
+import { StatusBar } from './StatusBar';
+import { FirstRunGuide } from './FirstRunGuide';
+
+const NAV = [
+  { to: '/jobs', label: 'Jobs' },
+  { to: '/board', label: 'Board' },
+  { to: '/profile', label: 'Profile' },
+  { to: '/settings', label: 'Settings' },
+  { to: '/activity', label: 'Activity' },
+] as const;
+
+export function RootLayout() {
+  const auth = useQuery({ queryKey: qk.auth, queryFn: api.me, staleTime: Infinity });
+  const allowed = auth.data ? !auth.data.authRequired || auth.data.authenticated : false;
+  useServerEvents(allowed);
+
+  if (auth.isPending) return <LoadingState label="Starting" />;
+  if (auth.isError) {
+    return (
+      <main className="mx-auto max-w-lg pt-16">
+        <ErrorState title="The server cannot be reached." error={auth.error} onRetry={() => void auth.refetch()} />
+      </main>
+    );
+  }
+  if (!allowed) return <LoginScreen />;
+  return <Shell authRequired={auth.data.authRequired} />;
+}
+
+function Shell({ authRequired }: { authRequired: boolean }) {
+  const status = useQuery({ queryKey: qk.status, queryFn: api.status, refetchInterval: 60_000 });
+  const qc = useQueryClient();
+  const logout = useMutation({
+    mutationFn: api.logout,
+    onSuccess: () => {
+      qc.clear();
+      qc.setQueryData(qk.auth, { authRequired: true, authenticated: false });
+    },
+  });
+  const counts = status.data?.counts;
+
+  return (
+    <div className="flex h-dvh flex-col">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:bg-accent focus:px-3 focus:py-2 focus:font-semibold focus:text-on-accent"
+      >
+        Skip to content
+      </a>
+      <header className="flex h-14 shrink-0 items-stretch gap-2.5 border-b border-fg px-3 sm:gap-8 sm:px-6">
+        <Link to="/jobs" className="flex items-center text-xl leading-none font-extrabold tracking-tight sm:text-2xl" aria-label="sieve, go to jobs">
+          sieve
+        </Link>
+        <nav aria-label="Main" className="no-scrollbar flex min-w-0 flex-1 items-stretch gap-3 overflow-x-auto sm:gap-6">
+          {NAV.map((n) => (
+            <Link
+              key={n.to}
+              to={n.to}
+              className="relative flex items-center border-b-2 border-transparent pt-0.5 text-[13px] font-medium whitespace-nowrap text-muted hover:text-fg sm:text-sm"
+              activeProps={{ className: 'text-fg border-b-accent!', 'aria-current': 'page' }}
+            >
+              {n.label}
+              {n.to === '/jobs' && counts && counts.unread > 0 && (
+                <span className="tabular ml-1 bg-fg px-1 text-xs font-bold text-bg" aria-label={`${counts.unread} unread`}>
+                  {counts.unread}
+                </span>
+              )}
+              {n.to === '/board' && counts && counts.applied > 0 && (
+                <span className="tabular ml-1 bg-field-pink px-1 text-xs font-bold text-ink" aria-label={`${counts.applied} applications`}>
+                  {counts.applied}
+                </span>
+              )}
+            </Link>
+          ))}
+        </nav>
+        {authRequired && (
+          <Button size="sm" variant="ghost" className="self-center" onClick={() => logout.mutate()} busy={logout.isPending}>
+            Log out
+          </Button>
+        )}
+      </header>
+      {status.data && <FirstRunGuide status={status.data} />}
+      <main id="main" className="relative min-h-0 flex-1 overflow-clip">
+        <Outlet />
+      </main>
+      <StatusBar status={status} />
+      <Toaster />
+    </div>
+  );
+}

@@ -1,0 +1,10 @@
+node_modules
+dist
+data
+plans
+openspec
+.claude
+*.db
+*.db-wal
+*.db-shm
+.env

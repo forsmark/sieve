@@ -1,0 +1,1 @@
+ALTER TABLE `postings` ADD `enriched_at` text;

@@ -1,0 +1,298 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/schibsted-grotesk/wght.css';
+
+/*
+ * Design tokens. One theme on a dark grey ground.
+ * Four flat color fields carry near-black text. Each field names one kind of content:
+ * yellow = score and primary action, blue = facts and skills, pink = cover letter and applications, beige = posting text.
+ * No corner radius and no shadow exist in this system.
+ */
+:root {
+  --bg: #27282b;
+  --surface: #27282b;
+  --surface-2: #323337;
+  --surface-3: #3a3b40;
+  --border: #48494e;
+  --border-strong: #6e6f75;
+  --text: #f5f3ee;
+  --muted: #b9b8b2;
+  --faint: #a3a29c;
+  --ink: #131314;
+  --ink-muted: #3f3d3a;
+  --field-yellow: #ffca31;
+  --field-yellow-strong: #ffd95f;
+  --field-blue: #cad5d4;
+  --field-pink: #ffb9ce;
+  --field-beige: #e4dcd3;
+  --accent: var(--field-yellow);
+  --accent-strong: var(--field-yellow-strong);
+  --on-accent: var(--ink);
+  --danger: #ff8672;
+  --danger-soft: #40282a;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-field-yellow: var(--field-yellow);
+  --color-field-blue: var(--field-blue);
+  --color-field-pink: var(--field-pink);
+  --color-field-beige: var(--field-beige);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+  /* Sharp corners everywhere. */
+  --radius: 0;
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+  /* Flat surfaces. */
+  --shadow-2xs: 0 0 #0000;
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
+  --shadow-md: 0 0 #0000;
+  --shadow-lg: 0 0 #0000;
+  --shadow-xl: 0 0 #0000;
+  --shadow-2xl: 0 0 #0000;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--field-yellow);
+  outline-offset: 2px;
+}
+
+/* On a yellow field the yellow ring is invisible, so the ring turns to ink there. */
+.field :focus-visible,
+.field:focus-visible {
+  outline-color: var(--ink);
+}
+
+::selection {
+  background: var(--field-yellow);
+  color: var(--ink);
+}
+
+input,
+textarea,
+select {
+  caret-color: var(--field-yellow);
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A field is a flat color tile with near-black text.
+ * Muted text inside a field is tinted ink, never grey.
+ */
+.field {
+  color: var(--ink);
+  --muted: var(--ink-muted);
+  --faint: var(--ink-muted);
+  --text: var(--ink);
+  --border: color-mix(in srgb, var(--ink) 28%, transparent);
+  --border-strong: color-mix(in srgb, var(--ink) 55%, transparent);
+  --accent: var(--ink);
+  --accent-strong: #000;
+  --on-accent: #f5f3ee;
+  --surface: transparent;
+  --surface-2: color-mix(in srgb, var(--ink) 9%, transparent);
+  --danger: #8c1c0c;
+  --danger-soft: color-mix(in srgb, #8c1c0c 12%, transparent);
+}
+.field ::selection {
+  background: var(--ink);
+  color: #f5f3ee;
+}
+.field input,
+.field textarea,
+.field select {
+  caret-color: var(--ink);
+}
+
+/*
+ * The mosaic: tiles that touch, with a thin channel of ground between them.
+ * A notch is a triangle in the color of its tile that crosses the channel into the next tile.
+ * It reads as "the next tile follows from this one".
+ */
+.mosaic {
+  --channel: 6px;
+  --notch: 11px;
+  display: grid;
+  gap: var(--channel);
+}
+.tile {
+  position: relative;
+  min-width: 0;
+}
+@utility notch-down {
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+  }
+  /* The ground-colored outline that keeps the channel visible around the notch. */
+  &::before {
+    left: calc(var(--notch-at, 28px) - var(--channel));
+    top: 100%;
+    width: calc(2 * (var(--notch) + var(--channel)));
+    height: calc(var(--notch) + 2 * var(--channel));
+    background: var(--bg);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+  }
+  &::after {
+    left: var(--notch-at, 28px);
+    top: calc(100% - 1px);
+    width: calc(2 * var(--notch));
+    height: calc(var(--notch) + 1px);
+    background: var(--tile-color, var(--surface-2));
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+  }
+}
+
+.tile-yellow { background: var(--field-yellow); --tile-color: var(--field-yellow); }
+.tile-blue { background: var(--field-blue); --tile-color: var(--field-blue); }
+.tile-pink { background: var(--field-pink); --tile-color: var(--field-pink); }
+.tile-beige { background: var(--field-beige); --tile-color: var(--field-beige); }
+.tile-ground { background: var(--surface-2); --tile-color: var(--surface-2); }
+
+/* Checkboxes are square, with a hairline border and a drawn check. */
+input[type='checkbox'] {
+  appearance: none;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-strong);
+  background: transparent center / 12px 12px no-repeat;
+  cursor: pointer;
+}
+input[type='checkbox']:hover {
+  border-color: var(--text);
+}
+input[type='checkbox']:checked {
+  border-color: var(--text);
+  background-color: var(--text);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%2327282b' stroke-width='2' stroke-linecap='square'%3E%3Cpath d='M2.5 6.5 5 9l4.5-5.5'/%3E%3C/svg%3E");
+}
+.field input[type='checkbox']:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23f5f3ee' stroke-width='2' stroke-linecap='square'%3E%3Cpath d='M2.5 6.5 5 9l4.5-5.5'/%3E%3C/svg%3E");
+}
+
+/* The popup list of a select is drawn by the browser, so it gets a fixed readable pair. */
+select option {
+  background: #27282b;
+  color: #f5f3ee;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* The side notch exists only when two tiles sit side by side. */
+@utility notch-right {
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+  }
+  &::before {
+    top: calc(var(--notch-at, 20px) - var(--channel));
+    left: 100%;
+    height: calc(2 * (var(--notch) + var(--channel)));
+    width: calc(var(--notch) + 2 * var(--channel));
+    background: var(--bg);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+  &::after {
+    top: var(--notch-at, 20px);
+    left: calc(100% - 1px);
+    height: calc(2 * var(--notch));
+    width: calc(var(--notch) + 1px);
+    background: var(--tile-color, var(--surface-2));
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+}
+
+/* A card moves to its new place when the order of the list changes. */
+.card-grid > * {
+  transition: transform 420ms cubic-bezier(0.2, 0, 0, 1);
+}
+.card-grid[data-still] > * {
+  transition: none;
+}
+
+@keyframes tile-in {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

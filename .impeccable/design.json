@@ -1,0 +1,523 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T00:00:00Z",
+  "title": "Design System: Sieve",
+  "extensions": {
+    "colorMeta": {
+      "field-yellow": {
+        "role": "primary",
+        "displayName": "Yellow field",
+        "canonical": "#ffca31",
+        "tonalRamp": [
+          "#110a00",
+          "#322400",
+          "#564205",
+          "#7f6203",
+          "#a88417",
+          "#d6a70f",
+          "#f3cc6c",
+          "#ffedc3"
+        ]
+      },
+      "field-yellow-strong": {
+        "role": "primary",
+        "displayName": "Yellow field, hover",
+        "canonical": "#ffd95f",
+        "tonalRamp": [
+          "#110a00",
+          "#302500",
+          "#544302",
+          "#7a6412",
+          "#a48611",
+          "#ccab3a",
+          "#ebcf7b",
+          "#ffeebb"
+        ]
+      },
+      "field-blue": {
+        "role": "secondary",
+        "displayName": "Pale blue-grey field",
+        "canonical": "#cad5d4",
+        "tonalRamp": [
+          "#0a0c0b",
+          "#232827",
+          "#3f4746",
+          "#5f6867",
+          "#818c8b",
+          "#a7b0af",
+          "#cbd3d2",
+          "#eaf0ef"
+        ]
+      },
+      "field-pink": {
+        "role": "tertiary",
+        "displayName": "Pink field",
+        "canonical": "#ffb9ce",
+        "tonalRamp": [
+          "#12070b",
+          "#3a1b26",
+          "#633444",
+          "#8c5165",
+          "#b37388",
+          "#d89aac",
+          "#f5c0d0",
+          "#fee8ee"
+        ]
+      },
+      "field-beige": {
+        "role": "tertiary",
+        "displayName": "Beige field",
+        "canonical": "#e4dcd3",
+        "tonalRamp": [
+          "#0c0b09",
+          "#292622",
+          "#49443e",
+          "#6c655d",
+          "#8f8880",
+          "#b4ada5",
+          "#d6d0c9",
+          "#f2eee9"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Dark grey ground",
+        "canonical": "#27282b",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#262628",
+          "#444548",
+          "#656669",
+          "#88898d",
+          "#adaeb1",
+          "#d0d1d4",
+          "#eeeef1"
+        ]
+      },
+      "ground-raised": {
+        "role": "neutral",
+        "displayName": "Raised ground",
+        "canonical": "#323337",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#262629",
+          "#444548",
+          "#65666a",
+          "#88898e",
+          "#acaeb2",
+          "#d0d1d5",
+          "#edeef1"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#48494e",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#262629",
+          "#444549",
+          "#65666b",
+          "#88898e",
+          "#acaeb3",
+          "#d0d1d5",
+          "#edeef2"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong hairline",
+        "canonical": "#6e6f75",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#262629",
+          "#444549",
+          "#65666b",
+          "#88898f",
+          "#acadb3",
+          "#d0d1d6",
+          "#edeef2"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Off-white text",
+        "canonical": "#f5f3ee",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#272624",
+          "#464542",
+          "#686662",
+          "#8b8984",
+          "#afaea9",
+          "#d2d1cd",
+          "#efeeec"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted text",
+        "canonical": "#b9b8b2",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#272624",
+          "#464541",
+          "#676661",
+          "#8a8984",
+          "#afaea9",
+          "#d2d1cc",
+          "#efeeeb"
+        ]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "Faint text",
+        "canonical": "#a3a29c",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#272624",
+          "#464541",
+          "#676661",
+          "#8a8983",
+          "#afaea8",
+          "#d2d1cc",
+          "#efeeeb"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#131314",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262627",
+          "#454546",
+          "#666667",
+          "#89898a",
+          "#aeaeaf",
+          "#d1d1d2",
+          "#eeeeef"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Muted ink",
+        "canonical": "#3f3d3a",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#272625",
+          "#464542",
+          "#686662",
+          "#8b8985",
+          "#b0adaa",
+          "#d2d1ce",
+          "#f0eeec"
+        ]
+      },
+      "danger": {
+        "role": "neutral",
+        "displayName": "Danger",
+        "canonical": "#ff8672",
+        "tonalRamp": [
+          "#180503",
+          "#490e07",
+          "#7b2015",
+          "#aa3d2d",
+          "#d4604e",
+          "#f98a77",
+          "#fdc0b4",
+          "#fee9e5"
+        ]
+      },
+      "danger-soft": {
+        "role": "neutral",
+        "displayName": "Danger ground",
+        "canonical": "#40282a",
+        "tonalRamp": [
+          "#0f0a0a",
+          "#302223",
+          "#543f40",
+          "#795e60",
+          "#9e8182",
+          "#c2a6a7",
+          "#e2cacb",
+          "#fce9ea"
+        ]
+      },
+      "danger-on-field": {
+        "role": "neutral",
+        "displayName": "Danger on field",
+        "canonical": "#8c1c0c",
+        "tonalRamp": [
+          "#180503",
+          "#490f07",
+          "#7a2114",
+          "#a93d2d",
+          "#d4614e",
+          "#f88b77",
+          "#fdc0b4",
+          "#fee9e5"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The total score in the yellow score tile."
+      },
+      "score-card": {
+        "displayName": "Score on a card",
+        "purpose": "The score block on each job card."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The page title of Board, Profile, Settings, and Activity."
+      },
+      "headline-detail": {
+        "displayName": "Detail headline",
+        "purpose": "The title of the open posting."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "The heading of a form section."
+      },
+      "title-tile": {
+        "displayName": "Tile title",
+        "purpose": "The heading of a tile and of a board column."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "The default text."
+      },
+      "reading": {
+        "displayName": "Reading text",
+        "purpose": "The assessment, the facts summary, the description, and the cover letter; at most 70ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, small buttons, skill labels, card meta lines, notices."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Hints, the status bar, the foot of a card."
+      },
+      "badge": {
+        "displayName": "Badge",
+        "purpose": "State badges."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Keyboard keys, commands, identifiers, file names, and the log."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "tile-in",
+        "value": "tile-in 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards",
+        "purpose": "Color fills an opened job card and each detail tile from the top (clip-path inset from 100% to 0 on the bottom edge)."
+      },
+      {
+        "name": "tile-stagger",
+        "value": "45ms",
+        "purpose": "Start delay added for each following tile of the detail mosaic."
+      },
+      {
+        "name": "state-transition",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Color change of buttons and the switch on hover and state change (the framework default for color transitions)."
+      },
+      {
+        "name": "toast-in",
+        "value": "160ms, opacity 0 to 1 and 8px rise",
+        "purpose": "Entry of a toast. Exit fades and moves 4px."
+      },
+      {
+        "name": "board-card-fade",
+        "value": "150ms opacity",
+        "purpose": "An application card enters or leaves a board column; the other cards move to their new place."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation-duration and transition-duration 0.01ms",
+        "purpose": "Applies to every element when the system asks for reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "mosaic-container-3xl",
+        "value": "48rem"
+      },
+      {
+        "name": "mosaic-container-md",
+        "value": "28rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one main action of a view, such as \"Mark as applied\". Yellow fill with ink text.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Mark as applied</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; height: 36px; padding: 0 16px; border: 1px solid; border-radius: 0; font-size: 14px; font-weight: 600; cursor: pointer; transition: color .15s, background-color .15s, border-color .15s; font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--field-yellow, #ffca31); border-color: var(--field-yellow, #ffca31); color: var(--ink, #131314); } .ds-btn-primary:hover { background: var(--field-yellow-strong, #ffd95f); } .ds-btn-primary:focus-visible { outline: 2px solid var(--field-yellow, #ffca31); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: .45; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The default button. Transparent with a strong hairline border.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Dismiss</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; height: 36px; padding: 0 16px; border: 1px solid; border-radius: 0; font-size: 14px; font-weight: 600; cursor: pointer; transition: color .15s, background-color .15s, border-color .15s; font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; background: transparent; border-color: #6e6f75; color: #f5f3ee; } .ds-btn-secondary:hover { border-color: #f5f3ee; background: #323337; } .ds-btn-secondary:focus-visible { outline: 2px solid var(--field-yellow, #ffca31); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "A quiet action such as \"Rescore\" or \"Close\". No visible border.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">Rescore</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; height: 36px; padding: 0 16px; border: 1px solid; border-radius: 0; font-size: 14px; font-weight: 600; cursor: pointer; transition: color .15s, background-color .15s, border-color .15s; font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; background: transparent; border-color: transparent; color: #f5f3ee; } .ds-btn-ghost:hover { background: #323337; } .ds-btn-ghost:focus-visible { outline: 2px solid var(--field-yellow, #ffca31); outline-offset: 2px; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "The second step of a destructive action, shown after the first click with \"Cancel\" beside it.",
+      "html": "<button class=\"ds-btn-danger\" type=\"button\">Remove the application</button>",
+      "css": ".ds-btn-danger { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; height: 36px; padding: 0 16px; border: 1px solid; border-radius: 0; font-size: 14px; font-weight: 600; cursor: pointer; transition: color .15s, background-color .15s, border-color .15s; font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; background: transparent; border-color: #ff8672; color: #ff8672; } .ds-btn-danger:hover { background: #40282a; } .ds-btn-danger:focus-visible { outline: 2px solid var(--field-yellow, #ffca31); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A text field with its label above and a hint below.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-field-label\" for=\"ds-region\">Region</label><input id=\"ds-region\" class=\"ds-input\" type=\"text\" placeholder=\"For example Berlin\"><p class=\"ds-field-hint\">Used by sources that support a region, such as a city or country.</p></div>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 4px; max-width: 24rem; font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; } .ds-field-label { font-size: 13px; font-weight: 500; color: #f5f3ee; } .ds-field-hint { margin: 0; font-size: 12px; color: #b9b8b2; } .ds-input { width: 100%; height: 36px; padding: 6px 10px; border: 1px solid #6e6f75; border-radius: 0; background: transparent; color: #f5f3ee; font: inherit; font-size: 14px; caret-color: #ffca31; } .ds-input::placeholder { color: #a3a29c; } .ds-input:hover { border-color: #f5f3ee; } .ds-input:focus-visible { border-color: #ffca31; outline: 2px solid var(--field-yellow, #ffca31); outline-offset: 2px; }"
+    },
+    {
+      "name": "Badges",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "State badges with a 1px border and no fill: neutral, accent and ok (text color), danger, warn (dashed).",
+      "html": "<span class=\"ds-badges\"><span class=\"ds-badge\">Waiting</span><span class=\"ds-badge ds-badge-accent\">Saved</span><span class=\"ds-badge ds-badge-danger\">Excluded</span><span class=\"ds-badge ds-badge-warn\">Stale</span><span class=\"ds-badge ds-badge-ok\">Applied</span></span>",
+      "css": ".ds-badges { display: inline-flex; gap: 6px; font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; } .ds-badge { display: inline-flex; align-items: center; padding: 1px 6px; border: 1px solid #6e6f75; border-radius: 0; color: #b9b8b2; font-size: 11px; font-weight: 600; line-height: 16px; } .ds-badge-accent { border-color: #f5f3ee; color: #f5f3ee; } .ds-badge-danger { border-color: #ff8672; color: #ff8672; } .ds-badge-warn { border-style: dashed; color: #f5f3ee; } .ds-badge-ok { border-color: #f5f3ee; color: #f5f3ee; }"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "The top bar: lowercase wordmark, text links, counts as color blocks, closed by a 1px rule in the text color.",
+      "html": "<header class=\"ds-nav\"><a class=\"ds-nav-mark\" href=\"#\">sieve</a><nav class=\"ds-nav-links\"><a class=\"ds-nav-link ds-nav-link-active\" href=\"#\" aria-current=\"page\">Jobs<span class=\"ds-nav-count\">69</span></a><a class=\"ds-nav-link\" href=\"#\">Board<span class=\"ds-nav-count ds-nav-count-pink\">1</span></a><a class=\"ds-nav-link\" href=\"#\">Profile</a><a class=\"ds-nav-link\" href=\"#\">Settings</a><a class=\"ds-nav-link\" href=\"#\">Activity</a></nav></header>",
+      "css": ".ds-nav { display: flex; align-items: stretch; gap: 32px; height: 56px; padding: 0 24px; background: #27282b; border-bottom: 1px solid #f5f3ee; font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; } .ds-nav-mark { display: flex; align-items: center; color: #f5f3ee; font-size: 1.5rem; font-weight: 800; line-height: 1; letter-spacing: -0.025em; text-decoration: none; } .ds-nav-links { display: flex; align-items: stretch; gap: 24px; } .ds-nav-link { display: flex; align-items: center; padding-top: 2px; border-bottom: 2px solid transparent; color: #b9b8b2; font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; } .ds-nav-link:hover { color: #f5f3ee; } .ds-nav-link-active { color: #f5f3ee; border-bottom-color: #ffca31; } .ds-nav-link:focus-visible, .ds-nav-mark:focus-visible { outline: 2px solid var(--field-yellow, #ffca31); outline-offset: 2px; } .ds-nav-count { margin-left: 6px; padding: 0 4px; background: #f5f3ee; color: #27282b; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; } .ds-nav-count-pink { background: #ffb9ce; color: #131314; }"
+    },
+    {
+      "name": "Job Card",
+      "kind": "card",
+      "refersTo": "job-card",
+      "description": "One posting in the jobs grid, at rest and opened, with the score block and the score bar. The opened card fills with yellow from the top in 420ms.",
+      "html": "<div class=\"ds-jobs\"><div class=\"ds-job\"><span class=\"ds-job-top\"><span class=\"ds-job-score ds-job-score-medium\">51</span><span class=\"ds-job-side\"><span class=\"ds-job-band\">Possible match</span><span class=\"ds-job-bar\"><span style=\"width:51%\"></span></span></span></span><span class=\"ds-job-title\"><span class=\"ds-job-unread\"></span>Deployed Engineering Manager, Northern Europe</span><span class=\"ds-job-meta\">LangChain · Amsterdam</span><span class=\"ds-job-foot\">Arbeitnow · 4h</span></div><div class=\"ds-job ds-job-open\"><span class=\"ds-job-top\"><span class=\"ds-job-score\">67</span><span class=\"ds-job-side\"><span class=\"ds-job-band\">Possible match</span><span class=\"ds-job-bar\"><span style=\"width:67%\"></span></span></span></span><span class=\"ds-job-title\">Full-Stack Engineer</span><span class=\"ds-job-meta\">ElevenLabs · Remote</span><span class=\"ds-job-foot\">Arbeitnow · 4h</span></div></div>",
+      "css": ".ds-jobs { display: grid; grid-template-columns: repeat(2, 270px); gap: 6px; padding: 6px; background: #27282b; font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; } .ds-job { position: relative; display: flex; flex-direction: column; height: 184px; padding: 14px; background: #323337; color: #f5f3ee; } .ds-job:hover { background: #3a3b40; } .ds-job > * { position: relative; } .ds-job-top { display: flex; align-items: flex-start; gap: 10px; height: 44px; } .ds-job-score { display: flex; align-items: center; justify-content: center; height: 44px; min-width: 56px; padding: 0 6px; font-size: 2rem; font-weight: 800; line-height: 1; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; } .ds-job-score-medium { color: #ffca31; box-shadow: inset 0 0 0 1px #ffca31; } .ds-job-band { font-size: 12px; line-height: 1; color: #b9b8b2; } .ds-job-title { display: flex; align-items: flex-start; gap: 6px; margin-top: 12px; font-size: 15px; font-weight: 700; line-height: 1.375; } .ds-job-unread { flex: none; width: 8px; height: 8px; margin-top: 7px; background: #f5f3ee; } .ds-job-side { display: flex; flex: 1; flex-direction: column; gap: 4px; padding-top: 2px; } .ds-job-bar { display: block; height: 4px; max-width: 112px; background: #27282b; } .ds-job-bar span { display: block; height: 100%; background: #ffca31; } .ds-job-open .ds-job-bar { background: rgba(19, 19, 20, .2); } .ds-job-open .ds-job-bar span { background: #131314; } .ds-job-meta { margin-top: 4px; font-size: 13px; color: #b9b8b2; } .ds-job-foot { margin-top: auto; text-align: right; font-size: 12px; color: #a3a29c; font-variant-numeric: tabular-nums; } .ds-job-open, .ds-job-open:hover { background: #323337; color: #131314; } .ds-job-open::before { content: ''; position: absolute; inset: 0; background: #ffca31; animation: ds-tile-in 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards; } .ds-job-open .ds-job-score { background: #131314; color: #ffca31; } .ds-job-open .ds-job-band, .ds-job-open .ds-job-meta, .ds-job-open .ds-job-foot { color: #3f3d3a; } @keyframes ds-tile-in { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } } @media (prefers-reduced-motion: reduce) { .ds-job-open::before { animation-duration: 0.01ms; } }"
+    },
+    {
+      "name": "Score Mosaic",
+      "kind": "custom",
+      "refersTo": "tile-yellow",
+      "description": "The signature figure of the posting detail: the yellow score tile with a side notch to its parts, a down notch from the parts to the blue-grey skills tile, and a down notch from there to the assessment.",
+      "html": "<div class=\"ds-mosaic\"><section class=\"ds-tile ds-tile-yellow ds-notch-right\"><h3 class=\"ds-tile-title\">Score</h3><p class=\"ds-score\"><span class=\"ds-score-num\">67</span><span class=\"ds-score-band\">Possible match</span><span class=\"ds-score-bar\"><span style=\"width:67%\"></span></span></p></section><section class=\"ds-tile ds-tile-ground ds-tile-parts ds-notch-down\"><h3 class=\"ds-tile-title\">How the score is built</h3><dl class=\"ds-parts\"><dt>Skills<span class=\"ds-weight\">weight 40%</span></dt><dd class=\"ds-bar\"><span style=\"width:50%\"></span></dd><dd class=\"ds-part-num\">50</dd><dt>Experience<span class=\"ds-weight\">weight 30%</span></dt><dd class=\"ds-bar\"><span style=\"width:70%\"></span></dd><dd class=\"ds-part-num\">70</dd><dt>Preferences<span class=\"ds-weight\">weight 20%</span></dt><dd class=\"ds-bar\"><span style=\"width:70%\"></span></dd><dd class=\"ds-part-num\">70</dd><dt>Location<span class=\"ds-weight\">weight 10%</span></dt><dd class=\"ds-bar\"><span style=\"width:100%\"></span></dd><dd class=\"ds-part-num\">100</dd></dl><p class=\"ds-parts-note\">The total is the average of the four parts by weight. Conflicts with your preferences lower it.</p></section><section class=\"ds-tile ds-tile-blue ds-tile-wide ds-notch-down-blue\"><h3 class=\"ds-tile-title\">Matched skills (3)</h3><ul class=\"ds-skills\"><li>Full-stack development</li><li>Frontend development</li><li>Developer tools</li></ul></section></div>",
+      "css": ".ds-mosaic { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; width: 560px; padding: 6px 6px 20px; background: var(--bg, #27282b); font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; } .ds-tile { position: relative; min-width: 0; padding: 20px; animation: ds-mosaic-in 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards; } .ds-tile-title { margin: 0 0 12px; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; } .ds-tile-yellow { grid-column: span 2; display: flex; flex-direction: column; background: #ffca31; color: #131314; } .ds-tile-ground { background: #323337; color: #f5f3ee; } .ds-tile-parts { grid-column: span 4; animation-delay: 45ms; } .ds-tile-blue { background: #cad5d4; color: #131314; } .ds-tile-wide { grid-column: span 6; animation-delay: 90ms; } .ds-score { margin: auto 0 0; padding-top: 16px; } .ds-score-num { display: block; font-size: 6rem; font-weight: 800; line-height: .8; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; } .ds-score-band { display: block; margin-top: 12px; font-size: 14px; font-weight: 600; } .ds-score-bar { display: block; height: 6px; margin-top: 8px; background: rgba(19, 19, 20, .2); } .ds-score-bar span { display: block; height: 100%; background: #131314; } .ds-weight { display: block; font-size: 12px; color: #a3a29c; font-variant-numeric: tabular-nums; } .ds-parts-note { margin: 12px 0 0; font-size: 12px; color: #b9b8b2; } .ds-parts { display: grid; grid-template-columns: 6.5rem 1fr 2.75rem; align-items: center; gap: 12px; margin: 0; } .ds-parts dt { font-size: 13px; color: #b9b8b2; } .ds-parts dd { margin: 0; } .ds-bar { height: 10px; background: #27282b; } .ds-bar span { display: block; height: 100%; background: #ffca31; } .ds-part-num { text-align: right; font-size: 1.125rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; } .ds-skills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; } .ds-skills li { padding: 2px 8px; border: 1px solid rgba(19, 19, 20, .55); font-size: 13px; font-weight: 500; } .ds-notch-right::before, .ds-notch-right::after { content: ''; position: absolute; z-index: 2; pointer-events: none; clip-path: polygon(0 0, 100% 50%, 0 100%); } .ds-notch-right::before { top: 14px; left: 100%; height: 34px; width: 23px; background: var(--bg, #27282b); } .ds-notch-right::after { top: 20px; left: calc(100% - 1px); height: 22px; width: 12px; background: #ffca31; } .ds-notch-down::before, .ds-notch-down::after { content: ''; position: absolute; z-index: 2; pointer-events: none; clip-path: polygon(0 0, 100% 0, 50% 100%); } .ds-notch-down::before { left: 22px; top: 100%; width: 34px; height: 23px; background: var(--bg, #27282b); } .ds-notch-down::after { left: 28px; top: calc(100% - 1px); width: 22px; height: 12px; background: #323337; } .ds-notch-down-blue::before, .ds-notch-down-blue::after { content: ''; position: absolute; z-index: 2; pointer-events: none; clip-path: polygon(0 0, 100% 0, 50% 100%); } .ds-notch-down-blue::before { left: 22px; top: 100%; width: 34px; height: 23px; background: var(--bg, #27282b); } .ds-notch-down-blue::after { left: 28px; top: calc(100% - 1px); width: 22px; height: 12px; background: #cad5d4; } @keyframes ds-mosaic-in { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } } @media (prefers-reduced-motion: reduce) { .ds-tile { animation-duration: 0.01ms; animation-delay: 0s; } }"
+    },
+    {
+      "name": "Board Column and Application Card",
+      "kind": "custom",
+      "refersTo": "board-card",
+      "description": "A stage column of the board as a ground tile with a notch to the next stage, holding a pink application card with an inverted score block.",
+      "html": "<div class=\"ds-board\"><section class=\"ds-col ds-col-notch\"><h2 class=\"ds-col-head\">Interview<span class=\"ds-col-count\">1</span></h2><div class=\"ds-app\"><span class=\"ds-app-title\">Senior Frontend Engineer</span><span class=\"ds-app-company\">Almedia</span><span class=\"ds-app-row\"><span class=\"ds-app-score\">63</span>Applied Nov 11, 2026</span></div></section><section class=\"ds-col\"><h2 class=\"ds-col-head\">Offer<span class=\"ds-col-count\">0</span></h2></section></div>",
+      "css": ".ds-board { display: grid; grid-template-columns: repeat(2, 270px); gap: 6px; padding: 6px; background: var(--bg, #27282b); font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; } .ds-col { position: relative; display: flex; flex-direction: column; min-height: 220px; background: #323337; color: #f5f3ee; } .ds-col-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0; padding: 14px 16px 12px; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; } .ds-col-count { font-size: 1.5rem; font-weight: 800; line-height: 1; color: #b9b8b2; font-variant-numeric: tabular-nums; } .ds-app { margin: 0 6px 6px; padding: 12px; background: #ffb9ce; color: #131314; cursor: grab; } .ds-app-title { display: block; font-size: 15px; font-weight: 700; line-height: 1.375; } .ds-app-company { display: block; margin-top: 2px; font-size: 13px; color: #3f3d3a; } .ds-app-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: #3f3d3a; } .ds-app-score { padding: 0 6px; background: #131314; color: #ffb9ce; font-size: 14px; font-weight: 800; line-height: 24px; font-variant-numeric: tabular-nums; } .ds-col-notch::before, .ds-col-notch::after { content: ''; position: absolute; z-index: 2; pointer-events: none; clip-path: polygon(0 0, 100% 50%, 0 100%); } .ds-col-notch::before { top: 14px; left: 100%; height: 34px; width: 23px; background: var(--bg, #27282b); } .ds-col-notch::after { top: 20px; left: calc(100% - 1px); height: 22px; width: 12px; background: #323337; } "
+    }
+  ],
+  "narrative": {
+    "northStar": "Connected Tiles",
+    "overview": "The interface has one theme. The ground is dark grey (not black), and text on it is off-white. Four flat color fields sit on the ground: yellow, pale blue-grey, pink, and beige. Every field carries near-black text. Color is not decoration here: each field names one kind of content, so the user can tell what a block holds before reading it.\n\nThe posting detail and the application board are built from tiles that touch, with a thin channel of ground between them. A triangular notch in the color of a tile crosses the channel into the next tile and says \"the next tile follows from this one\". The score tile points to the parts it is computed from; a board stage points to the stage that follows it. The jobs list uses the same channel as a grid of cards of equal height, each with a large score numeral.\n\nAll corners are square, rules are 1px hairlines, and no surface casts a shadow. One grotesk family does all the text work, with tabular numerals and heavy weights for scores. Controls are standard web controls drawn with a 1px border.",
+    "keyCharacteristics": [
+      "One theme on a dark grey ground; there is no light theme.",
+      "Four flat color fields with near-black text; the color names the kind of content.",
+      "Zero corner radius, 1px hairline rules, no shadows.",
+      "Tiles that touch across a 6px channel, linked by triangular notches.",
+      "Large tabular score numerals in weight 800.",
+      "Color fills an opened card and the detail tiles from the top in 420ms."
+    ],
+    "rules": [
+      {
+        "name": "The Color Names Content Rule",
+        "body": "Yellow is the score and the primary action. Blue-grey is facts and skills. Pink is the cover letter and applications. Beige is the posting text. A field is never chosen for variety.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink On Fields Rule",
+        "body": "Text on a color field is ink. Secondary text on a field is muted ink, never grey. Borders on a field are ink at 28% or 55% opacity, and the focus ring turns from yellow to ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reserved Yellow Rule",
+        "body": "Yellow on the ground belongs to the score, the primary action, and the selected state of a control, plus four fixed signals: the active navigation underline, the focus ring, text selection, and the underline of text links. The selected state means a checked switch, a selected segment, an active filter chip, the outline of a selected card, and the outline of a drop target. Badges, counts, status dots, notices, and the unread marker are off-white or outlined, never yellow.",
+        "section": "colors"
+      },
+      {
+        "name": "The Inverted Score Rule",
+        "body": "A score shown on a color field is an ink block with the numeral in the color of that field (yellow on the opened card, pink on a board card).",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Numeral Rule",
+        "body": "Scores, counts, dates in lists, and ages use tabular numerals, so numbers align between cards and rows.",
+        "section": "typography"
+      },
+      {
+        "name": "The Weight Shows Read State Rule",
+        "body": "On a job card, an unread title is weight 700 in off-white text, and a read title is weight 500 in muted text.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Surface Rule",
+        "body": "Surfaces are flat at rest and in every state. Hover, selection, and focus change fill, border, or outline, never elevation.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Notch Means Follows Rule",
+        "body": "A notch points from a tile to the tile that follows from it: the score to its parts, the parts to the skills, the skills to the assessment, the assessment to the cover letter, a board stage to the next stage. A tile with no such relation has no notch.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do choose a field by the kind of content: yellow for the score and the primary action, blue-grey for facts and skills, pink for the cover letter and applications, beige for the posting text.",
+      "Do put ink text on every color field, and muted ink for secondary text on a field.",
+      "Do keep every corner square and every rule at 1px.",
+      "Do separate tiles and cards with the 6px channel of ground, and link tiles with a notch only when one follows from the other.",
+      "Do show a score as a tabular numeral in weight 800, and show its band as fill or outline as well as in words.",
+      "Do keep the jobs grid at 6 columns or fewer, and keep 3 card columns beside the open detail panel on a page of 5 or 6 columns.",
+      "Do fill an opened card and the detail tiles with color from the top in 420ms, and show them at once when the system asks for reduced motion."
+    ],
+    "donts": [
+      "Don't add a light theme or a second theme; the system has one theme on a dark grey ground.",
+      "Don't round corners.",
+      "Don't add shadows to show depth. Use the raised ground, a color field, or a 1px rule.",
+      "Don't put grey or off-white text on a color field.",
+      "Don't use yellow on the ground for a badge, a count, a status dot, or an unread marker; these are off-white or outlined.",
+      "Don't use a field color for decoration or to tell two items of the same kind apart.",
+      "Don't add a notch between tiles that have no \"follows from\" relation."
+    ]
+  }
+}

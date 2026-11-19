@@ -1,0 +1,59 @@
+#!/usr/bin/env node
+// A fake `claude` command for the end-to-end tests. The test server finds it first on its PATH,
+// so the CV digest runs without a real model call.
+// It supports the two calls that src/server/llm/claude-code.ts makes:
+//   claude --version
+//   claude -p ... --output-format json --json-schema <schema> ...   (the prompt comes on standard input)
+import { appendFileSync } from 'node:fs';
+
+const args = process.argv.slice(2);
+
+if (args.includes('--version')) {
+  console.log('0.0.0 (fake claude for the sieve end-to-end tests)');
+  process.exit(0);
+}
+
+/** The profile that the fake digest returns. The first-start scenario looks for these values in the interface. */
+const PROFILE = {
+  headline: 'Stub platform engineer from the fake claude command',
+  skills: [
+    { name: 'Fakelang', level: 'expert', years: 7 },
+    { name: 'TypeScript', level: 'strong', years: 5 },
+  ],
+  roles: [{ title: 'Platform Engineer', company: 'Stubworks', start: '2019', end: null, summary: 'Builds test doubles.' }],
+  totalYears: 7,
+  languages: ['English'],
+  education: [],
+};
+
+function value(flag) {
+  const i = args.indexOf(flag);
+  return i >= 0 ? args[i + 1] : undefined;
+}
+
+let stdin = '';
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', (chunk) => (stdin += chunk));
+process.stdin.on('end', () => {
+  let schema = {};
+  try {
+    schema = JSON.parse(value('--json-schema') ?? '{}');
+  } catch {
+    // An unreadable schema gets the error answer below.
+  }
+  const isProfile = !!schema.properties?.headline && !!schema.properties?.skills;
+
+  // The runner reads this log to verify that the server called this command with the CV text.
+  if (process.env.E2E_CLAUDE_LOG) {
+    appendFileSync(
+      process.env.E2E_CLAUDE_LOG,
+      JSON.stringify({ model: value('--model'), outputFormat: value('--output-format'), isProfile, prompt: stdin }) + '\n',
+    );
+  }
+
+  if (!args.includes('-p') || !isProfile) {
+    console.log(JSON.stringify({ type: 'result', is_error: true, result: 'The fake claude command only answers the candidate profile schema.' }));
+    process.exit(1);
+  }
+  console.log(JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: '', structured_output: PROFILE }));
+});

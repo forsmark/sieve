@@ -1,0 +1,544 @@
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import type { BulkAction, PostingListItem, TriageAction } from '../../../../shared/api';
+import { api } from '../../api/endpoints';
+import { qk } from '../../api/keys';
+import { errorText } from '../../api/client';
+import { updateListItems } from '../../api/events';
+import { Button, EmptyState, ErrorState, LoadingState, Spinner, cx } from '../../components/ui';
+import { plural } from '../../lib/format';
+import { showToast, toastError, undoLast } from '../../lib/toast';
+import { DetailPanel } from './DetailPanel';
+import { FilterBar, emptyPatch } from './FilterBar';
+import { hasActiveFilters, statusesOf, toPostingQuery, type JobSearch } from './filters';
+import { CARD_GAP, CARD_HEIGHT, CARD_MIN_WIDTH, JobRow, MAX_COLUMNS, listColumnsBesidePanel } from './JobRow';
+import { ShortcutHelp } from './ShortcutHelp';
+import { STATUS_OF, useTriage } from './useTriage';
+
+export const PAGE_SIZE = 50;
+
+function isTypingTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof HTMLElement)) return false;
+  if (t instanceof HTMLInputElement) return !['checkbox', 'radio', 'button', 'submit'].includes(t.type);
+  return t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t.isContentEditable;
+}
+
+function isWide(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 1024px)').matches;
+}
+
+export function JobsPage() {
+  const search = useSearch({ from: '/jobs' });
+  const navigate = useNavigate({ from: '/jobs' });
+  const qc = useQueryClient();
+
+  const update = useCallback(
+    (patch: Partial<JobSearch>, replace = false) => void navigate({ search: (prev) => ({ ...prev, ...patch }), replace }),
+    [navigate],
+  );
+
+  const query = toPostingQuery(search);
+  const list = useInfiniteQuery({
+    queryKey: qk.postings(query),
+    queryFn: ({ pageParam, signal }) => api.listPostings({ ...query, offset: pageParam, limit: PAGE_SIZE }, signal),
+    initialPageParam: 0,
+    // `nextOffset` says whether more exist. Rows that triage removed locally also left the server's result,
+    // so the next offset is the number of loaded rows; this avoids skipping postings.
+    getNextPageParam: (last, pages) =>
+      last.nextOffset === null ? undefined : Math.min(last.nextOffset, pages.reduce((n, p) => n + p.items.length, 0)),
+  });
+
+  const items = useMemo(() => {
+    const seen = new Set<string>();
+    const out: PostingListItem[] = [];
+    for (const page of list.data?.pages ?? []) {
+      for (const item of page.items) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        out.push(item);
+      }
+    }
+    return out;
+  }, [list.data]);
+  const total = list.data?.pages[0]?.total;
+
+  const [cursorRaw, setCursor] = useState(0);
+  const cursor = items.length === 0 ? -1 : Math.min(Math.max(0, cursorRaw), items.length - 1);
+  const current = cursor >= 0 ? items[cursor] : undefined;
+  const [selection, setSelection] = useState<Set<string>>(() => new Set());
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  const parentRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const focusRowSoon = useRef(false);
+
+  // Keep the cursor on the selected posting, for example after a reload with `?id=`.
+  useEffect(() => {
+    if (!search.id) return;
+    const idx = items.findIndex((i) => i.id === search.id);
+    if (idx >= 0) setCursor((c) => (c === idx ? c : idx));
+  }, [search.id, items]);
+
+  // Live updates add rows and change the order. The cursor stays on its posting while that posting is in the list.
+  // When the posting left the list, for example after a dismissal, the cursor keeps its position.
+  const cursorId = useRef<string | undefined>(undefined);
+  useLayoutEffect(() => {
+    const id = cursorId.current;
+    if (!id || items[cursorRaw]?.id === id) return;
+    const idx = items.findIndex((i) => i.id === id);
+    if (idx >= 0) setCursor(idx);
+  }, [items]);
+  useLayoutEffect(() => {
+    cursorId.current = current?.id;
+  }, [current?.id]);
+
+  // Drop selected ids that left the list.
+  useEffect(() => {
+    setSelection((sel) => {
+      if (sel.size === 0) return sel;
+      const ids = new Set(items.map((i) => i.id));
+      const next = new Set([...sel].filter((id) => ids.has(id)));
+      return next.size === sel.size ? sel : next;
+    });
+  }, [items]);
+
+  // The page has one column grid, with at most MAX_COLUMNS columns. The open detail panel covers some of
+  // those columns, so a card keeps its width when the panel opens or closes.
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [pageColumns, setPageColumns] = useState(1);
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const el = pageRef.current;
+    if (!el) return;
+    const measure = () => {
+      setPageColumns(Math.min(MAX_COLUMNS, Math.max(1, Math.floor((el.clientWidth - CARD_GAP) / (CARD_MIN_WIDTH + CARD_GAP)))));
+      // Below this width the detail covers the whole screen, as the "lg" breakpoint does in CSS.
+      setWide(window.innerWidth >= 1024);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const panelOpen = !!search.id && wide;
+  const columns = panelOpen ? listColumnsBesidePanel(pageColumns) : pageColumns;
+
+  const virtualizer = useVirtualizer({
+    count: items.length + (list.hasNextPage ? 1 : 0),
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => CARD_HEIGHT + CARD_GAP,
+    getItemKey: (i) => items[i]?.id ?? `loader-${i}`,
+    lanes: columns,
+    paddingStart: CARD_GAP,
+    overscan: 4 * columns,
+  });
+  // A new column count moves every card, so the same scroll offset would show other postings.
+  // Keep the open posting in view, or else the first visible row.
+  const lastColumns = useRef(columns);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const before = lastColumns.current;
+    lastColumns.current = columns;
+    virtualizer.measure();
+    if (before === columns) return;
+    // A column change places every card anew. Only a change of order animates.
+    const grid = gridRef.current;
+    if (grid) {
+      grid.dataset.still = '';
+      requestAnimationFrame(() => requestAnimationFrame(() => delete grid.dataset.still));
+    }
+    // On close, the posting that was open is the one under the cursor.
+    const openIndex = search.id ? items.findIndex((p) => p.id === search.id) : columns > before && cursor < items.length ? cursor : -1;
+    const firstVisible = Math.floor((parentRef.current?.scrollTop ?? 0) / (CARD_HEIGHT + CARD_GAP)) * before;
+    const anchor = openIndex >= 0 ? openIndex : firstVisible;
+    const el = parentRef.current;
+    if (!el || anchor <= 0) return;
+    // The offset comes from the fixed card height, because the virtualizer has no measurements at this point.
+    const rowTop = Math.floor(anchor / columns) * (CARD_HEIGHT + CARD_GAP);
+    const top = openIndex >= 0 ? rowTop - (el.clientHeight - CARD_HEIGHT) / 2 : rowTop;
+    el.scrollTop = Math.max(0, top);
+  }, [columns, virtualizer]);
+  const virtualItems = virtualizer.getVirtualItems();
+
+  // Paging: load the next page when the end of the list comes into view.
+  const lastVirtual = virtualItems[virtualItems.length - 1];
+  useEffect(() => {
+    if (!lastVirtual) return;
+    if (lastVirtual.index >= items.length - 5 && list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage();
+  }, [lastVirtual, items.length, list]);
+
+  // Move DOM focus to the cursor row when the list had focus.
+  useEffect(() => {
+    if (!focusRowSoon.current || cursor < 0) return;
+    const el = parentRef.current?.querySelector<HTMLElement>(`[data-row-button="${cursor}"]`);
+    if (el) {
+      el.focus({ preventScroll: true });
+      focusRowSoon.current = false;
+    }
+  });
+
+  const listHasFocus = () => {
+    const a = document.activeElement;
+    return !!a && (a === document.body || !!parentRef.current?.contains(a));
+  };
+
+  const openPosting = useCallback(
+    (id: string | undefined, replace = false) => {
+      update({ id }, replace);
+    },
+    [update],
+  );
+
+  const moveCursor = (next: number) => {
+    if (items.length === 0) return;
+    const i = Math.min(Math.max(0, next), items.length - 1);
+    if (listHasFocus()) focusRowSoon.current = true;
+    setCursor(i);
+    virtualizer.scrollToIndex(i, { align: 'auto' });
+    if (search.id && items[i]) openPosting(items[i].id, true);
+    if (i >= items.length - 3 && list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage();
+  };
+
+  const triage = useTriage();
+  const statuses = statusesOf(search);
+
+  const doTriage = useCallback(
+    (ids: string[], action: TriageAction, label?: string) => {
+      if (ids.length === 0) return;
+      const leaves = !statuses.includes(STATUS_OF[action]);
+      if (leaves && search.id && ids.includes(search.id)) {
+        // Follow with the next posting, so triage in the detail view keeps going.
+        const idx = items.findIndex((i) => i.id === search.id);
+        const after = items.slice(idx + 1).find((i) => !ids.includes(i.id)) ?? items.slice(0, Math.max(0, idx)).reverse().find((i) => !ids.includes(i.id));
+        openPosting(after?.id, true);
+      }
+      if (listHasFocus()) focusRowSoon.current = true;
+      triage.mutate({ ids, action, label });
+      setSelection((s) => (s.size ? new Set() : s));
+    },
+    [items, openPosting, search.id, statuses, triage],
+  );
+
+  const bulkOther = useMutation({
+    mutationFn: ({ ids, action }: { ids: string[]; action: Exclude<BulkAction, TriageAction> }) => api.bulk(ids, action),
+    onMutate: ({ ids, action }) => {
+      if (action === 'read' || action === 'unread') for (const id of ids) updateListItems(qc, id, (i) => ({ ...i, unread: action === 'unread' }));
+    },
+    onSuccess: (r, { ids, action }) => {
+      const what = plural(ids.length, 'posting');
+      showToast({
+        message:
+          action === 'rescore'
+            ? `Rescore queued for ${plural(r.queued ?? 0, 'posting')}.`
+            : action === 'analyze'
+              ? `Expanded analysis started for ${plural(r.queued ?? 0, 'posting')}.`
+              : `Marked ${what} as ${action}.`,
+        tone: 'info',
+      });
+      setSelection(new Set());
+    },
+    onError: (e) => {
+      toastError(errorText(e));
+      void qc.invalidateQueries({ queryKey: qk.postingsAll });
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: qk.status }),
+  });
+
+  const targets = (): string[] => (selection.size ? [...selection] : current ? [current.id] : []);
+  const labelFor = (ids: string[]) => (ids.length === 1 ? items.find((i) => i.id === ids[0])?.title : undefined);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelection((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const onOpenRow = useCallback(
+    (id: string, index: number) => {
+      setCursor(index);
+      openPosting(id);
+      if (!isWide()) requestAnimationFrame(() => headingRef.current?.focus());
+    },
+    [openPosting],
+  );
+
+  const closeDetail = () => {
+    focusRowSoon.current = true;
+    openPosting(undefined);
+  };
+
+  // ---- Keyboard shortcuts
+
+  const handler = useRef<(e: KeyboardEvent) => void>(() => {});
+  handler.current = (e: KeyboardEvent) => {
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (isTypingTarget(e.target)) return;
+    if (helpOpen) {
+      if (e.key === '?') {
+        e.preventDefault();
+        setHelpOpen(false);
+      }
+      return;
+    }
+    const target = e.target as HTMLElement | null;
+    switch (e.key) {
+      case 'j':
+        e.preventDefault();
+        moveCursor(cursor + 1);
+        break;
+      case 'k':
+        e.preventDefault();
+        moveCursor(cursor - 1);
+        break;
+      case 'ArrowRight':
+      case 'ArrowLeft':
+      case 'ArrowDown':
+      case 'ArrowUp': {
+        // Arrow keys move in the grid. They stay free for scrolling inside the detail panel.
+        const inList = target === document.body || (!!target && !!parentRef.current?.contains(target));
+        if (!inList || e.shiftKey) break;
+        e.preventDefault();
+        const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowDown' ? columns : -columns;
+        const next = cursor + step;
+        // A vertical step stops at the first and the last row and does not jump to another column.
+        if (Math.abs(step) > 1 && (next < 0 || next > items.length - 1)) break;
+        moveCursor(next);
+        break;
+      }
+      case 'Enter':
+        if (current && (target === document.body || target === parentRef.current)) {
+          e.preventDefault();
+          onOpenRow(current.id, cursor);
+        }
+        break;
+      case 's':
+        e.preventDefault();
+        doTriage(targets(), 'save', labelFor(targets()));
+        break;
+      case 'd':
+        e.preventDefault();
+        doTriage(targets(), 'dismiss', labelFor(targets()));
+        break;
+      case 'r':
+        e.preventDefault();
+        doTriage(targets(), 'restore', labelFor(targets()));
+        break;
+      case 'a':
+        e.preventDefault();
+        doTriage(targets(), 'apply', labelFor(targets()));
+        break;
+      case 'o':
+        if (current) {
+          e.preventDefault();
+          window.open(current.url, '_blank', 'noopener,noreferrer');
+        }
+        break;
+      case 'u':
+        e.preventDefault();
+        void undoLast().then((done) => {
+          if (!done) showToast({ message: 'Nothing to undo.', tone: 'info' }, 2000);
+        });
+        break;
+      case 'x':
+        if (current) {
+          e.preventDefault();
+          toggleSelect(current.id);
+        }
+        break;
+      case '/':
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+        break;
+      case '?':
+        e.preventDefault();
+        setHelpOpen(true);
+        break;
+      case 'Escape':
+        if (search.id) {
+          e.preventDefault();
+          closeDetail();
+        } else if (selection.size) {
+          e.preventDefault();
+          setSelection(new Set());
+        }
+        break;
+    }
+  };
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => handler.current(e);
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, []);
+
+  const allLoadedSelected = items.length > 0 && selection.size === items.length;
+
+  return (
+    <div ref={pageRef} className="flex h-full">
+      <div
+        className={cx('flex min-w-0 flex-col', !panelOpen && 'flex-1')}
+        style={panelOpen ? { width: `${(columns / pageColumns) * 100}%`, flexShrink: 0 } : undefined}
+      >
+        <FilterBar search={search} update={update} total={total} loading={list.isPending} searchRef={searchRef} />
+
+        <div className="flex h-9 shrink-0 items-center gap-2 border-b border-fg px-3 text-[13px]">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="size-4"
+              checked={allLoadedSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = selection.size > 0 && !allLoadedSelected;
+              }}
+              onChange={() => setSelection(allLoadedSelected ? new Set() : new Set(items.map((i) => i.id)))}
+              disabled={items.length === 0}
+            />
+            <span className={selection.size ? 'font-medium' : 'text-muted'}>
+              {selection.size ? `${selection.size} selected` : 'Select all loaded'}
+            </span>
+          </label>
+          {selection.size > 0 ? (
+            <div role="toolbar" aria-label="Bulk actions" className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+              <Button size="sm" onClick={() => doTriage([...selection], 'save')}>
+                Save
+              </Button>
+              <Button size="sm" onClick={() => doTriage([...selection], 'dismiss')}>
+                Dismiss
+              </Button>
+              <Button size="sm" onClick={() => doTriage([...selection], 'restore')}>
+                Restore
+              </Button>
+              <Button size="sm" onClick={() => doTriage([...selection], 'apply')}>
+                Applied
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => bulkOther.mutate({ ids: [...selection], action: 'rescore' })}>
+                Rescore
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                title="Fable 5.2 analyzes each selected posting. Your CV text and the posting text are sent to Anthropic."
+                onClick={() => bulkOther.mutate({ ids: [...selection], action: 'analyze' })}
+              >
+                Analyze
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => bulkOther.mutate({ ids: [...selection], action: 'read' })}>
+                Mark read
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => bulkOther.mutate({ ids: [...selection], action: 'unread' })}>
+                Mark unread
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelection(new Set())}>
+                Clear
+              </Button>
+            </div>
+          ) : (
+            <span className="ml-auto">
+              <Button size="sm" variant="ghost" onClick={() => setHelpOpen(true)} aria-keyshortcuts="?">
+                Shortcuts <kbd className="ml-1 border border-line-strong px-1 font-mono text-[11px]">?</kbd>
+              </Button>
+            </span>
+          )}
+        </div>
+
+        <div
+          ref={parentRef}
+          className="relative min-h-0 flex-1 overflow-y-auto"
+          role="list"
+          aria-label={`Job postings${total !== undefined ? `, ${plural(total, 'posting')}` : ''}`}
+          aria-busy={list.isFetching || undefined}
+        >
+          {list.isPending && <LoadingState label="Loading postings" />}
+          {list.isError && <ErrorState error={list.error} onRetry={() => void list.refetch()} title="The postings could not be loaded." />}
+          {list.isSuccess && items.length === 0 && (
+            hasActiveFilters(search) ? (
+              <EmptyState
+                title="No postings match these filters."
+                action={
+                  <Button variant="primary" onClick={() => update(emptyPatch(search))}>
+                    Clear filters
+                  </Button>
+                }
+              >
+                Try a lower minimum score, another status, or a shorter search.
+              </EmptyState>
+            ) : (
+              <EmptyState title="No postings yet.">
+                Add a CV and search terms, then fetch jobs with the button in the status bar. New postings appear here as they arrive.
+              </EmptyState>
+            )
+          )}
+          {items.length > 0 && (
+            <div ref={gridRef} className="card-grid" style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+              {virtualItems.map((v) => {
+                const item = items[v.index];
+                return (
+                  <div
+                    key={v.key}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: CARD_GAP,
+                      width: `calc((100% - ${CARD_GAP}px) / ${columns} - ${CARD_GAP}px)`,
+                      height: CARD_HEIGHT,
+                      // The percentage is the width of the card, so one lane is one card plus one gap.
+                      transform: `translate(calc(${v.lane} * (100% + ${CARD_GAP}px)), ${v.start}px)`,
+                    }}
+                  >
+                    {item ? (
+                      <JobRow
+                        item={item}
+                        index={v.index}
+                        active={v.index === cursor}
+                        open={item.id === search.id}
+                        selected={selection.has(item.id)}
+                        onOpen={onOpenRow}
+                        onToggleSelect={toggleSelect}
+                        onFocusRow={setCursor}
+                      />
+                    ) : (
+                      <div role="listitem" className="flex h-full items-center justify-center text-[13px] text-muted">
+                        {list.isFetchingNextPage ? <Spinner small label="Loading more" /> : list.isFetchNextPageError ? (
+                          <Button size="sm" onClick={() => void list.fetchNextPage()}>
+                            Loading failed. Try again
+                          </Button>
+                        ) : (
+                          ''
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {search.id && (
+        <aside
+          aria-label="Posting details"
+          className="fixed inset-0 z-30 flex flex-col bg-bg lg:static lg:z-auto lg:min-w-0 lg:flex-1 lg:border-l lg:border-fg"
+        >
+          <DetailPanel
+            key={search.id}
+            id={search.id}
+            onClose={closeDetail}
+            onTriage={doTriage}
+            onTagClick={(tag) => update({ tag, id: undefined })}
+            headingRef={headingRef}
+          />
+        </aside>
+      )}
+
+      {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
+    </div>
+  );
+}

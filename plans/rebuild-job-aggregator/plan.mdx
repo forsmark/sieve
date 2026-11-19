@@ -1,0 +1,628 @@
+---
+title: "newera-plus: architecture for the job aggregator rebuild"
+kind: plan
+localOnly: true
+---
+
+# newera-plus: architecture for the job aggregator rebuild
+
+## Objective
+
+Rebuild the job aggregator from an empty repository. The product keeps three principles from the first version: it scrapes job postings, it ranks them against the user's CV, and it shows the result in one interface.
+
+The work is done when a clean container can do this without manual repair: import a CV, fetch from two sources, score the postings, and let the user triage and track an application. A restart in the middle of scoring must lose no posting.
+
+The behavior is specified in `openspec/changes/rebuild-job-aggregator/`. That change holds six capability specs, the design, and the task list. This plan shows the architecture from `design.md`. A few decisions are still open. See Open Questions at the end.
+
+## Scope
+
+In scope: source adapters, the ingestion pipeline, the candidate profile, two-stage matching, the ranked job interface, and application tracking.
+
+Not in scope: notifications, cover letter generation, file attachments, more than one user, and data import from the first version.
+
+## System overview
+
+One process serves the API, runs the background worker, and serves the built client. One SQLite file holds all state. The server has one module for each capability and a shared kernel. A module calls another module only through its exported interface. Modules hand work to each other through the task queue and report changes through the event bus.
+
+<Diagram id="overview-diagram" caption="One process, one database file. Modules sit on a shared kernel and talk through tasks and events.">
+
+```html
+<div class="ov">
+  <div class="diagram-panel ov-row" data-rough>
+    <div class="ov-label">Browser</div>
+    <div class="ov-cells">
+      <div class="diagram-node">Jobs list and detail</div>
+      <div class="diagram-node">Application board</div>
+      <div class="diagram-node">Settings</div>
+      <div class="diagram-node">Activity</div>
+    </div>
+  </div>
+  <div class="ov-link"><span class="diagram-pill">REST for reads and commands</span><span class="diagram-pill">SSE for live events</span></div>
+  <div class="diagram-panel ov-row" data-rough>
+    <div class="ov-label">http</div>
+    <div class="ov-cells">
+      <div class="diagram-node">Routes</div>
+      <div class="diagram-node">SSE endpoint</div>
+      <div class="diagram-node">Auth and sessions</div>
+    </div>
+  </div>
+  <div class="diagram-panel ov-row" data-rough>
+    <div class="ov-label">Modules</div>
+    <div class="ov-cells ov-six">
+      <div class="diagram-card"><b>sources</b><span class="diagram-muted">adapters, fetch runner, schedule</span></div>
+      <div class="diagram-card"><b>ingestion</b><span class="diagram-muted">normalize, dedup, enrich, liveness</span></div>
+      <div class="diagram-card"><b>profile</b><span class="diagram-muted">CV, structured profile, preferences</span></div>
+      <div class="diagram-card"><b>matching</b><span class="diagram-muted">extract, constraints, judge, score</span></div>
+      <div class="diagram-card"><b>applications</b><span class="diagram-muted">stages, history, snapshots</span></div>
+      <div class="diagram-card"><b>llm</b><span class="diagram-muted">one client, schema output</span></div>
+    </div>
+  </div>
+  <div class="diagram-panel ov-row" data-rough>
+    <div class="ov-label">kernel</div>
+    <div class="ov-cells">
+      <div class="diagram-node">Task queue</div>
+      <div class="diagram-node">Event bus</div>
+      <div class="diagram-node">Migrations</div>
+      <div class="diagram-node">Settings and logger</div>
+    </div>
+  </div>
+  <div class="ov-ext">
+    <div class="diagram-box" data-rough><b>SQLite file</b><span class="diagram-muted">all state, WAL mode</span></div>
+    <div class="diagram-box" data-rough><b>Job boards</b><span class="diagram-muted">HTTP, one rate limit for each board</span></div>
+    <div class="diagram-box" data-rough><b>Language model endpoint</b><span class="diagram-muted">OpenAI-compatible API</span></div>
+  </div>
+</div>
+```
+
+```css
+.ov { display: grid; gap: 14px; }
+.ov-row { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center; padding: 14px; }
+.ov-label { font-weight: 700; color: var(--wf-muted); }
+.ov-cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.ov-six { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ov-cells .diagram-card { display: grid; gap: 4px; padding: 10px; }
+.ov-link { display: flex; gap: 10px; justify-content: center; }
+.ov-ext { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ov-ext .diagram-box { display: grid; gap: 4px; padding: 12px; }
+```
+
+</Diagram>
+
+<Callout id="stack-decision" tone="decision">
+
+**Stack: Bun, Hono, React with Vite, SQLite.** The first version showed that this stack fits a single-user tool. The system needs a long-lived worker, so a framework that expects a separate worker process adds a second process for no gain. One user and one writer do not need Postgres, and a file database makes a backup a file copy.
+
+</Callout>
+
+## The path of one posting
+
+Every posting follows the same path. The ingest step runs inside the fetch run. Each later step is a task in the durable queue. Two steps call the language model. All other steps are plain code.
+
+<Diagram id="pipeline-diagram" caption="Upper lane: code. Lower lane: language model calls. Ingest runs inside the fetch run. Each later box is a task kind.">
+
+```html
+<div class="pl">
+  <div class="pl-lane-label diagram-muted">Code</div>
+  <div class="pl-lane">
+    <div class="diagram-node" data-rough><b>fetch</b><span class="diagram-muted">adapter yields raw postings</span></div>
+    <div class="diagram-node" data-rough><b>ingest</b><span class="diagram-muted">normalize, upsert, dedup</span></div>
+    <div class="diagram-node" data-rough><b>enrich</b><span class="diagram-muted">fetch missing description</span></div>
+    <div class="pl-gap"></div>
+    <div class="diagram-node" data-rough><b>constraints</b><span class="diagram-muted">hard rules, exclusion reason</span></div>
+    <div class="pl-gap"></div>
+    <div class="diagram-node" data-rough><b>score</b><span class="diagram-muted">location fit, penalties, total</span></div>
+  </div>
+  <div class="pl-lane-label diagram-muted">Model</div>
+  <div class="pl-lane">
+    <div class="pl-gap"></div>
+    <div class="pl-gap"></div>
+    <div class="pl-gap"></div>
+    <div class="diagram-box pl-model" data-rough><b>extract</b><span class="diagram-muted">posting facts, once for each posting</span></div>
+    <div class="pl-gap"></div>
+    <div class="diagram-box pl-model" data-rough><b>judge</b><span class="diagram-muted">three fit scores and explanation</span></div>
+    <div class="pl-gap"></div>
+  </div>
+  <div class="pl-foot">
+    <span class="diagram-pill">Order: fetch, ingest, enrich, extract, constraints, judge, score</span>
+    <span class="diagram-pill">Duplicates stop after ingest</span>
+    <span class="diagram-pill">Excluded postings skip judge</span>
+  </div>
+</div>
+```
+
+```css
+.pl { display: grid; gap: 10px; }
+.pl-lane { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: stretch; }
+.pl-lane .diagram-node, .pl-lane .diagram-box { display: grid; gap: 4px; padding: 10px 8px; align-content: start; }
+.pl-model { background: var(--wf-accent-soft); }
+.pl-lane-label { font-weight: 700; }
+.pl-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+```
+
+</Diagram>
+
+The posting is visible in the interface right after the ingest step with the match state "waiting". The score fills in later through a live event.
+
+## Two-stage matching
+
+The first version asked the model one question for each posting and stored one number. Every change to the CV or the preferences forced a new model call for every posting. The new design separates what the posting says from how well it fits.
+
+<Columns id="matching-columns">
+<Column id="matching-before" label="First version">
+
+One prompt receives the CV text, the preferences, and the posting text. It returns one score from 0 to 100 and two sentences.
+
+The location rules are literal prompt text for one country.
+
+One hash of CV and preferences marks scores as stale. Any change means one model call for each posting.
+
+</Column>
+
+<Column id="matching-after" label="New design">
+
+**Extract** reads only the posting and stores `PostingFacts`. The result does not depend on the profile.
+
+**Constraints** and **score** are code. They read the facts, the preferences, and the weights. They handle location, language, and work arrangement, both hard and soft.
+
+**Judge** reads the facts, the structured profile, and the other soft preferences. It returns three fit scores, matched skills, missing skills, and an assessment.
+
+Two version hashes decide which steps run again.
+
+</Column>
+</Columns>
+
+### What a change costs
+
+<Table
+  id="rescore-table"
+  columns={["What changed", "Version that changes", "Work for each posting", "Model calls"]}
+  rows={[
+    ["Weights, excluded companies, and location, language, or work arrangement preferences, hard or soft", "rule_version", "constraints and score", "0"],
+    ["Skills, experience, target seniority, salary, wanted and unwanted technologies, notes", "judge_version", "judge, then score", "1"],
+    ["Posting description", "description_hash", "extract, judge, score", "2"],
+    ["Fetch interval, endpoint URL, interface settings", "none", "none", "0"],
+  ]}
+/>
+
+<Callout id="unknown-fact-rule" tone="info">
+
+An unknown fact never excludes a posting. If the posting does not state a location or a language, the hard constraint for that fact does not apply. The detail view shows the extracted facts and the exclusion reason, so the user can check each exclusion.
+
+</Callout>
+
+## Key contracts
+
+These three shapes are the hardest to change after code depends on them. The code below is the planned shape.
+
+<TabsBlock
+  id="contracts-tabs"
+  orientation="vertical"
+  tabs={[
+    {
+      id: "contract-adapter",
+      label: "sources/adapter.ts",
+      blocks: [
+        {
+          id: "contract-adapter-code",
+          type: "annotated-code",
+          data: {
+            filename: "src/server/sources/adapter.ts",
+            language: "ts",
+            code: "export interface SourceAdapter {\n  id: string;\n  name: string;\n  supports: { keywords: boolean; region: boolean };\n  rate: { minDelayMs: number; maxConcurrent: number };\n  search(query: SearchQuery, ctx: FetchContext): AsyncIterable<RawPosting>;\n  fetchDescription?(posting: StoredPosting, ctx: FetchContext): Promise<string | null>;\n}\n\nexport interface FetchContext {\n  http: RateLimitedClient;\n  signal: AbortSignal;\n  log: Logger;\n}",
+            annotations: [
+              { lines: "5", label: "Rate limit is data", note: "The runner applies the limit. An adapter never sleeps. This removes the fixed 30 second pause between sources." },
+              { lines: "6", label: "Stream, not array", note: "The runner ingests each posting as it arrives. A timeout keeps the postings that arrived before it." },
+              { lines: "7", label: "Optional hook", note: "The enrich task calls this when a board needs a second request for the description." },
+              { lines: "10-14", note: "The client gives rate limit, retry with backoff on 429 and 5xx, and a timeout. Adapters do not write to the database." },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: "contract-facts",
+      label: "shared/facts.ts",
+      blocks: [
+        {
+          id: "contract-facts-code",
+          type: "annotated-code",
+          data: {
+            filename: "src/shared/facts.ts",
+            language: "ts",
+            code: "export const PostingFacts = z.object({\n  requiredSkills: z.array(z.string()),\n  optionalSkills: z.array(z.string()),\n  seniority: z.enum(['junior', 'mid', 'senior', 'lead']).nullable(),\n  workArrangement: z.enum(['remote', 'hybrid', 'onsite']).nullable(),\n  location: z.object({ city: z.string().nullable(), country: z.string().nullable() }),\n  requiredLanguages: z.array(z.string()),\n  salary: z.object({ min: z.number(), max: z.number(), currency: z.string(), period: z.string() }).nullable(),\n  summary: z.string(),\n});\n\nexport const Judgment = z.object({\n  skillsFit: z.number().int().min(0).max(100),\n  experienceFit: z.number().int().min(0).max(100),\n  preferenceFit: z.number().int().min(0).max(100),\n  matchedSkills: z.array(z.string()),\n  missingSkills: z.array(z.string()),\n  assessment: z.string(),\n});",
+            annotations: [
+              { lines: "1-10", label: "Extract output", note: "Stored once in `posting_facts`. A null value means the posting does not state the fact." },
+              { lines: "12-19", label: "Judge output", note: "The model returns no total. Code computes the total from these scores, the location score, and the weights." },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: "contract-llm",
+      label: "llm/client.ts",
+      blocks: [
+        {
+          id: "contract-llm-code",
+          type: "annotated-code",
+          data: {
+            filename: "src/server/llm/client.ts",
+            language: "ts",
+            code: "export interface LlmClient {\n  generateObject<T>(\n    schema: z.ZodType<T>,\n    messages: Message[],\n    opts?: { maxAttempts?: number; signal?: AbortSignal },\n  ): Promise<T>;\n  health(): Promise<{ reachable: boolean; modelAvailable: boolean }>;\n}",
+            annotations: [
+              { lines: "2-6", label: "One entry point", note: "One client for the OpenAI-compatible chat endpoint replaces three provider functions. The client validates with the schema and retries with the error text. It does not repair JSON with regular expressions." },
+              { lines: "7", note: "A probe runs every 30 seconds. A failure pauses the language model lane and publishes `llm.status`." },
+            ],
+          },
+        },
+      ],
+    },
+  ]}
+/>
+
+## Durable work
+
+One `tasks` table drives all background work. The first version kept the scoring queue in memory and rebuilt it with a table scan after each start.
+
+<Diagram id="queue-diagram" caption="One worker loop, three lanes. The language model lane runs one task at a time.">
+
+```html
+<div class="tq">
+  <div class="diagram-panel tq-col" data-rough>
+    <b>Producers</b>
+    <div class="diagram-node">Fetch runner</div>
+    <div class="diagram-node">Rescore planner</div>
+    <div class="diagram-node">Schedule timer</div>
+    <div class="diagram-node">User commands</div>
+  </div>
+  <div class="diagram-panel tq-col" data-rough>
+    <b>tasks table</b>
+    <div class="diagram-card"><span class="diagram-pill">pending</span><span class="diagram-muted">waits for run_after</span></div>
+    <div class="diagram-card"><span class="diagram-pill">running</span><span class="diagram-muted">reset to pending at startup</span></div>
+    <div class="diagram-card"><span class="diagram-pill">done</span><span class="diagram-muted">kept for the activity screen</span></div>
+    <div class="diagram-card"><span class="diagram-pill">failed</span><span class="diagram-muted">after the retry limit, with last_error</span></div>
+  </div>
+  <div class="diagram-panel tq-col" data-rough>
+    <b>Worker lanes</b>
+    <div class="diagram-box"><b>Network lane</b><span class="diagram-muted">enrich, liveness</span></div>
+    <div class="diagram-box tq-model"><b>Language model lane</b><span class="diagram-muted">derive_profile, extract, judge. Concurrency 1. Pauses when the endpoint is down.</span></div>
+    <div class="diagram-box"><b>Code lane</b><span class="diagram-muted">constraints, score</span></div>
+  </div>
+</div>
+```
+
+```css
+.tq { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.tq-col { display: grid; gap: 10px; padding: 14px; align-content: start; }
+.tq-col .diagram-card, .tq-col .diagram-box { display: grid; gap: 4px; padding: 10px; }
+.tq-model { background: var(--wf-accent-soft); }
+```
+
+</Diagram>
+
+A unique index on kind and subject for unfinished tasks removes duplicate work. A failed task gets a later `run_after` with exponential backoff. The schedule is one row with the interval, the paused flag, and the next run time. Sessions are rows too. No state that matters lives only in memory.
+
+## Data model
+
+Drizzle defines the schema and generates versioned SQL migrations. The server applies pending migrations at startup. `UNIQUE(source, external_id)` on `postings` makes ingestion idempotent.
+
+<DataModel
+  id="data-model"
+  entities={[
+    {
+      id: "postings",
+      name: "postings",
+      fields: [
+        { name: "id", type: "text", pk: true },
+        { name: "source", type: "text" },
+        { name: "external_id", type: "text" },
+        { name: "title", type: "text" },
+        { name: "company", type: "text" },
+        { name: "company_key", type: "text" },
+        { name: "fingerprint", type: "text" },
+        { name: "duplicate_of", type: "text", fk: "postings.id", nullable: true },
+        { name: "description", type: "text", nullable: true },
+        { name: "link_status", type: "text" },
+        { name: "triage_status", type: "text" },
+        { name: "triage_origin", type: "text" },
+        { name: "read_at", type: "text", nullable: true },
+      ],
+    },
+    {
+      id: "posting_facts",
+      name: "posting_facts",
+      fields: [
+        { name: "posting_id", type: "text", pk: true, fk: "postings.id" },
+        { name: "facts_json", type: "json" },
+        { name: "description_hash", type: "text" },
+        { name: "model", type: "text" },
+      ],
+    },
+    {
+      id: "matches",
+      name: "matches",
+      fields: [
+        { name: "posting_id", type: "text", pk: true, fk: "postings.id" },
+        { name: "state", type: "text" },
+        { name: "judge_version", type: "text" },
+        { name: "rule_version", type: "text" },
+        { name: "excluded_reason", type: "text", nullable: true },
+        { name: "skills_score", type: "integer", nullable: true },
+        { name: "experience_score", type: "integer", nullable: true },
+        { name: "preference_score", type: "integer", nullable: true },
+        { name: "location_score", type: "integer", nullable: true },
+        { name: "total_score", type: "integer", nullable: true },
+        { name: "matched_skills", type: "json" },
+        { name: "missing_skills", type: "json" },
+        { name: "assessment", type: "text", nullable: true },
+      ],
+    },
+    {
+      id: "applications",
+      name: "applications",
+      fields: [
+        { name: "posting_id", type: "text", pk: true, fk: "postings.id" },
+        { name: "stage", type: "text" },
+        { name: "notes", type: "text", nullable: true },
+        { name: "interview_at", type: "text", nullable: true },
+        { name: "applied_at", type: "text" },
+        { name: "snapshot_json", type: "json" },
+      ],
+    },
+    {
+      id: "application_events",
+      name: "application_events",
+      fields: [
+        { name: "id", type: "integer", pk: true },
+        { name: "posting_id", type: "text", fk: "applications.posting_id" },
+        { name: "from_stage", type: "text", nullable: true },
+        { name: "to_stage", type: "text" },
+        { name: "created_at", type: "text" },
+      ],
+    },
+    {
+      id: "profile",
+      name: "profile",
+      fields: [
+        { name: "id", type: "integer", pk: true },
+        { name: "cv_text", type: "text" },
+        { name: "derived_json", type: "json" },
+        { name: "edits_json", type: "json" },
+        { name: "judge_version", type: "text" },
+      ],
+    },
+    {
+      id: "preferences",
+      name: "preferences",
+      fields: [
+        { name: "id", type: "integer", pk: true },
+        { name: "prefs_json", type: "json" },
+        { name: "rule_version", type: "text" },
+      ],
+    },
+    {
+      id: "fetch_runs",
+      name: "fetch_runs",
+      fields: [
+        { name: "id", type: "integer", pk: true },
+        { name: "trigger", type: "text" },
+        { name: "state", type: "text" },
+        { name: "started_at", type: "text" },
+        { name: "ended_at", type: "text", nullable: true },
+      ],
+    },
+    {
+      id: "fetch_run_sources",
+      name: "fetch_run_sources",
+      fields: [
+        { name: "run_id", type: "integer", fk: "fetch_runs.id" },
+        { name: "source", type: "text" },
+        { name: "state", type: "text" },
+        { name: "found", type: "integer" },
+        { name: "new", type: "integer" },
+        { name: "invalid", type: "integer" },
+        { name: "error", type: "text", nullable: true },
+      ],
+    },
+    {
+      id: "tasks",
+      name: "tasks",
+      fields: [
+        { name: "id", type: "integer", pk: true },
+        { name: "kind", type: "text" },
+        { name: "subject_id", type: "text" },
+        { name: "state", type: "text" },
+        { name: "attempts", type: "integer" },
+        { name: "run_after", type: "text" },
+        { name: "last_error", type: "text", nullable: true },
+      ],
+    },
+  ]}
+  relations={[
+    { from: "posting_facts", to: "postings", kind: "1-1" },
+    { from: "matches", to: "postings", kind: "1-1" },
+    { from: "applications", to: "postings", kind: "1-1" },
+    { from: "applications", to: "application_events", kind: "1-n" },
+    { from: "fetch_runs", to: "fetch_run_sources", kind: "1-n" },
+  ]}
+/>
+
+`profile.derived_json` and `profile.edits_json` stay separate. The effective profile is the derived profile with the edits applied on top, so a new CV import keeps the manual edits. The tables `schedule`, `sessions`, and `settings` each hold a few plain rows and are not shown.
+
+## Repository layout
+
+<FileTree
+  id="file-tree"
+  title="Planned layout"
+  entries={[
+    { path: "src/server/kernel/db.ts", change: "added", note: "Connection, WAL mode, in-memory database for tests." },
+    { path: "src/server/kernel/schema.ts", change: "added", note: "Drizzle schema. Source for generated migrations." },
+    { path: "src/server/kernel/tasks.ts", change: "added", note: "Claim, complete, fail, backoff, lanes." },
+    { path: "src/server/kernel/events.ts", change: "added", note: "In-process event bus." },
+    { path: "src/server/sources/adapter.ts", change: "added", note: "The adapter contract." },
+    { path: "src/server/sources/registry.ts", change: "added", note: "One line for each adapter." },
+    { path: "src/server/sources/runner.ts", change: "added", note: "Parallel adapters, failure isolation, run history." },
+    { path: "src/server/sources/adapters/jobindex.ts", change: "added", note: "One file for each board, with a recorded fixture test." },
+    { path: "src/server/ingestion/normalize.ts", change: "added" },
+    { path: "src/server/ingestion/dedup.ts", change: "added", note: "Exact fingerprint, then fuzzy match inside one company_key." },
+    { path: "src/server/ingestion/enrich.ts", change: "added" },
+    { path: "src/server/ingestion/liveness.ts", change: "added" },
+    { path: "src/server/profile/cv-import.ts", change: "added" },
+    { path: "src/server/profile/versions.ts", change: "added", note: "Computes judge_version and rule_version." },
+    { path: "src/server/matching/extract.ts", change: "added" },
+    { path: "src/server/matching/constraints.ts", change: "added", note: "Pure function. No model call." },
+    { path: "src/server/matching/judge.ts", change: "added" },
+    { path: "src/server/matching/score.ts", change: "added", note: "Pure function. Weighted total." },
+    { path: "src/server/matching/rescore-planner.ts", change: "added", note: "Compares stored versions with current versions." },
+    { path: "src/server/applications/service.ts", change: "added" },
+    { path: "src/server/llm/client.ts", change: "added" },
+    { path: "src/server/http/routes.ts", change: "added" },
+    { path: "src/server/http/sse.ts", change: "added" },
+    { path: "src/server/http/auth.ts", change: "added" },
+    { path: "src/shared/facts.ts", change: "added", note: "Zod schemas used by server and client." },
+    { path: "src/client/features/jobs/", change: "added", note: "List, detail, filters, triage. One folder for each feature." },
+    { path: "src/client/features/board/", change: "added" },
+    { path: "src/client/features/settings/", change: "added" },
+    { path: "src/client/features/activity/", change: "added" },
+    { path: "openspec/changes/rebuild-job-aggregator/", change: "added", note: "Proposal, six specs, design, and tasks. Already written." },
+  ]}
+/>
+
+## Interface and live updates
+
+The client has four routes: `/jobs`, `/board`, `/settings`, and `/activity`. The jobs screen has two panes on a wide screen: the ranked list on the left and the detail on the right. On a narrow screen the detail is its own route. Filters, sort order, and the selected posting are typed search parameters in the address, so a reload restores the view.
+
+The server publishes events such as `run.progress`, `posting.added`, `match.updated`, and `llm.status`. One SSE endpoint forwards them. The client patches the matching query in place. A new score updates its row without a reload. The list changes its order only when the user asks for a refresh, so rows do not move while the user reads.
+
+Triage actions update the interface first and roll back on an error. Each action returns an undo token.
+
+<Callout id="auth-decision" tone="decision">
+
+**Access control is one optional password.** Session token hashes live in the database, so a login survives a restart. Without a password the server binds to `127.0.0.1` only.
+
+</Callout>
+
+## Risks
+
+<Table
+  id="risk-table"
+  columns={["Risk", "Mitigation"]}
+  rows={[
+    ["A new posting needs two model calls, where the first version needed one.", "The judge input is short structured data. The extract result is reused for every later rescore. Task 7.9 measures time and quality on 20 real postings before the interface work depends on it."],
+    ["A local model does not support JSON schema output.", "The client falls back to JSON mode with validation and retry. The settings screen tests this when the user saves the endpoint."],
+    ["A wrong extracted fact excludes a good posting.", "An unknown fact never excludes. The user can show excluded postings with the reason for each."],
+    ["A job board changes its markup or blocks requests.", "A fixture test for each adapter detects parse changes. A failed source does not stop the others. The run history shows the error."],
+    ["The LinkedIn guest endpoint has no official support.", "The adapter has a conservative rate and is the first candidate to disable. The terms of each board remain the user's responsibility."],
+    ["Fuzzy duplicate detection merges two different roles.", "The user can separate a duplicate. The threshold is one constant with tests on real title pairs."],
+    ["A slow local model needs hours for a large backlog.", "The queue takes the newest postings first. The interface shows queue length and estimated time."],
+  ]}
+/>
+
+## Build order
+
+The task list in `openspec/changes/rebuild-job-aggregator/tasks.md` has ten groups. Each group lands its own tests.
+
+<Table
+  id="build-order"
+  columns={["Group", "Delivers", "Depends on"]}
+  rows={[
+    ["1. Foundation", "Workspace, checks, Docker start", "none"],
+    ["2. Kernel", "Schema, migrations, task queue, event bus, SSE", "1"],
+    ["3. Language model", "generateObject, validation, health probe", "2"],
+    ["4. Sources", "Adapter contract, runner, schedule, seven adapters", "2"],
+    ["5. Ingestion", "Normalize, upsert, dedup, enrich, liveness", "4"],
+    ["6. Profile", "CV import, structured profile, preferences, versions", "3"],
+    ["7. Matching", "Extract, constraints, judge, score, rescore planner", "5 and 6"],
+    ["8. Interface", "List, detail, triage, filters, live updates, settings, login", "7"],
+    ["9. Applications", "Board, stages, history, snapshots", "8"],
+    ["10. Integration", "Backup, activity screen, end-to-end and restart tests", "all"],
+  ]}
+/>
+
+## Verification
+
+<Checklist
+  id="verification"
+  items={[
+    { id: "v-validate", label: "Run `openspec validate rebuild-job-aggregator --strict`", note: "Passes today for the written change." },
+    { id: "v-unit", label: "Run `bun test` for server and client", note: "Tests use an in-memory database. One test fails if the database path is a file." },
+    { id: "v-calls", label: "Count model calls in the rescore planner tests", note: "A weight change gives 0 calls. A skill change gives 1 call for each posting." },
+    { id: "v-eval", label: "Score 20 real postings with the target local model", note: "Record quality and time for each posting in `docs/matching-eval.md`." },
+    { id: "v-e2e", label: "End-to-end on a clean container", note: "Import a CV, fetch from two sources, wait for scores, save one posting, dismiss one, and mark one as applied. Check that the board shows the application." },
+    { id: "v-restart", label: "Stop the container during scoring and start it again", note: "The queue resumes. The count of postings and tasks matches the count before the stop." },
+  ]}
+/>
+
+### Open Questions
+
+<QuestionForm
+  id="open-questions"
+  questions={[
+    {
+      id: "q-model-default",
+      title: "Which language model endpoint is the default?",
+      subtitle: "The client works with any OpenAI-compatible endpoint. This sets the default and the model that task 7.9 evaluates.",
+      mode: "single",
+      options: [
+        { id: "local", label: "Local endpoint", detail: "Ollama, LM Studio, or llama.cpp on this machine. No cost for each posting. Slower, and extraction quality depends on the model.", recommended: true },
+        { id: "hosted", label: "Hosted model", detail: "Better extraction and faster scoring. Costs money for each posting, and CV data leaves the machine." },
+        { id: "split", label: "Local for extract, hosted for judge", detail: "The judge input is short, so the hosted cost is low. Two endpoints to configure." },
+      ],
+      required: true,
+    },
+    {
+      id: "q-embedding",
+      title: "Add an embedding prefilter in this change?",
+      subtitle: "A similarity between profile and posting can order the queue so that likely matches are scored first.",
+      mode: "single",
+      options: [
+        { id: "later", label: "Not in this change", detail: "Add it later behind the score step if the backlog becomes slow.", recommended: true },
+        { id: "now", label: "Build it now", detail: "Adds an embedding model and one more task kind." },
+      ],
+    },
+    {
+      id: "q-weights",
+      title: "Which default weights?",
+      subtitle: "The user can change the weights in settings at no model cost.",
+      mode: "single",
+      options: [
+        { id: "skills-first", label: "Skills 40, experience 25, preferences 20, location 15", detail: "Tune after the first week of use.", recommended: true },
+        { id: "equal", label: "Equal weights, 25 each", detail: "Simple to reason about. Location counts as much as skills." },
+      ],
+    },
+    {
+      id: "q-sources",
+      title: "Which sources ship first?",
+      subtitle: "The first version has seven adapters. Each one is an isolated task under the new contract.",
+      mode: "multi",
+      options: [
+        { id: "jobindex", label: "Jobindex", recommended: true },
+        { id: "linkedin", label: "LinkedIn guest API", recommended: true },
+        { id: "remotive", label: "Remotive", recommended: true },
+        { id: "arbeitnow", label: "Arbeitnow", recommended: true },
+        { id: "remoteok", label: "RemoteOK", recommended: true },
+        { id: "infojobs", label: "InfoJobs", detail: "Disabled by default in the first version." },
+        { id: "tecnoempleo", label: "Tecnoempleo", detail: "Disabled by default in the first version." },
+      ],
+    },
+    {
+      id: "q-deferred",
+      title: "Should a deferred feature move into this change?",
+      subtitle: "The first version has these features. This change leaves them out.",
+      mode: "multi",
+      options: [
+        { id: "telegram", label: "Telegram notification for high scores" },
+        { id: "cover-letter", label: "Cover letter generation" },
+        { id: "attachments", label: "File attachments on applications" },
+        { id: "import", label: "Data import from the first version" },
+      ],
+    },
+    {
+      id: "q-notes",
+      title: "Other constraints or changes?",
+      mode: "freeform",
+      placeholder: "Add constraints or review notes...",
+    },
+  ]}
+  submitLabel="Send answers"
+/>
