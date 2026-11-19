@@ -73,7 +73,7 @@ Without `AUTH_PASSWORD` the server accepts connections from the local machine on
 
 ## Language model providers
 
-Select the provider under Settings. The "Test" button checks the connection.
+Select the provider under Settings. Use "Save and test" to check new settings before they are stored. "Test saved settings" checks the stored ones again.
 
 ### Local endpoint (default)
 
@@ -124,7 +124,7 @@ These three tasks always use Fable 5.2 at medium effort through the `claude` com
 claude -p --model claude-fable-5-2 --effort medium --output-format json --json-schema <schema> --tools "" --no-session-persistence --system-prompt <instructions>
 ```
 
-The provider setting does not change this. Your CV text goes to Anthropic for these tasks, also when you selected the local endpoint for matching. They run in their own queue, so they do not wait for posting scores.
+The provider setting does not change this. Your CV text goes to Anthropic for these tasks, also when you selected the local endpoint for matching. They do not wait for posting scores.
 
 Open a posting and select "Generate cover letter". The letter uses the language of the posting. You can add an instruction for one letter, for example a word limit. The system stores one letter for each posting. The model gets a rule to use only facts from your CV, but check every claim before you send the letter. The PDF uses a standard font that covers Western European text.
 
@@ -140,8 +140,8 @@ Under Settings, enable notifications. The system generates a topic name with 120
 - Topics on the public server have no password. Everyone who knows the topic name can read the messages. Keep the name private, and regenerate it if it leaks.
 - A message holds only the title, the company, the score, and a link to your installation. It never holds CV text, profile data, or assessment text.
 - A posting notifies at most once, when its first score is at or above the threshold. The default threshold is 80.
-- Postings that score within two minutes of each other arrive as one message.
-- Set "Address of this application" so the link in the message opens your installation.
+- Postings that score within the batching window arrive as one message. The window is 120 seconds by default.
+- Set "Address of this app" so the link in the message opens your installation.
 
 ## Backups
 
@@ -160,7 +160,7 @@ pnpm test        # all tests
 pnpm e2e         # browser end-to-end tests, needs google-chrome, no network
 pnpm typecheck   # TypeScript
 pnpm lint        # ESLint
-pnpm check       # typecheck and lint
+pnpm check       # typecheck, lint, and spec checks
 ```
 
 Tests always use an in-memory database and never open `DATA_DIR`.
