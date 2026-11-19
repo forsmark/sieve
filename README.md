@@ -67,9 +67,45 @@ Environment variables:
 | `PORT` | `3000` | The port of the server. |
 | `DATA_DIR` | `./data` | The directory of the database and the backups. |
 | `AUTH_PASSWORD` | not set | The login password. Without it there is no login. |
-| `HOST` | `127.0.0.1` without a password, `0.0.0.0` with one | The address the server binds to. |
+| `HOST` | `127.0.0.1` without a password, `0.0.0.0` with one or with `EDGE_ALLOWED_USER` | The address the server binds to. |
+| `EDGE_ALLOWED_USER` | not set | Behind the olympus-edge gateway: the only user name the gateway may send in `X-User`. Other users get status 403. |
+| `APP_BASE` | `/` | At build time: the path prefix the interface is served under, for example `/sieve/`. |
 
 Without `AUTH_PASSWORD` the server accepts connections from the local machine only. All other settings are in the interface.
+
+## Host on olympus-edge
+
+sieve can run as a gated app on the olympus-edge platform, at `https://olympus.tailf4d52f.ts.net/sieve/`. The platform builds the `Containerfile` with `APP_BASE=/sieve/` from the committed `HEAD` and signs users in through the portal. The image contains the latest Claude Code command line from the day of the build.
+
+1. Register the app:
+
+   ```sh
+   portal app add sieve --name "Sieve" --src ~/development/sieve --description "Job aggregator"
+   ```
+
+2. Let only your portal user in. Use the name that `portal user list` shows:
+
+   ```sh
+   printf '%s' 'Marc' | portal app env set sieve EDGE_ALLOWED_USER
+   ```
+
+3. Create a long-lived Claude Code token with `claude setup-token` and store it. Type the command yourself, so the token stays out of logs and chats:
+
+   ```sh
+   printf '%s' '<token>' | portal app env set sieve CLAUDE_CODE_OAUTH_TOKEN
+   ```
+
+4. Deploy, then check the state:
+
+   ```sh
+   portal app deploy sieve
+   portal app status sieve
+   portal app logs sieve -n 50
+   ```
+
+5. Open the app. Under Settings, select Claude Code and select "Save and test". Set "Address of this app" to `https://olympus.tailf4d52f.ts.net/sieve` so that notification links open the app.
+
+The data is in `/srv/edge/data/apps/sieve/` and survives deploys. Changes to the variables take effect on the next deploy. The token gives the container access to your Claude plan. If it leaks, revoke it on claude.ai and create a new one.
 
 ## Language model providers
 
@@ -112,7 +148,7 @@ Host setup:
 2. Start sieve as the same user, so the command finds the login.
 3. Select "Claude Code" under Settings.
 
-Container setup: the image does not contain Claude Code. Add `RUN npm install -g @anthropic-ai/claude-code` to the `Dockerfile`, and mount your login into the container, for example `~/.claude:/root/.claude` and `~/.claude.json:/root/.claude.json`. This setup was not tested.
+Container setup with the `Dockerfile`: that image does not contain Claude Code. The olympus-edge `Containerfile` does, see "Host on olympus-edge". Add `RUN npm install -g @anthropic-ai/claude-code` to the `Dockerfile`, and mount your login into the container, for example `~/.claude:/root/.claude` and `~/.claude.json:/root/.claude.json`. This setup was not tested.
 
 With this provider, posting text and your profile data leave your machine and go to Anthropic. Each posting needs two calls. The usage counts against your Claude Code plan.
 

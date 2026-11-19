@@ -2,20 +2,20 @@
 
 ## 1. Path prefix in the client
 
-- [ ] 1.1 Add `apiPath(path)` in `src/client/src/api/client.ts` that joins `import.meta.env.BASE_URL` with an absolute API path. Use it in `request`, in `new EventSource` in `events.ts`, and in `coverLetterPdfUrl` and `backupUrl` in `endpoints.ts`. Verify with unit tests for the scenarios "Built for a prefix", "Download link under a prefix" and "No prefix", mapped in `e2e/coverage/edge-hosting.json`.
-- [ ] 1.2 Set `base: process.env.APP_BASE ?? '/'` in `vite.config.ts`, give the router `basepath` from `BASE_URL`, and replace the `href="/jobs"` anchor in `router.tsx` with a router link. Verify that `APP_BASE=/sieve/ pnpm build` writes `/sieve/assets/...` URLs into `dist/client/index.html`, and that `pnpm test` passes.
-- [ ] 1.3 Add a Vite plugin that puts the portal manifest link, the apple-touch-icon link and the Apple web-app meta tags into the head when `APP_BASE` is not `/`. Verify that the tags appear in a `/sieve/` build and are absent from a default build.
+- [x] 1.1 Add `apiPath(path)` in `src/client/src/api/client.ts` that joins `import.meta.env.BASE_URL` with an absolute API path. Use it in `request`, in `new EventSource` in `events.ts`, and in `coverLetterPdfUrl` and `backupUrl` in `endpoints.ts`. Verify with unit tests for the scenarios "Built for a prefix", "Download link under a prefix" and "No prefix", mapped in `e2e/coverage/edge-hosting.json`.
+- [x] 1.2 Set `base: process.env.APP_BASE ?? '/'` in `vite.config.ts`, give the router `basepath` from `BASE_URL`, and replace the `href="/jobs"` anchor in `router.tsx` with a router link. Verify that `APP_BASE=/sieve/ pnpm build` writes `/sieve/assets/...` URLs into `dist/client/index.html`, and that `pnpm test` passes.
+- [x] 1.3 Add a Vite plugin that puts the portal manifest link, the apple-touch-icon link and the Apple web-app meta tags into the head when `APP_BASE` is not `/`. Verify that the tags appear in a `/sieve/` build and are absent from a default build.
 
 ## 2. Server routes and gateway check
 
-- [ ] 2.1 Add `GET /healthz` and serve `icon.png` without a login. Add a 512x512 `src/client/public/icon.png` in the DESIGN.md colors. Verify with tests in `app.test.ts` for "Platform probes health" and "Device fetches the icon", mapped in the coverage file.
-- [ ] 2.2 Add `src/server/http/edge.ts` with a middleware that compares `X-User` with `EDGE_ALLOWED_USER`. Register it in `createApp` before every route except `/healthz` and `/icon.png`. Read the variable in `config.ts`, and default `host` to `0.0.0.0` when it is set. Verify with tests for "Allowed user", "Other user", "Header missing" and "Not configured", mapped in the coverage file.
-- [ ] 2.3 Run `pnpm check` and `pnpm test`. Verify that both pass.
+- [x] 2.1 Add `GET /healthz` and serve `icon.png` without a login. Add a 512x512 `src/client/public/icon.png` in the DESIGN.md colors. Verify with tests in `edge.test.ts` for "Platform probes health" and "Device fetches the icon", mapped in the coverage file.
+- [x] 2.2 Add `src/server/http/edge.ts` with a middleware that compares `X-User` with `EDGE_ALLOWED_USER`. Register it in `createApp` before every route except `/healthz` and `/icon.png`. Read the variable in `config.ts`, and default `host` to `0.0.0.0` when it is set. Verify with tests for "Allowed user", "Other user", "Header missing" and "Not configured", mapped in the coverage file.
+- [x] 2.3 Run `pnpm check` and `pnpm test`. Verify that both pass. Note: `pnpm test`, typecheck, lint and the other spec checks pass. `coverage` reports the `edge-hosting` map as "in no spec" until the delta syncs to `openspec/specs/` at archive.
 
 ## 3. Container image
 
-- [ ] 3.1 Add a root `Containerfile` with `ARG APP_BASE`, a pinned Claude Code release installed with pnpm, `DISABLE_AUTOUPDATER=1`, user `node` (uid 1000), `HOME=/home/node`, `DATA_DIR=/data`, wget, and `HEALTHCHECK` on `/healthz`. Verify with `podman build --build-arg APP_BASE=/sieve/` and a run with `--userns=keep-id:uid=1000,gid=1000 --user 1000:1000`, a temp `/data` and `EDGE_ALLOWED_USER=Marc`: `/healthz` answers 200 within 30 seconds, `/icon.png` answers a PNG, `/api/status` answers 403 without `X-User` and 200 with `X-User: Marc`, the index refers to `/sieve/assets/`, and `claude --version` runs in the container. Remove the container and the image afterwards.
-- [ ] 3.2 Add a README section "Host on olympus-edge" covering the variables `APP_BASE`, `EDGE_ALLOWED_USER` and `CLAUDE_CODE_OAUTH_TOKEN`, `claude setup-token`, and the `portal` commands. Add `EDGE_ALLOWED_USER` to the configuration table. Verify that the commands in the section match `portal app --help`.
+- [x] 3.1 Add a root `Containerfile` with `ARG APP_BASE`, the latest Claude Code release installed with pnpm after the app files (changed during apply, see design.md), `DISABLE_AUTOUPDATER=1`, user `node` (uid 1000), `HOME=/home/node`, `DATA_DIR=/data`, wget, and `HEALTHCHECK` on `/healthz`. Verify with `podman build --build-arg APP_BASE=/sieve/` and a run with `--userns=keep-id:uid=1000,gid=1000 --user 1000:1000`, a temp `/data` and `EDGE_ALLOWED_USER=Marc`: `/healthz` answers 200 within 30 seconds, `/icon.png` answers a PNG, `/api/status` answers 403 without `X-User` and 200 with `X-User: Marc`, the index refers to `/sieve/assets/`, and `claude --version` runs in the container. Remove the container and the image afterwards.
+- [x] 3.2 Add a README section "Host on olympus-edge" covering the variables `APP_BASE`, `EDGE_ALLOWED_USER` and `CLAUDE_CODE_OAUTH_TOKEN`, `claude setup-token`, and the `portal` commands. Add `EDGE_ALLOWED_USER` to the configuration table. Verify that the commands in the section match `portal app --help`.
 
 ## 4. Deploy
 

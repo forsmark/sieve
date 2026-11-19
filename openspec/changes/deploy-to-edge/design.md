@@ -46,3 +46,9 @@ Today the client calls absolute paths (`/api/...`, `new EventSource('/api/events
 3. `portal app deploy sieve`. Under Settings, select Claude Code, run "Save and test", and set "Address of this app" to `https://olympus.tailf4d52f.ts.net/sieve`.
 4. The edge install starts with an empty database. The user uploads the CV and enters the search terms again. Moving a local database is out of scope, because `/srv/edge` is reachable only through `portal`.
 5. Rollback: `portal app deploy` rolls back by itself when the health check fails. `portal app remove sieve` takes it off the edge and keeps the data.
+
+## Changed during apply
+
+### 2026-11-19: Claude Code is the latest release, not a pinned one
+
+The owner chose the latest Claude Code over a pinned version. The Containerfile installs `@anthropic-ai/claude-code@latest` in a step after the app files, so each deploy of a new commit installs the release of that day instead of reusing a cached layer. `DISABLE_AUTOUPDATER=1` stays, because the container cannot write to the global install. The risk "A Claude Code release changes flags or output" is now handled by the deploy health check and by "Save and test" after a deploy, not by a pin. Task 3.1 changed to match.

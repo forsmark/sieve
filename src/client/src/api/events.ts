@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useQueryClient, type InfiniteData, type QueryClient, type QueryKey } from '@tanstack/react-query';
 import type { PostingDetail, PostingListItem, PostingListResponse, ServerEvent } from '../../../shared/api';
 import { createStore } from '../lib/store';
-import { ApiRequestError } from './client';
+import { ApiRequestError, apiPath } from './client';
 import { api } from './endpoints';
 import { qk } from './keys';
 
@@ -278,7 +278,7 @@ export function useServerEvents(enabled: boolean, reconnectDelayMs = 5000): void
 
     const connect = () => {
       connectionStore.set('connecting');
-      const es = new EventSource('/api/events');
+      const es = new EventSource(apiPath('/api/events'));
       source = es;
       es.addEventListener('ready', () => {
         connectionStore.set('open');

@@ -34,7 +34,9 @@ recoverPendingAnalyses();
 const app = createApp({ clientDir: resolve('dist/client') });
 const server = serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => {
   log('info', `sieve listens on http://${info.address}:${info.port}`);
-  if (!config.authPassword) {
+  if (config.edgeAllowedUser) {
+    log('info', `only the gateway user ${JSON.stringify(config.edgeAllowedUser)} is let in`);
+  } else if (!config.authPassword) {
     const local = config.host === '127.0.0.1' || config.host === 'localhost' || config.host === '::1';
     log(local ? 'info' : 'warn', local
       ? 'no AUTH_PASSWORD is set, so the server accepts only local connections'

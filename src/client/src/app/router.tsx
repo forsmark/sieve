@@ -1,4 +1,4 @@
-import { createRootRoute, createRoute, createRouter, lazyRouteComponent, redirect, type RouterHistory } from '@tanstack/react-router';
+import { Link, createRootRoute, createRoute, createRouter, lazyRouteComponent, redirect, type RouterHistory } from '@tanstack/react-router';
 import { RootLayout } from './Layout';
 import { JobsPage } from '../features/jobs/JobsPage';
 import { LoadingState } from '../components/ui';
@@ -9,9 +9,9 @@ const rootRoute = createRootRoute({
   notFoundComponent: () => (
     <div className="p-8 text-center">
       <p className="font-medium">This page does not exist.</p>
-      <a className="mt-2 inline-block font-medium underline decoration-accent decoration-2 hover:decoration-fg" href="/jobs">
+      <Link className="mt-2 inline-block font-medium underline decoration-accent decoration-2 hover:decoration-fg" to="/jobs">
         Go to jobs
-      </a>
+      </Link>
     </div>
   ),
 });
@@ -48,6 +48,8 @@ export function createAppRouter(history?: RouterHistory) {
   return createRouter({
     routeTree,
     history,
+    // The path prefix of this build, for example `/sieve` behind the olympus-edge portal.
+    basepath: import.meta.env.BASE_URL.replace(/\/+$/, '') || '/',
     // Plain `key=value` search parameters, so `/jobs?id=abc` from a notification works and URLs stay readable.
     parseSearch: parseSearchString,
     stringifySearch: stringifySearchObject,

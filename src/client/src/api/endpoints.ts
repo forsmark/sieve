@@ -4,7 +4,7 @@ import type {
   StatusDto, TriageAction, TriageResult,
 } from '../../../shared/api';
 import type { ApplicationStage, Preferences, StructuredProfile, TriageStatus } from '../../../shared/schemas';
-import { request, toQueryString } from './client';
+import { apiPath, request, toQueryString } from './client';
 
 /** Typed helpers for every route in `src/server/http/app.ts`. */
 
@@ -73,7 +73,7 @@ export const api = {
     request<CoverLetterDto>(`/api/postings/${encodeURIComponent(id)}/cover-letter`, { method: 'POST', body: { instruction } }),
   saveCoverLetter: (id: string, text: string) =>
     request<CoverLetterDto>(`/api/postings/${encodeURIComponent(id)}/cover-letter`, { method: 'PUT', body: { text } }),
-  coverLetterPdfUrl: (id: string) => `/api/postings/${encodeURIComponent(id)}/cover-letter.pdf`,
+  coverLetterPdfUrl: (id: string) => apiPath(`/api/postings/${encodeURIComponent(id)}/cover-letter.pdf`),
   rescore: (id: string) => request<{ queued: number }>(`/api/postings/${encodeURIComponent(id)}/rescore`, { method: 'POST' }),
 
   // Profile and preferences
@@ -138,5 +138,5 @@ export const api = {
   logs: (level: string) => request<LogDto[]>(`/api/logs${toQueryString({ level: level === 'all' ? undefined : level })}`),
   backups: () => request<BackupList>('/api/backups'),
   createBackup: () => request<BackupDto>('/api/backups', { method: 'POST' }),
-  backupUrl: (name: string) => `/api/backups/${encodeURIComponent(name)}`,
+  backupUrl: (name: string) => apiPath(`/api/backups/${encodeURIComponent(name)}`),
 };

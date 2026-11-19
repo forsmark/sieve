@@ -37,6 +37,7 @@ import {
   SESSION_COOKIE, allowLoginAttempt, authRequired, checkPassword, clearLoginAttempts, createSession, deleteSession, isValidSession,
 } from './auth';
 import { backupPath, createBackup, listBackups } from './backup';
+import { gatewayUserCheck } from './edge';
 import { applyTriage, getCounts, getPostingDetail, listPostings, markRead, setTriage } from './postings';
 
 const MAX_CV_BYTES = 5 * 1024 * 1024;
@@ -156,6 +157,12 @@ export interface AppOptions {
   clientDir?: string;
 }
 
+/** The icon of the built client, or the source file when no client is built. */
+function iconFile(clientDir: string | undefined): string {
+  const built = clientDir ? join(resolve(clientDir), 'icon.png') : null;
+  return built && existsSync(built) ? built : resolve('src/client/public/icon.png');
+}
+
 export function createApp(opts: AppOptions = {}): Hono {
   const app = new Hono();
 
@@ -168,8 +175,19 @@ export function createApp(opts: AppOptions = {}): Hono {
     return c.json({ error: errorMessage(err) }, 500);
   });
 
-  // The health route needs no login and no database.
+  // Behind the olympus-edge gateway only the allowed user passes. The health check and the icon stay open.
+  app.use('*', gatewayUserCheck());
+
+  // The health routes need no login and no database. The platform probes `/healthz`.
   app.get('/api/health', (c) => c.json({ ok: true }));
+  app.get('/healthz', (c) => c.json({ ok: true }));
+
+  // Home screens fetch the icon without a session.
+  const icon = iconFile(opts.clientDir);
+  app.get('/icon.png', (c) => {
+    if (!existsSync(icon)) return c.notFound();
+    return new Response(new Uint8Array(readFileSync(icon)), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' } });
+  });
 
   // ---- Login
 

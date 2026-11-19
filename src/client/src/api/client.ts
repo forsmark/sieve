@@ -38,6 +38,16 @@ export function toQueryString(params: Record<string, string | number | boolean |
   return s ? `?${s}` : '';
 }
 
+/** Joins the path prefix the client was built for with an absolute path such as `/api/status`. */
+export function joinBase(base: string, path: string): string {
+  return base.replace(/\/+$/, '') + path;
+}
+
+/** The URL of an API path under the prefix of this build. Without `APP_BASE` the prefix is `/`. */
+export function apiPath(path: string): string {
+  return joinBase(import.meta.env.BASE_URL, path);
+}
+
 export async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   let body: BodyInit | undefined;
@@ -49,7 +59,7 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   }
   let res: Response;
   try {
-    res = await fetch(path, { method: opts.method ?? 'GET', headers, body, signal: opts.signal, credentials: 'same-origin' });
+    res = await fetch(apiPath(path), { method: opts.method ?? 'GET', headers, body, signal: opts.signal, credentials: 'same-origin' });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
     throw new ApiRequestError(0, 'The server cannot be reached. Check that it is running.', null);

@@ -1,0 +1,37 @@
+{
+  "Path prefix": {
+    "Built for a prefix": {
+      "unit": "src/client/src/api/client.test.ts › path prefix › sends API requests under the prefix the client was built for"
+    },
+    "Download link under a prefix": {
+      "unit": "src/client/src/api/client.test.ts › path prefix › puts download links under the prefix"
+    },
+    "No prefix": {
+      "unit": "src/client/src/api/client.test.ts › path prefix › sends API requests to the root without a prefix"
+    }
+  },
+  "Health check": {
+    "Platform probes health": {
+      "unit": "src/server/http/edge.test.ts › edge hosting › answers /healthz without a session and without a gateway user"
+    }
+  },
+  "Public icon": {
+    "Device fetches the icon": {
+      "unit": "src/server/http/edge.test.ts › edge hosting › serves the icon as a PNG without a session and without a gateway user"
+    }
+  },
+  "Allowed gateway user": {
+    "Allowed user": {
+      "unit": "src/server/http/edge.test.ts › edge hosting › handles a request from the allowed gateway user as usual"
+    },
+    "Other user": {
+      "unit": "src/server/http/edge.test.ts › edge hosting › refuses a request from another gateway user with 403 and no data"
+    },
+    "Header missing": {
+      "unit": "src/server/http/edge.test.ts › edge hosting › refuses a request without a gateway user header with 403 and no data"
+    },
+    "Not configured": {
+      "unit": "src/server/http/edge.test.ts › edge hosting › handles a request without a gateway user as before when no allowed user is configured"
+    }
+  }
+}
