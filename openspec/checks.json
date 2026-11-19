@@ -1,0 +1,22 @@
+{
+  "baseRefs": ["main"],
+  "checks": ["validate", "coverage", "shall", "dropped", "repeated", "gate"],
+  "baselines": {
+    "validate": "openspec/long-requirements-not-yet.txt",
+    "coverage": "e2e/coverage/not-yet.txt",
+    "shall": "openspec/shall-not-yet.txt",
+    "repeated": "openspec/repeated-lists-not-yet.txt"
+  },
+  "coverage": {
+    "mapDir": "e2e/coverage",
+    "adapters": [
+      { "kind": "vitest", "roots": ["src"] }
+    ]
+  },
+  "glossary": null,
+  "sweep": {
+    "groups": {},
+    "dismissed": "openspec/disagreements-dismissed.txt"
+  },
+  "extra": []
+}

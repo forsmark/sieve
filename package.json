@@ -14,7 +14,8 @@
     "start": "NODE_ENV=production tsx src/server/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "check": "pnpm typecheck && pnpm lint",
+    "check": "pnpm typecheck && pnpm lint && pnpm spec-checks",
+    "spec-checks": "node tools/spec-checks/bin/spec-checks verify",
     "test": "vitest run",
     "e2e": "node e2e/run.mjs",
     "db:generate": "drizzle-kit generate"
