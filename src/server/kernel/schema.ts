@@ -21,7 +21,10 @@ export const postings = sqliteTable(
     companyKey: text('company_key').notNull(),
     fingerprint: text('fingerprint').notNull(),
     duplicateOf: text('duplicate_of'),
-    /** 1 when the user separated this posting from a primary record. Detection then skips it. */
+    /**
+     * 1 when the user separated this posting from a primary record. No code reads it: detection runs only when a
+     * new posting is stored, so a separated posting is never checked again. The flag records the user's correction.
+     */
     duplicateLocked: integer('duplicate_locked').notNull().default(0),
     linkStatus: text('link_status').notNull().default('unchecked'),
     linkCheckedAt: text('link_checked_at'),

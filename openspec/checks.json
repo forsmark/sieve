@@ -1,5 +1,5 @@
 {
-  "baseRefs": ["main"],
+  "baseRefs": ["origin/main"],
   "checks": ["validate", "coverage", "shall", "dropped", "repeated", "gate"],
   "baselines": {
     "validate": "openspec/long-requirements-not-yet.txt",
