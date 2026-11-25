@@ -306,7 +306,7 @@ The wordmark "sieve" is lowercase in weight 800 at 1.5rem in the top bar (1.25re
 
 ## Layout
 
-The shell fills the viewport height and has three bands. The top bar is 56px high and holds the wordmark, five text links, and the log-out button; a 1px rule in the text color closes it. The main area scrolls inside itself. The status bar at the bottom is at least 36px high, in 12px text, with a 1px hairline above it. Horizontal page padding is 12px, and 24px from 640px width.
+The shell fills the viewport height and has three bands. The top bar is 56px high and holds the wordmark, five text links, and the log-out button; a 1px rule in the text color closes it. The main area scrolls inside itself. The status bar at the bottom is at least 36px high, in 12px text, with a 1px hairline above it. Its bottom padding grows to the device's safe area, so the home indicator of a phone never covers it. Horizontal page padding is 12px, and 24px from 640px width.
 
 **Jobs.** The list is a grid of cards. Each card is 184px high and at least 270px wide, with a 6px channel between cards. The number of columns follows from the page width and is never more than 6. When a posting is open and the window is at least 1024px wide, the detail panel covers some columns and the cards keep their width: 3 card columns stay on a page of 5 or 6 columns, 2 columns stay on a page of 4, and 1 column stays on a narrower page. Below 1024px the detail covers the whole screen and has a "Back to list" button.
 
@@ -383,11 +383,11 @@ The score numeral in a block of 44px height on a job card. The band shows as fil
 
 ### Navigation
 - **Top bar:** the lowercase wordmark, then text links in 14px weight 500. A link is muted at rest and off-white on hover. The current link is off-white with a 2px yellow line on the bottom edge of the bar. The unread count is an off-white block with ground-colored numerals; the application count is a pink block with ink numerals. Below 640px width the links are 13px and scroll sideways without a visible scrollbar.
-- **Status bar:** 12px muted text with square status dots (off-white for ok, danger for a fault, faint for unknown, a hollow square with a 1px off-white border for busy; no dot is yellow), ghost buttons of 24px height, and "Matching paused" as off-white text in weight 600 inside a 1px off-white border.
+- **Status bar:** 12px muted text with square status dots (off-white for ok, danger for a fault, faint for unknown, a hollow square with a 1px off-white border for busy; no dot is yellow), ghost buttons of 24px height, and "Matching paused" as off-white text in weight 600 inside a 1px off-white border. Below 640px width the status text wraps above, and "Fetch now" and "Pause matching" sit on a row of their own as buttons of 44px height with a strong hairline border and 14px text, sharing the width. The pause button then names matching, because its label is no longer beside it.
 - **Text links:** every text link on the ground is off-white in weight 600 or 500 with a 2px yellow underline, in running text and for standalone links such as "Open posting". On hover the underline of a standalone link changes to the text color. On a color field the link is ink with a 2px ink underline. The section links in Settings are muted text in weight 500 with a strong hairline underline; hover changes both to the text color.
 
 ### Messages
-- **Toast and undo bar:** a yellow field with ink text in weight 500. An error toast is a danger border on the danger ground. A toast rises 8px and fades in over 160ms.
+- **Toast and undo bar:** a yellow field with ink text in weight 500. An error toast is a danger border on the danger ground. A toast rises 8px and fades in over 160ms. Toasts stack just above the status bar: 12px above it below 640px width, 20px above it and at the right edge from 640px.
 - **Notice:** a 1px bordered box in 13px text with no tinted fill. The border says the kind: a hairline for a neutral notice, the text color for a positive or emphasized notice, a dashed border in the text color for a caution, and a danger border on the danger ground for an error.
 
 ## Do's and Don'ts

@@ -90,8 +90,11 @@ function Shell({ authRequired }: { authRequired: boolean }) {
       <main id="main" className="relative min-h-0 flex-1 overflow-clip">
         <Outlet />
       </main>
-      <StatusBar status={status} />
-      <Toaster />
+      {/* Toasts sit just above the status bar, whose height changes with the width and the device's safe area. */}
+      <div className="relative shrink-0">
+        <Toaster />
+        <StatusBar status={status} />
+      </div>
     </div>
   );
 }
