@@ -7,14 +7,15 @@ import { qk } from './keys';
 
 describe('effectsFor: SSE event to query invalidation', () => {
   const cases: Array<[ServerEvent, unknown[][], string[], boolean]> = [
-    [{ type: 'run.progress', runId: 1 }, [['status'], ['runs'], ['activity'], ['sources']], [], false],
-    [{ type: 'posting.added', postingId: 'p1' }, [['status']], [], true],
-    [{ type: 'posting.updated', postingId: 'p1' }, [['posting', 'p1'], ['status']], ['p1'], false],
+    [{ type: 'run.progress', runId: 1 }, [['status'], ['runs'], ['activity'], ['sources'], ['clear-preview']], [], false],
+    [{ type: 'posting.added', postingId: 'p1' }, [['status'], ['clear-preview']], [], true],
+    [{ type: 'posting.updated', postingId: 'p1' }, [['posting', 'p1'], ['status'], ['clear-preview']], ['p1'], false],
     [{ type: 'match.updated', postingId: 'p1' }, [['posting', 'p1'], ['status']], ['p1'], false],
     [{ type: 'queue.changed' }, [['status'], ['activity']], [], false],
     [{ type: 'llm.status', available: false }, [['status'], ['llm']], [], false],
     [{ type: 'profile.updated' }, [['profile'], ['status']], [], true],
-    [{ type: 'application.updated', postingId: 'p1' }, [['applications'], ['application-events', 'p1'], ['posting', 'p1'], ['status']], ['p1'], false],
+    [{ type: 'application.updated', postingId: 'p1' }, [['applications'], ['application-events', 'p1'], ['posting', 'p1'], ['status'], ['clear-preview']], ['p1'], false],
+    [{ type: 'postings.cleared' }, [['status'], ['activity'], ['posting'], ['clear-preview'], ['backups'], ['logs']], [], true],
   ];
 
   it.each(cases)('maps %o', (event, keys, patch, refresh) => {

@@ -26,11 +26,11 @@ export interface EventEffects {
 export function effectsFor(event: ServerEvent): EventEffects {
   switch (event.type) {
     case 'run.progress':
-      return { invalidate: [qk.status, qk.runs, qk.activity, qk.sources], patchPostings: [], refreshList: false };
+      return { invalidate: [qk.status, qk.runs, qk.activity, qk.sources, qk.clearPreview], patchPostings: [], refreshList: false };
     case 'posting.added':
-      return { invalidate: [qk.status], patchPostings: [], refreshList: true };
+      return { invalidate: [qk.status, qk.clearPreview], patchPostings: [], refreshList: true };
     case 'posting.updated':
-      return { invalidate: [qk.posting(event.postingId), qk.status], patchPostings: [event.postingId], refreshList: false };
+      return { invalidate: [qk.posting(event.postingId), qk.status, qk.clearPreview], patchPostings: [event.postingId], refreshList: false };
     case 'match.updated':
       return { invalidate: [qk.posting(event.postingId), qk.status], patchPostings: [event.postingId], refreshList: false };
     case 'queue.changed':
@@ -41,10 +41,14 @@ export function effectsFor(event: ServerEvent): EventEffects {
       return { invalidate: [qk.profile, qk.status], patchPostings: [], refreshList: true };
     case 'application.updated':
       return {
-        invalidate: [qk.applications, qk.applicationEvents(event.postingId), qk.posting(event.postingId), qk.status],
+        invalidate: [qk.applications, qk.applicationEvents(event.postingId), qk.posting(event.postingId), qk.status, qk.clearPreview],
         patchPostings: [event.postingId],
         refreshList: false,
       };
+    case 'postings.cleared':
+      // Every open detail may show a posting that is gone. The list loses its rows through the refetch. The new backup and
+      // the log line show on every open page, so another device sees the backup it may need.
+      return { invalidate: [qk.status, qk.activity, qk.postingAll, qk.clearPreview, qk.backups, qk.logsAll], patchPostings: [], refreshList: true };
     default:
       return { invalidate: [], patchPostings: [], refreshList: false };
   }

@@ -46,18 +46,25 @@ export function backupPath(name: string): string | null {
   }
 }
 
-/** Writes a complete copy of the database and deletes the oldest copies beyond the retention count. */
-export async function createBackup(): Promise<BackupDto> {
+/**
+ * Writes a complete copy of the database and deletes the oldest copies beyond the retention count.
+ * With `prune: false` the oldest copies stay, for a caller that may not go on to need the new one.
+ */
+export async function createBackup(opts: { prune?: boolean } = {}): Promise<BackupDto> {
   const dir = backupDir();
   const stamp = nowIso().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
   let name = `sieve-${stamp}.db`;
   for (let i = 1; backupPath(name); i++) name = `sieve-${stamp}-${i}.db`;
   await sqlite.backup(join(dir, name));
-  const settings = getSetting('backup');
-  setSetting('backup', { ...settings, lastAt: nowIso() });
-  const all = listBackups();
-  for (const old of all.slice(Math.max(1, settings.keep))) unlinkSync(join(dir, old.name));
+  setSetting('backup', { ...getSetting('backup'), lastAt: nowIso() });
+  if (opts.prune !== false) pruneBackups();
   return listBackups().find((b) => b.name === name)!;
+}
+
+/** Deletes the oldest backups beyond the retention count. The newest backup always stays. */
+export function pruneBackups(): void {
+  const keep = getSetting('backup').keep;
+  for (const old of listBackups().slice(Math.max(1, keep))) unlinkSync(join(backupDir(), old.name));
 }
 
 /** Creates a backup when the interval passed after the last one. A timer calls this. */

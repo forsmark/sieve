@@ -6,7 +6,8 @@ export type AppEvent =
   | { type: 'queue.changed' }
   | { type: 'llm.status'; available: boolean }
   | { type: 'profile.updated' }
-  | { type: 'application.updated'; postingId: string };
+  | { type: 'application.updated'; postingId: string }
+  | { type: 'postings.cleared' };
 
 type Listener = (event: AppEvent) => void;
 

@@ -50,6 +50,7 @@ export function ConfirmButton({
   confirmLabel,
   onConfirm,
   busy,
+  disabled,
   size = 'md',
   variant = 'danger',
 }: {
@@ -57,13 +58,15 @@ export function ConfirmButton({
   confirmLabel: string;
   onConfirm: () => void;
   busy?: boolean;
+  /** Also disables the second button, for a state that changes while the user decides. */
+  disabled?: boolean;
   size?: 'sm' | 'md';
   variant?: Variant;
 }) {
   const [asking, setAsking] = useState(false);
   if (!asking) {
     return (
-      <Button size={size} variant={variant === 'danger' ? 'secondary' : variant} onClick={() => setAsking(true)} busy={busy}>
+      <Button size={size} variant={variant === 'danger' ? 'secondary' : variant} onClick={() => setAsking(true)} busy={busy} disabled={disabled}>
         {label}
       </Button>
     );
@@ -74,6 +77,7 @@ export function ConfirmButton({
         size={size}
         variant={variant}
         autoFocus
+        disabled={disabled}
         onClick={() => {
           setAsking(false);
           onConfirm();

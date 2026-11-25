@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { HealthDto, LlmSettingsDto, NotificationSettingsDto, ScheduleDto, SourceDto } from '../../../../shared/api';
+import type { ClearPreviewDto, HealthDto, LlmSettingsDto, NotificationSettingsDto, ScheduleDto, SourceDto } from '../../../../shared/api';
 import { api, type LlmSaveInput, type SearchSettings } from '../../api/endpoints';
 import { qk } from '../../api/keys';
 import { errorText } from '../../api/client';
@@ -21,6 +21,7 @@ export function SettingsPage() {
             ['model', 'Language model'],
             ['notifications', 'Notifications'],
             ['backups', 'Backups'],
+            ['postings', 'Postings'],
           ].map(([id, label]) => (
             <a key={id} href={`#${id}`} className="font-medium text-muted underline decoration-line-strong hover:text-fg hover:decoration-fg">
               {label}
@@ -33,6 +34,7 @@ export function SettingsPage() {
         <LlmSection />
         <NotificationsSection />
         <BackupsSection />
+        <PostingsSection />
       </div>
     </div>
   );
@@ -551,6 +553,74 @@ function BackupsSection() {
             </li>
           ))}
         </ul>
+      )}
+    </Section>
+  );
+}
+
+// ---- Postings
+
+function postings(n: number): string {
+  return n === 1 ? '1 posting' : `${n} postings`;
+}
+
+function storedText({ delete: gone, keep, withApplication }: ClearPreviewDto): string {
+  const total = gone + keep;
+  if (total === 0) return 'No postings are stored.';
+  const stored = total === 1 ? '1 posting is stored.' : `${total} postings are stored.`;
+  if (keep === 0) return stored;
+  // A posting kept without an application is the other listing of a job the user applied to on a second board.
+  const listings = keep - withApplication;
+  if (listings === 0) {
+    if (gone === 0) return `${stored} ${keep === 1 ? 'It has an application, so it cannot be deleted.' : 'Each has an application, so none can be deleted.'}`;
+    return `${stored} ${keep === 1 ? '1 has an application and stays' : `${keep} have an application and stay`} when you delete the others.`;
+  }
+  const applied = withApplication === 1 ? '1 has an application' : `${withApplication} have an application`;
+  const other = listings === 1 ? '1 is another listing of a job you applied to' : `${listings} are other listings of jobs you applied to`;
+  return `${stored} ${applied}, and ${other}. ${gone === 0 ? 'None can be deleted.' : 'These stay when you delete the others.'}`;
+}
+
+function PostingsSection() {
+  const qc = useQueryClient();
+  const preview = useQuery({ queryKey: qk.clearPreview, queryFn: api.clearPreview });
+  const status = useQuery({ queryKey: qk.status, queryFn: api.status });
+  const fetching = status.data?.activeRunId != null;
+  const clear = useMutation({
+    mutationFn: (confirmed: ClearPreviewDto) => api.clearPostings({ delete: confirmed.delete, saved: confirmed.saved }),
+    onSuccess: (r) => {
+      // The server also sends an event, but the page must not depend on a live connection.
+      for (const queryKey of [qk.clearPreview, qk.backups, qk.status, qk.activity, qk.postingAll, qk.postingsAll]) void qc.invalidateQueries({ queryKey });
+      showToast({ message: `Deleted ${postings(r.deleted)}. Backup ${r.backup} holds the earlier data.`, tone: 'info' });
+    },
+    onError: (e) => {
+      // The counts may have changed, so the section shows the new ones.
+      void qc.invalidateQueries({ queryKey: qk.clearPreview });
+      toastError(errorText(e));
+    },
+  });
+  const p = preview.data;
+  return (
+    <Section id="postings" title="Postings" description={p ? storedText(p) : 'The postings the sources found.'}>
+      {preview.isPending && <LoadingState />}
+      {preview.isError && <ErrorState error={preview.error} onRetry={() => void preview.refetch()} />}
+      {p && (
+        <div className="flex flex-col gap-3">
+          <div>
+            <ConfirmButton
+              label={p.delete > 0 ? `Delete ${postings(p.delete)}` : 'Delete postings'}
+              confirmLabel={`Yes, delete ${postings(p.delete)}`}
+              busy={clear.isPending}
+              disabled={p.delete === 0 || fetching}
+              onConfirm={() => clear.mutate(p)}
+            />
+          </div>
+          {p.delete > 0 && p.saved > 0 && <p className="text-[13px]">This includes {p.saved === 1 ? '1 saved posting' : `${p.saved} saved postings`}.</p>}
+          {fetching && p.delete > 0 && <p className="text-[13px]">A fetch is running. Delete the postings when it ends.</p>}
+          <p className="text-xs text-muted">
+            A backup of all data is made first. At the next fetch, the postings that the job sites still list come back as new and are scored
+            again.
+          </p>
+        </div>
       )}
     </Section>
   );

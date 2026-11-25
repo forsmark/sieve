@@ -181,7 +181,11 @@ Under Settings, enable notifications. The system generates a topic name with 120
 
 ## Backups
 
-The system writes a copy of the database to `DATA_DIR/backups` every 6 hours and keeps the newest 10. Under Activity you can create a backup and download one. To restore, stop the server and replace `DATA_DIR/sieve.db` with the backup file.
+The system writes a copy of the database to `DATA_DIR/backups` every 6 hours and keeps the newest 10. Under Settings you can create a backup and download one. To restore, stop the server and replace `DATA_DIR/sieve.db` with the backup file.
+
+## Delete the postings
+
+Under Settings, "Postings" deletes every posting that has no application, saved and dismissed ones included, with their scores, cover letters and match analyses. Postings with an application stay, and so does the other listing of a job you applied to on a second board. The profile, the settings and the history stay too. The system makes a backup first, and refuses while a fetch runs. The next fetch adds the postings that the boards still list again, as new postings, and scores them again.
 
 ## Job boards and terms of use
 

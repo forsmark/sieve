@@ -302,6 +302,24 @@ export interface BackupDto {
   createdAt: string;
 }
 
+/**
+ * What a clear of the postings would do now. `keep` holds the postings with an application (`withApplication`) and the
+ * other listing that each applied duplicate points to. `saved` counts the saved postings among those it deletes.
+ */
+export interface ClearPreviewDto {
+  delete: number;
+  keep: number;
+  withApplication: number;
+  saved: number;
+}
+
+export interface ClearResultDto {
+  deleted: number;
+  kept: number;
+  /** The file name of the backup made before the delete. */
+  backup: string;
+}
+
 export interface NotificationLogDto {
   id: number;
   count: number;
@@ -324,7 +342,8 @@ export type ServerEvent =
   | { type: 'queue.changed' }
   | { type: 'llm.status'; available: boolean }
   | { type: 'profile.updated' }
-  | { type: 'application.updated'; postingId: string };
+  | { type: 'application.updated'; postingId: string }
+  | { type: 'postings.cleared' };
 
 export interface ApiError {
   error: string;

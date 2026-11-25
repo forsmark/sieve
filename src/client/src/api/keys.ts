@@ -23,4 +23,6 @@ export const qk = {
   logsAll: ['logs'] as const,
   logs: (level: string) => ['logs', level] as const,
   backups: ['backups'] as const,
+  /** What a clear of the postings would delete and keep. */
+  clearPreview: ['clear-preview'] as const,
 };

@@ -57,3 +57,33 @@ Task handlers read the posting at the start and write at the end. A handler that
 ## Migration Plan
 
 No schema change. Deploy as usual with `portal app deploy sieve`. Rollback is a redeploy of the earlier commit; a clear that already ran is undone only from its backup.
+
+## Changed during apply
+
+### 2026-11-25: Wording of the refusals
+
+The copy check (`fstack:humanize`) changed two messages. The 409 now reads "A fetch is running. Delete the postings when it ends.", the same words the settings page shows, and with the button's verb "Delete" instead of "Clear". A failed backup now answers "The backup could not be made, so no posting was deleted. The cause is in the Log on the Activity page." and writes the system error to the log, instead of showing the error text of the file system. No behaviour changed, and no task changed.
+
+### 2026-11-25: The clear checks the counts the user confirmed
+
+Changes the decisions **Routes**, **Interface** and **Live update**. Found by the code review.
+
+The page could show counts that were out of date. Only `posting.added` and `application.updated` refreshed them, so a run that ingested only duplicates, or a posting saved in another tab, left "Delete 406 postings" on the button while the server would delete more, or delete a saved posting the page did not name. Now:
+
+- `POST /api/postings/clear` takes the body `{ delete, saved }`, the counts on the button and in the saved line. The server compares them with its own counts twice: before the backup, so a stale page costs no backup, and again inside the delete transaction, since a posting can be saved or added while the backup is written (the verifier reproduced that case live). When they differ it deletes nothing and answers 409 "The postings changed after the page counted them. Check the new counts and delete again." A body without the counts answers 400. After a refusal the page fetches the counts again.
+- `posting.updated` and `run.progress` also refresh the counts.
+- The server answers 409 "No posting can be deleted." when nothing would go, before it makes a backup. The page already disables the button then; this stops a direct API call from adding an empty backup.
+
+### 2026-11-25: The kept listings of applied jobs are named apart
+
+Changes the decision **Interface**. Found by the code review.
+
+The kept set holds the primary of each applied duplicate, which may have no application of its own, but the page counted every kept posting as one "with an application". `GET /api/postings/clear` now also returns `withApplication`, and the page names the rest apart, for example "23 postings are stored. 2 have an application, and 1 is another listing of a job you applied to. These stay when you delete the others." The README says the same. The kept set itself did not change.
+
+### 2026-11-25: A refused clear keeps the oldest backup
+
+Changes the decision **Backup first, outside the transaction** and narrows the risk "The pre-clear backup pushes out the oldest backup". Found by the code review.
+
+A run that starts during the backup makes the second check refuse the clear, and the backup had already pruned the oldest stored one, so each refused attempt cost one old backup. The clear now makes its backup without the prune (`createBackup({ prune: false })`) and prunes (`pruneBackups()`) only after the delete went through. A clear that goes through still pushes out the oldest backup, as accepted. When that prune fails, the clear still reports success and publishes its events, because the postings are already gone, and the failure goes to the log. The other live update: `postings.cleared` now also refreshes the backup list and the log, so another device shows the backup it may need.
+
+No task changed. Tasks 1.1, 1.3, 2.1 and 2.2 carry the new checks, and their tests are in `clear.test.ts`, `app.test.ts`, `SettingsPage.test.tsx` and `events.test.tsx`.

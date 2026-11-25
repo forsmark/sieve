@@ -681,6 +681,56 @@ describe('activity and backups', () => {
   });
 });
 
+describe('clear postings', () => {
+  beforeEach(() => saveProfileEdits(PROFILE));
+
+  it('reports the counts, deletes the postings without an application, and names the backup it made', async () => {
+    const applied = add({ externalId: 'applied', url: 'https://jobs.test/applied', title: 'Backend Developer', company: 'Beta' });
+    const saved = add({ externalId: 'saved', url: 'https://jobs.test/saved', title: 'Data Engineer', company: 'Gamma' });
+    const fresh = add({ externalId: 'fresh', url: 'https://jobs.test/fresh', title: 'Product Designer', company: 'Delta' });
+    await whenIdle();
+    await call('PATCH', `/api/postings/${applied}`, { action: 'apply' });
+    await call('PATCH', `/api/postings/${saved}`, { action: 'save' });
+
+    expect((await call('GET', '/api/postings/clear')).json).toEqual({ delete: 2, keep: 1, withApplication: 1, saved: 1 });
+    expect((await call('POST', '/api/postings/clear')).status).toBe(400);
+    expect(await call('POST', '/api/postings/clear', { delete: 2, saved: 0 })).toMatchObject({
+      status: 409,
+      json: { error: 'The postings changed after the page counted them. Check the new counts and delete again.' },
+    });
+    const cleared = await call('POST', '/api/postings/clear', { delete: 2, saved: 1 });
+
+    expect(cleared.status).toBe(200);
+    expect(cleared.json).toEqual({ deleted: 2, kept: 1, backup: expect.stringMatching(/^sieve-\d{8}-\d{6}\.db$/) });
+    expect((await call('GET', '/api/backups')).json.backups.map((b: { name: string }) => b.name)).toEqual([cleared.json.backup]);
+    expect((await call('GET', '/api/postings/clear')).json).toEqual({ delete: 0, keep: 1, withApplication: 1, saved: 0 });
+    expect((await call('GET', `/api/postings/${saved}`)).status).toBe(404);
+    expect((await call('GET', `/api/postings/${fresh}`)).status).toBe(404);
+    expect((await call('GET', `/api/postings/${applied}`)).json).toMatchObject({ triageStatus: 'applied' });
+    expect((await call('GET', '/api/applications')).json).toHaveLength(1);
+  });
+
+  it('refuses with 409 and deletes nothing while a fetch run is active', async () => {
+    const id = add();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const slow: SourceAdapter = {
+      id: 'slow', name: 'Slow', supports: { keywords: false, region: false }, rate: { minDelayMs: 0, maxConcurrent: 1 },
+      async *search() {
+        await gate;
+      },
+    };
+    const run = startFetchRun('manual', { adapters: [slow] })!;
+
+    const refused = await call('POST', '/api/postings/clear', { delete: 1, saved: 0 });
+
+    expect(refused).toMatchObject({ status: 409, json: { error: 'A fetch is running. Delete the postings when it ends.' } });
+    expect((await call('GET', `/api/postings/${id}`)).status).toBe(200);
+    release();
+    await run.done;
+  });
+});
+
 describe('expanded match analysis', () => {
   const CV = `Jane Doe\nSenior developer with eight years of TypeScript and React.\n${'Built web applications for logistics companies. '.repeat(8)}`;
 

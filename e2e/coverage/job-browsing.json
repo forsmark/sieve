@@ -124,5 +124,25 @@
     "Restart": {
       "unit": "src/server/http/app.test.ts › rejects requests without a session, accepts the password, and keeps the session until logout"
     }
+  },
+  "Clear postings": {
+    "User clears postings": {
+      "unit": "src/server/ingestion/clear.test.ts › deletes every posting without an application, with its score, letter, analysis, and work, and keeps the profile and the settings"
+    },
+    "Confirmation states the counts": {
+      "unit": "src/client/src/features/settings/SettingsPage.test.tsx › states how many postings go and how many stay, and deletes nothing before the second click"
+    },
+    "Posting with an application stays": {
+      "unit": "src/server/ingestion/clear.test.ts › keeps a posting with an application, with its score, its letter, its open work, and its application in its stage"
+    },
+    "Backup before the clear": {
+      "unit": "src/server/ingestion/clear.test.ts › stores a backup with every posting before it deletes, and deletes nothing when the backup fails"
+    },
+    "Fetch run is active": {
+      "unit": "src/server/ingestion/clear.test.ts › deletes nothing and makes no backup while a fetch run is active"
+    },
+    "Deleted posting comes back": {
+      "unit": "src/server/ingestion/clear.test.ts › stores a deleted posting as new and unread when a source returns it again, and scores it again"
+    }
   }
 }

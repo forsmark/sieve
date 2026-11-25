@@ -104,13 +104,16 @@ async function handleExtract(ctx: TaskContext): Promise<void> {
       ],
       { name: 'posting_facts' },
     );
-    sqlite
+    // The posting can be deleted while the model call runs, by a clear of the postings. Then nothing is stored.
+    const stored = sqlite
       .prepare(
-        `INSERT INTO posting_facts (posting_id, facts_json, description_hash, provider, model, created_at) VALUES (?, ?, ?, ?, ?, ?)
+        `INSERT INTO posting_facts (posting_id, facts_json, description_hash, provider, model, created_at)
+         SELECT ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM postings WHERE id = ?)
          ON CONFLICT(posting_id) DO UPDATE SET facts_json = excluded.facts_json, description_hash = excluded.description_hash,
            provider = excluded.provider, model = excluded.model, created_at = excluded.created_at`,
       )
-      .run(posting.id, JSON.stringify(data), descriptionHash, provider, model, nowIso());
+      .run(posting.id, JSON.stringify(data), descriptionHash, provider, model, nowIso(), posting.id).changes;
+    if (stored === 0) return;
     // New facts make an earlier judgment invalid.
     sqlite.prepare('UPDATE matches SET judge_version = NULL, rule_version = NULL WHERE posting_id = ?').run(posting.id);
     setState(posting.id, 'waiting');

@@ -1,5 +1,5 @@
 import type {
-  ActivityDto, ApplicationDto, ApplicationEventDto, BackupDto, BulkAction, CoverLetterDto, HealthDto, LlmSettingsDto, LogDto, MatchAnalysisDto, NotificationSettingsDto,
+  ActivityDto, ApplicationDto, ApplicationEventDto, BackupDto, BulkAction, ClearPreviewDto, ClearResultDto, CoverLetterDto, HealthDto, LlmSettingsDto, LogDto, MatchAnalysisDto, NotificationSettingsDto,
   PostingDetail, PostingListResponse, PostingQuery, PreferencesSaveResult, ProfileDto, RescorePlanDto, RunDto, ScheduleDto, SourceDto,
   StatusDto, TriageAction, TriageResult,
 } from '../../../shared/api';
@@ -139,4 +139,9 @@ export const api = {
   backups: () => request<BackupList>('/api/backups'),
   createBackup: () => request<BackupDto>('/api/backups', { method: 'POST' }),
   backupUrl: (name: string) => apiPath(`/api/backups/${encodeURIComponent(name)}`),
+
+  // Clear the postings
+  clearPreview: () => request<ClearPreviewDto>('/api/postings/clear'),
+  /** Sends the counts the user confirmed. The server refuses when they no longer hold. */
+  clearPostings: (confirmed: { delete: number; saved: number }) => request<ClearResultDto>('/api/postings/clear', { method: 'POST', body: confirmed }),
 };

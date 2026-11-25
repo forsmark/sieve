@@ -12,6 +12,7 @@ import { getSetting, setSetting } from '../kernel/settings';
 import { queueCounts, retryTask } from '../kernel/tasks';
 import { publish } from '../kernel/events';
 import { createApplication, listApplicationEvents, listApplications, removeApplication, updateApplication } from '../applications/service';
+import { ClearError, clearPostings, clearPreview } from '../ingestion/clear';
 import { separateDuplicate } from '../ingestion/ingest';
 import { isLlmAvailable, probe, saveLlmSettings } from '../llm';
 import { CLAUDE_CODE_MODEL, WRITING_EFFORT, WRITING_MODEL } from '../llm/claude-code';
@@ -171,6 +172,7 @@ export function createApp(opts: AppOptions = {}): Hono {
     if (err instanceof CvImportError) return c.json({ error: err.message }, 400);
     if (err instanceof CoverLetterError) return c.json({ error: err.message }, err.message === 'Posting not found.' ? 404 : 400);
     if (err instanceof MatchAnalysisError) return c.json({ error: err.message }, err.message === 'Posting not found.' ? 404 : 400);
+    if (err instanceof ClearError) return c.json({ error: err.message }, err.status);
     if (err instanceof SyntaxError) return c.json({ error: 'The request body is not valid JSON.' }, 400);
     return c.json({ error: errorMessage(err) }, 500);
   });
@@ -283,6 +285,13 @@ export function createApp(opts: AppOptions = {}): Hono {
     const body = z.object({ previous: z.array(z.object({ id: z.string(), triageStatus: TriageStatus })).max(1000) }).parse(await c.req.json());
     for (const p of body.previous) setTriage(p.id, p.triageStatus);
     return c.json({ ok: true });
+  });
+
+  // Before `/api/postings/:id`, so "clear" is not read as a posting id.
+  app.get('/api/postings/clear', (c) => c.json(clearPreview()));
+  app.post('/api/postings/clear', async (c) => {
+    const confirmed = z.object({ delete: z.number().int().min(0), saved: z.number().int().min(0) }).parse(await c.req.json());
+    return c.json(await clearPostings(confirmed));
   });
 
   app.get('/api/postings/:id', (c) => {
