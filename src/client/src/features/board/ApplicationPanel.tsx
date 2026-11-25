@@ -59,7 +59,8 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
           </a>
         )}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+      {/* Full screen below 1024px: the last lines stay above the home indicator of a phone. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 max-lg:pb-[max(1rem,env(safe-area-inset-bottom))]">
         <header>
           <h2 className="text-2xl leading-[1.15] font-bold tracking-tight">{s.title}</h2>
           <p className="text-muted">{[s.company, s.location].filter(Boolean).join(' · ')}</p>

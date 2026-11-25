@@ -88,7 +88,8 @@ export function DetailPanel({
           </a>
         )}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      {/* Full screen below 1024px: the last lines stay above the home indicator of a phone. */}
+      <div className="min-h-0 flex-1 overflow-y-auto max-lg:pb-[env(safe-area-inset-bottom)]">
         {detail.isPending && <LoadingState label="Loading posting" />}
         {detail.isError && <ErrorState error={detail.error} onRetry={() => void detail.refetch()} title="This posting could not be loaded." />}
         {detail.data && (

@@ -273,6 +273,59 @@ describe('jobs view', () => {
     await waitFor(() => expect(history.location.search).toBe(''));
   });
 
+  it('names the applied and dismissed postings that the default list hides, and lists them on request', async () => {
+    const all = [makeItem('a1', 80, { triageStatus: 'applied' }), makeItem('d1', 60, { triageStatus: 'dismissed' })];
+    const api = mockApi({
+      ...baseRoutes(() => []),
+      'GET /api/postings': (_call, url) => {
+        const items = url.searchParams.get('status') === 'all' ? all : [];
+        return { items, total: items.length, nextOffset: null };
+      },
+      'GET /api/status': () => ({ ...STATUS, counts: { ...STATUS.counts, new: 0, unread: 0, applied: 3, dismissed: 2 } }),
+    });
+    const user = userEvent.setup();
+    const { history } = renderApp('/jobs');
+
+    const empty = await screen.findByText('No new or saved postings.');
+    const box = within(empty.parentElement as HTMLElement);
+    expect(box.getByText('3 applied and 2 dismissed postings are hidden. New ones appear here after the next fetch.')).toBeInTheDocument();
+    await user.click(box.getByRole('button', { name: 'Show every status' }));
+
+    await waitFor(() => expect(history.location.search).toBe('?status=all'));
+    expect(await screen.findByText('Job a1')).toBeInTheDocument();
+    expect(screen.getByText('Job d1')).toBeInTheDocument();
+    expect(api.calls.some((c) => c.path === '/api/postings')).toBe(true);
+  });
+
+  it.each([
+    [1, 0, '1 applied posting is hidden.'],
+    [3, 0, '3 applied postings are hidden.'],
+    [0, 1, '1 dismissed posting is hidden.'],
+    [0, 4, '4 dismissed postings are hidden.'],
+    [1, 1, '1 applied and 1 dismissed postings are hidden.'],
+  ])('names %i applied and %i dismissed hidden postings as "%s"', async (applied, dismissed, text) => {
+    mockApi({ ...baseRoutes(() => []), 'GET /api/status': () => ({ ...STATUS, counts: { ...STATUS.counts, new: 0, unread: 0, applied, dismissed } }) });
+    renderApp('/jobs');
+    expect(await screen.findByText(`${text} New ones appear here after the next fetch.`)).toBeInTheDocument();
+  });
+
+  it('asks for a CV and search terms instead of promising a fetch when fetching cannot find postings', async () => {
+    mockApi({
+      ...baseRoutes(() => []),
+      'GET /api/status': () => ({ ...STATUS, hasCv: false, searchTermCount: 0, counts: { ...STATUS.counts, new: 0, unread: 0, applied: 2 } }),
+    });
+    renderApp('/jobs');
+    expect(
+      await screen.findByText('2 applied postings are hidden. Add a CV and search terms, then fetch jobs with the button in the status bar.'),
+    ).toBeInTheDocument();
+  });
+
+  it('says no postings exist yet when the default list hides none', async () => {
+    mockApi({ ...baseRoutes(() => []), 'GET /api/status': () => ({ ...STATUS, counts: { ...STATUS.counts, new: 0, unread: 0 } }) });
+    renderApp('/jobs');
+    expect(await screen.findByText('No postings yet.')).toBeInTheDocument();
+  });
+
   it('writes filter changes to the URL', async () => {
     mockApi(baseRoutes(() => [makeItem('1', 90)]));
     const user = userEvent.setup();

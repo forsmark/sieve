@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import type { BulkAction, PostingListItem, TriageAction } from '../../../../shared/api';
+import type { BulkAction, PostingCounts, PostingListItem, TriageAction } from '../../../../shared/api';
 import { api } from '../../api/endpoints';
 import { qk } from '../../api/keys';
 import { errorText } from '../../api/client';
@@ -205,6 +205,10 @@ export function JobsPage() {
 
   const triage = useTriage();
   const statuses = statusesOf(search);
+  // The navigation shares this query, so it adds no request. The empty state names the postings the default list hides.
+  const status = useQuery({ queryKey: qk.status, queryFn: api.status });
+  const hidden = status.data ? hiddenByDefault(status.data.counts) : null;
+  const canFetch = status.data ? status.data.hasCv && status.data.searchTermCount > 0 : false;
 
   const doTriage = useCallback(
     (ids: string[], action: TriageAction, label?: string) => {
@@ -457,7 +461,8 @@ export function JobsPage() {
         >
           {list.isPending && <LoadingState label="Loading postings" />}
           {list.isError && <ErrorState error={list.error} onRetry={() => void list.refetch()} title="The postings could not be loaded." />}
-          {list.isSuccess && items.length === 0 && (
+          {/* The status decides between the two empty states, so they wait for it. */}
+          {list.isSuccess && items.length === 0 && !status.isPending && (
             hasActiveFilters(search) ? (
               <EmptyState
                 title="No postings match these filters."
@@ -468,6 +473,17 @@ export function JobsPage() {
                 }
               >
                 Try a lower minimum score, another status, or a shorter search.
+              </EmptyState>
+            ) : hidden ? (
+              <EmptyState
+                title="No new or saved postings."
+                action={
+                  <Button variant="primary" onClick={() => update({ status: 'all' })}>
+                    Show every status
+                  </Button>
+                }
+              >
+                {hidden} {canFetch ? 'New ones appear here after the next fetch.' : 'Add a CV and search terms, then fetch jobs with the button in the status bar.'}
               </EmptyState>
             ) : (
               <EmptyState title="No postings yet.">
@@ -541,4 +557,13 @@ export function JobsPage() {
       {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
     </div>
   );
+}
+
+/** Names the applied and dismissed postings that the default list leaves out, or null when there are none. */
+function hiddenByDefault({ applied, dismissed }: PostingCounts): string | null {
+  if (applied === 0 && dismissed === 0) return null;
+  const verb = applied + dismissed === 1 ? 'is' : 'are';
+  if (dismissed === 0) return `${plural(applied, 'applied posting')} ${verb} hidden.`;
+  if (applied === 0) return `${plural(dismissed, 'dismissed posting')} ${verb} hidden.`;
+  return `${applied} applied and ${dismissed} dismissed postings are hidden.`;
 }

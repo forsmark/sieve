@@ -318,7 +318,7 @@ The shell fills the viewport height and has three bands. The top bar is 56px hig
 
 ## Elevation & Depth
 
-The system is flat. No surface casts a shadow, and all shadow tokens of the framework are set to nothing. Depth is shown in two ways only: the raised ground is one step lighter than the ground, and a color field stands out from both. A panel that opens beside the list is divided from it by a 1px rule in the text color. Below 1024px a panel covers the screen completely. The shortcut dialog darkens the page behind it with ink at 70% opacity.
+The system is flat. No surface casts a shadow, and all shadow tokens of the framework are set to nothing. Depth is shown in two ways only: the raised ground is one step lighter than the ground, and a color field stands out from both. A panel that opens beside the list is divided from it by a 1px rule in the text color. Below 1024px a panel covers the screen completely, and its scrolling content ends with bottom padding of at least the device's safe area, so its last line stays above the home indicator of a phone. The shortcut dialog darkens the page behind it with ink at 70% opacity.
 
 ### Named Rules
 **The Flat Surface Rule.** Surfaces are flat at rest and in every state. Hover, selection, and focus change fill, border, or outline, never elevation.
