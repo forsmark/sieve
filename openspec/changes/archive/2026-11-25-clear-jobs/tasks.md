@@ -19,7 +19,7 @@
 
 ## 4. Ship
 
-- [ ] 4.1 After the owner approves the diff, merge to `main`, push, and run `portal app deploy sieve`. Verify that the deploy reports healthy and that the "Postings" section shows the counts at `https://olympus.tailf4d52f.ts.net/sieve/settings#postings`.
+- [x] 4.1 After the owner approves the diff, merge to `main`, push, and run `portal app deploy sieve`. Verify that the deploy reports healthy and that the "Postings" section shows the counts at `https://olympus.tailf4d52f.ts.net/sieve/settings#postings`.
 
 ## Workflow follow-up
 
