@@ -215,7 +215,7 @@ export function getCounts(): PostingCounts {
        WHERE p.duplicate_of IS NULL AND (m.state IS NULL OR m.state != 'excluded') GROUP BY p.triage_status`,
     )
     .all() as Array<{ s: string; n: number }>;
-  const counts: PostingCounts = { new: 0, saved: 0, applied: 0, dismissed: 0, unread: 0, excluded: 0 };
+  const counts: PostingCounts = { new: 0, saved: 0, applied: 0, dismissed: 0, unread: 0, excluded: 0, openApplications: 0 };
   for (const r of rows) if (r.s in counts) (counts as unknown as Record<string, number>)[r.s] = r.n;
   counts.unread = (
     sqlite
@@ -229,6 +229,9 @@ export function getCounts(): PostingCounts {
     sqlite
       .prepare(`SELECT COUNT(*) AS n FROM matches m JOIN postings p ON p.id = m.posting_id WHERE m.state = 'excluded' AND p.duplicate_of IS NULL`)
       .get() as { n: number }
+  ).n;
+  counts.openApplications = (
+    sqlite.prepare(`SELECT COUNT(*) AS n FROM applications WHERE stage IN ('applied', 'interview', 'offer')`).get() as { n: number }
   ).n;
   return counts;
 }
