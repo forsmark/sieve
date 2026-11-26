@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import type { RunDto } from '../../../../shared/api';
+import type { RunDto, StatusDto } from '../../../../shared/api';
 import { api } from '../../api/endpoints';
 import { qk } from '../../api/keys';
 import { errorText } from '../../api/client';
 import { Badge, Button, ErrorState, LoadingState, PageHeader, Section, Select, Spinner } from '../../components/ui';
 import { capitalize, dateTime, relativeTime, sourceName } from '../../lib/format';
 import { showToast, toastError } from '../../lib/toast';
+import { useDocumentTitle } from '../../lib/useDocumentTitle';
+import { useMediaQuery } from '../../lib/useMediaQuery';
+import { useFetchNow, useMatchingPause } from '../../app/actions';
+import { PHONE_QUERY } from '../../app/media';
 
 const KIND_LABEL: Record<string, string> = {
   extract: 'Extract facts',
@@ -22,10 +26,13 @@ const KIND_LABEL: Record<string, string> = {
 
 export function ActivityPage() {
   const activity = useQuery({ queryKey: qk.activity, queryFn: api.activity });
+  useDocumentTitle('Activity');
   return (
     <div className="h-full overflow-y-auto">
       <div className="flex max-w-5xl flex-col gap-4 p-3 sm:p-6">
-        <PageHeader title="Activity" />
+        <PageHeader title="Activity">
+          <HeaderActions />
+        </PageHeader>
         {activity.isPending && <LoadingState label="Loading activity" />}
         {activity.isError && <ErrorState error={activity.error} onRetry={() => void activity.refetch()} />}
         {activity.data && (
@@ -56,11 +63,31 @@ export function ActivityPage() {
   );
 }
 
+/** "Fetch now" and "Pause matching" beside the runs they start, at every width. Below 640px only this page has them. */
+function HeaderActions() {
+  const status = useQuery<StatusDto>({ queryKey: qk.status, queryFn: api.status });
+  const fetchNow = useFetchNow();
+  const pause = useMatchingPause();
+  const s = status.data;
+  if (!s) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button onClick={() => fetchNow.mutate()} busy={fetchNow.isPending} disabled={s.activeRunId != null}>
+        Fetch now
+      </Button>
+      <Button onClick={() => pause.mutate(!s.matchingPaused)} busy={pause.isPending}>
+        {s.matchingPaused ? 'Resume matching' : 'Pause matching'}
+      </Button>
+    </div>
+  );
+}
+
 function RunsSection({ runs }: { runs: RunDto[] }) {
+  const phone = useMediaQuery(PHONE_QUERY);
   return (
     <Section title="Fetch runs" description="The latest 20 runs and the result of each source.">
       {runs.length === 0 ? (
-        <p className="text-[13px] text-muted">No fetch runs yet. Use Fetch now in the status bar.</p>
+        <p className="text-[13px] text-muted">No fetch runs yet. Use Fetch now above to start one.</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {runs.map((r) => (
@@ -74,48 +101,75 @@ function RunsSection({ runs }: { runs: RunDto[] }) {
                   {r.endedAt && ` · took ${Math.max(1, Math.round((Date.parse(r.endedAt) - Date.parse(r.startedAt)) / 1000))} s`}
                 </span>
               </div>
-              <div className="mt-2 overflow-x-auto">
-                <table className="w-full min-w-[28rem] text-left text-[13px]">
-                  <thead className="text-xs text-muted">
-                    <tr>
-                      <th scope="col" className="py-1 pr-3 font-medium">
-                        Source
-                      </th>
-                      <th scope="col" className="py-1 pr-3 font-medium">
-                        State
-                      </th>
-                      <th scope="col" className="py-1 pr-3 text-right font-medium">
-                        Found
-                      </th>
-                      <th scope="col" className="py-1 pr-3 text-right font-medium">
-                        New
-                      </th>
-                      <th scope="col" className="py-1 pr-3 text-right font-medium">
-                        Invalid
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="tabular">
-                    {r.sources.map((s) => (
-                      <tr key={s.source} className="border-t border-line align-top">
-                        <td className="py-1 pr-3">{sourceName(s.source)}</td>
-                        <td className="py-1 pr-3">
-                          <span className={s.state === 'failed' ? 'text-danger' : ''}>{capitalize(s.state)}</span>
-                          {s.error && <p className={`max-w-md text-xs break-words ${s.state === 'failed' ? 'text-danger' : 'text-muted'}`}>{s.error}</p>}
-                        </td>
-                        <td className="py-1 pr-3 text-right">{s.found}</td>
-                        <td className="py-1 pr-3 text-right">{s.added}</td>
-                        <td className="py-1 pr-3 text-right">{s.invalid}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {phone ? <SourceRows run={r} /> : <SourceTable run={r} />}
             </li>
           ))}
         </ul>
       )}
     </Section>
+  );
+}
+
+/** From 640px: one table row per source. */
+function SourceTable({ run }: { run: RunDto }) {
+  return (
+    <div className="mt-2 overflow-x-auto">
+      <table className="w-full min-w-[28rem] text-left text-[13px]">
+        <thead className="text-xs text-muted">
+          <tr>
+            <th scope="col" className="py-1 pr-3 font-medium">
+              Source
+            </th>
+            <th scope="col" className="py-1 pr-3 font-medium">
+              State
+            </th>
+            <th scope="col" className="py-1 pr-3 text-right font-medium">
+              Found
+            </th>
+            <th scope="col" className="py-1 pr-3 text-right font-medium">
+              New
+            </th>
+            <th scope="col" className="py-1 pr-3 text-right font-medium">
+              Invalid
+            </th>
+          </tr>
+        </thead>
+        <tbody className="tabular">
+          {run.sources.map((s) => (
+            <tr key={s.source} className="border-t border-line align-top">
+              <td className="py-1 pr-3">{sourceName(s.source)}</td>
+              <td className="py-1 pr-3">
+                <span className={s.state === 'failed' ? 'text-danger' : ''}>{capitalize(s.state)}</span>
+                {s.error && <p className={`max-w-md text-xs break-words ${s.state === 'failed' ? 'text-danger' : 'text-muted'}`}>{s.error}</p>}
+              </td>
+              <td className="py-1 pr-3 text-right">{s.found}</td>
+              <td className="py-1 pr-3 text-right">{s.added}</td>
+              <td className="py-1 pr-3 text-right">{s.invalid}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Below 640px: two lines per source, the source and its state, then the counts. */
+function SourceRows({ run }: { run: RunDto }) {
+  return (
+    <ul className="mt-2 text-[13px]">
+      {run.sources.map((s) => (
+        <li key={s.source} className="border-t border-line py-1.5">
+          <p className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <span className="font-medium">{sourceName(s.source)}</span>
+            <span className={s.state === 'failed' ? 'text-danger' : ''}>{capitalize(s.state)}</span>
+          </p>
+          <p className="tabular text-xs text-muted">
+            {s.found} found · {s.added} new · {s.invalid} invalid
+          </p>
+          {s.error && <p className={`text-xs break-words ${s.state === 'failed' ? 'text-danger' : 'text-muted'}`}>{s.error}</p>}
+        </li>
+      ))}
+    </ul>
   );
 }
 
