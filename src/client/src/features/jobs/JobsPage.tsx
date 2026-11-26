@@ -516,7 +516,8 @@ export function JobsPage() {
         <FilterBar search={search} update={update} total={total} loading={list.isPending} searchRef={searchRef} />
 
         <div className="flex h-9 shrink-0 items-center gap-2 border-b border-fg px-3 text-[13px] touch:h-11">
-          <label className="flex items-center gap-2 self-stretch">
+          {/* The label keeps one line; the undo control beside it shortens instead. */}
+          <label className="flex shrink-0 items-center gap-2 self-stretch whitespace-nowrap">
             <input
               type="checkbox"
               className="size-4"

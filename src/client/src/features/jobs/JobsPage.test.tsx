@@ -894,7 +894,11 @@ describe('undo after the message', () => {
     await closeToast(user, /Dismissed “Job 1”/);
     const control = await screen.findByRole('button', { name: 'Undo · Dismissed “Job 1”.' });
     // The control stands in the top row of the job list, beside the selection.
-    expect(control.closest('div')?.parentElement).toContainElement(screen.getByRole('checkbox', { name: /Select all loaded/ }));
+    const selectAll = screen.getByRole('checkbox', { name: /Select all loaded/ });
+    expect(control.closest('div')?.parentElement).toContainElement(selectAll);
+    // At 375px the control shortens with an ellipsis. "Select all loaded" keeps its line instead of wrapping in the 44px row.
+    expect(selectAll.closest('label')).toHaveClass('shrink-0', 'whitespace-nowrap');
+    expect(control).toHaveClass('min-w-0', 'shrink');
   });
 
   it('undoes the triage action from the undo control after the message has closed', async () => {
@@ -1098,6 +1102,9 @@ describe('bulk actions', () => {
     for (const b of within(bar).getAllByRole('button')) expect(b).toHaveClass('h-11');
     const more = within(bar).getByRole('combobox', { name: 'More bulk actions' });
     expect(more).toHaveDisplayValue('More');
+    // Chrome draws the menu arrow inside the content box. With the 28px right padding of a select, "More" was cut at 375px.
+    expect(more).toHaveClass('px-2');
+    expect(more).not.toHaveClass('pr-7');
     // The card's selection box takes a 44px corner on a touch screen.
     expect(screen.getByRole('checkbox', { name: 'Select Job 1' }).closest('label')).toHaveClass('size-10', 'touch:size-11');
     expect(

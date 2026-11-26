@@ -38,7 +38,8 @@ export function BulkBar({ onTriage, onOther }: { onTriage: (action: TriageAction
       </label>
       <Select
         id="bulk-more"
-        className="h-11 w-auto min-w-0 flex-1 font-semibold"
+        // Chrome draws the menu arrow inside the content box, so the plain right padding of a select would leave "More" no room at 375px.
+        className="h-11 w-auto min-w-0 flex-1 px-2 font-semibold"
         value=""
         onChange={(e) => {
           const action = e.target.value as (typeof MORE_ACTIONS)[number]['value'] | '';
