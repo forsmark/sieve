@@ -1,10 +1,12 @@
-import { useEffect, useId, useState, type RefObject } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/endpoints';
 import { qk } from '../../api/keys';
-import { Button, Select, TextInput, cx } from '../../components/ui';
+import { Button, Chip, Icon, Select, TextInput } from '../../components/ui';
 import { capitalize, plural } from '../../lib/format';
+import { useMediaQuery } from '../../lib/useMediaQuery';
 import { TRIAGE_STATUSES, hasActiveFilters, normalizeStatus, statusesOf, type JobSearch } from './filters';
+import { PHONE, TOUCH } from './media';
 
 const SCORE_OPTIONS = [40, 50, 60, 70, 75, 80, 90];
 const AGE_OPTIONS = [
@@ -46,8 +48,12 @@ export function FilterBar({
   loading: boolean;
   searchRef: RefObject<HTMLInputElement | null>;
 }) {
-  const [open, setOpen] = useState(() => hasActiveFilters({ ...search, q: undefined }));
+  // Below 640px the filters open as a full-screen sheet, and never by themselves: the count on the button says that filters are on.
+  const phone = useMediaQuery(PHONE);
+  const touch = useMediaQuery(TOUCH);
+  const [open, setOpen] = useState(() => !phone && hasActiveFilters({ ...search, q: undefined }));
   const panelId = useId();
+  const sheetTitleId = useId();
   const [q, setQ] = useDebounced(search.q, (v) => update({ q: v }, true));
   const [tag, setTag] = useDebounced(search.tag, (v) => update({ tag: v }, true));
   const sources = useQuery({ queryKey: qk.sources, queryFn: api.sources, staleTime: 5 * 60_000 });
@@ -71,7 +77,8 @@ export function FilterBar({
             id="job-search"
             ref={searchRef}
             type="search"
-            placeholder="Search jobs   /"
+            // The "/" key is a keyboard hint, so a touch screen leaves it out.
+            placeholder={touch ? 'Search jobs' : 'Search jobs   /'}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -103,90 +110,152 @@ export function FilterBar({
         </span>
       </div>
 
-      <div id={panelId} hidden={!open} className="border-t border-line px-3 py-2">
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-          <fieldset className="flex flex-col gap-1">
-            <legend className="mb-1 text-xs font-medium text-muted">Status</legend>
-            <div className="flex flex-wrap gap-1">
-              {TRIAGE_STATUSES.map((s) => {
-                const on = statuses.includes(s);
-                return (
-                  <label
-                    key={s}
-                    className={cx(
-                      'flex h-7 cursor-pointer items-center gap-1.5 border px-2 text-[13px] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent',
-                      on ? 'border-accent bg-accent font-semibold text-on-accent' : 'border-line-strong text-muted hover:border-fg hover:text-fg',
-                    )}
-                  >
-                    <input type="checkbox" checked={on} onChange={(e) => toggleStatus(s, e.target.checked)} />
-                    {capitalize(s)}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
+      {phone ? (
+        open && (
+          <FilterSheet id={panelId} titleId={sheetTitleId} total={total} onClose={() => setOpen(false)}>
+            {fields()}
+          </FilterSheet>
+        )
+      ) : (
+        <div id={panelId} hidden={!open} className="border-t border-line px-3 py-2">
+          {fields()}
+        </div>
+      )}
+    </div>
+  );
 
-          <FilterSelect label="Source" value={search.source ?? ''} onChange={(v) => update({ source: v || undefined })}>
-            <option value="">All sources</option>
-            {(sources.data ?? []).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
+  function fields() {
+    return (
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <fieldset className="flex flex-col gap-1">
+          <legend className="mb-1 text-xs font-medium text-muted">Status</legend>
+          <div className="flex flex-wrap gap-1">
+            {TRIAGE_STATUSES.map((s) => (
+              <Chip key={s} checked={statuses.includes(s)} onChange={(on) => toggleStatus(s, on)}>
+                {capitalize(s)}
+              </Chip>
+            ))}
+          </div>
+        </fieldset>
+
+        <FilterSelect label="Source" value={search.source ?? ''} onChange={(v) => update({ source: v || undefined })}>
+          <option value="">All sources</option>
+          {(sources.data ?? []).map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+          {search.source && !sources.data?.some((s) => s.id === search.source) && <option value={search.source}>{search.source}</option>}
+        </FilterSelect>
+
+        <FilterSelect label="Work arrangement" value={search.work ?? ''} onChange={(v) => update({ work: (v || undefined) as JobSearch['work'] })}>
+          <option value="">Any</option>
+          <option value="remote">Remote</option>
+          <option value="hybrid">Hybrid</option>
+          <option value="onsite">On site</option>
+        </FilterSelect>
+
+        <FilterSelect label="Minimum score" value={String(search.minScore ?? '')} onChange={(v) => update({ minScore: v ? Number(v) : undefined })}>
+          <option value="">Any score</option>
+          {[...new Set([...SCORE_OPTIONS, ...(search.minScore ? [search.minScore] : [])])]
+            .sort((a, b) => a - b)
+            .map((n) => (
+              <option key={n} value={n}>
+                {n} or higher
               </option>
             ))}
-            {search.source && !sources.data?.some((s) => s.id === search.source) && <option value={search.source}>{search.source}</option>}
-          </FilterSelect>
+        </FilterSelect>
 
-          <FilterSelect label="Work arrangement" value={search.work ?? ''} onChange={(v) => update({ work: (v || undefined) as JobSearch['work'] })}>
-            <option value="">Any</option>
-            <option value="remote">Remote</option>
-            <option value="hybrid">Hybrid</option>
-            <option value="onsite">On site</option>
-          </FilterSelect>
-
-          <FilterSelect label="Minimum score" value={String(search.minScore ?? '')} onChange={(v) => update({ minScore: v ? Number(v) : undefined })}>
-            <option value="">Any score</option>
-            {[...new Set([...SCORE_OPTIONS, ...(search.minScore ? [search.minScore] : [])])]
-              .sort((a, b) => a - b)
-              .map((n) => (
-                <option key={n} value={n}>
-                  {n} or higher
-                </option>
-              ))}
-          </FilterSelect>
-
-          <FilterSelect label="Age" value={String(search.maxAgeDays ?? '')} onChange={(v) => update({ maxAgeDays: v ? Number(v) : undefined })}>
-            <option value="">Any age</option>
-            {AGE_OPTIONS.map((a) => (
-              <option key={a.value} value={a.value}>
-                {a.label}
-              </option>
-            ))}
-            {search.maxAgeDays && !AGE_OPTIONS.some((a) => a.value === search.maxAgeDays) && (
-              <option value={search.maxAgeDays}>Last {search.maxAgeDays} days</option>
-            )}
-          </FilterSelect>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="job-tag" className="text-xs font-medium text-muted">
-              Skill tag
-            </label>
-            <TextInput id="job-tag" className="w-36" placeholder="For example Go" value={tag} onChange={(e) => setTag(e.target.value)} />
-          </div>
-
-          <div className="flex flex-wrap gap-3 pb-1">
-            <Check label="Unread only" checked={!!search.unread} onChange={(v) => update({ unread: v || undefined })} />
-            <Check label="Show excluded" checked={!!search.showExcluded} onChange={(v) => update({ showExcluded: v || undefined })} />
-            <Check label="Show duplicates" checked={!!search.showDuplicates} onChange={(v) => update({ showDuplicates: v || undefined })} />
-          </div>
-
-          {hasActiveFilters(search) && (
-            <Button size="sm" variant="ghost" className="mb-0.5" onClick={() => update({ ...emptyPatch(search) })}>
-              Clear filters
-            </Button>
+        <FilterSelect label="Age" value={String(search.maxAgeDays ?? '')} onChange={(v) => update({ maxAgeDays: v ? Number(v) : undefined })}>
+          <option value="">Any age</option>
+          {AGE_OPTIONS.map((a) => (
+            <option key={a.value} value={a.value}>
+              {a.label}
+            </option>
+          ))}
+          {search.maxAgeDays && !AGE_OPTIONS.some((a) => a.value === search.maxAgeDays) && (
+            <option value={search.maxAgeDays}>Last {search.maxAgeDays} days</option>
           )}
+        </FilterSelect>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="job-tag" className="text-xs font-medium text-muted">
+            Skill tag
+          </label>
+          <TextInput id="job-tag" className="w-36" placeholder="For example Go" value={tag} onChange={(e) => setTag(e.target.value)} />
+        </div>
+
+        <div className="flex flex-wrap gap-3 pb-1">
+          <Check label="Unread only" checked={!!search.unread} onChange={(v) => update({ unread: v || undefined })} />
+          <Check label="Show excluded" checked={!!search.showExcluded} onChange={(v) => update({ showExcluded: v || undefined })} />
+          <Check label="Show duplicates" checked={!!search.showDuplicates} onChange={(v) => update({ showDuplicates: v || undefined })} />
+        </div>
+
+        {hasActiveFilters(search) && (
+          <Button size="sm" variant="ghost" className="mb-0.5" onClick={() => update({ ...emptyPatch(search) })}>
+            Clear filters
+          </Button>
+        )}
+      </div>
+    );
+  }
+}
+
+/**
+ * The filters below 640px: a full-screen sheet with "Filters" and Close at the top and "Show N postings" at the bottom.
+ * Each filter writes to the address at once, so the count is live.
+ */
+function FilterSheet({
+  id,
+  titleId,
+  total,
+  onClose,
+  children,
+}: {
+  id: string;
+  titleId: string;
+  total: number | undefined;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open) {
+      if (typeof d.showModal === 'function') d.showModal();
+      else d.setAttribute('open', '');
+    }
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      id={id}
+      aria-labelledby={titleId}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+      // The job list's keys stay with the list behind the sheet.
+      onKeyDown={(e) => e.stopPropagation()}
+      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none border-0 bg-bg p-0 text-fg"
+    >
+      <div className="flex h-full flex-col">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-fg px-3 pt-[env(safe-area-inset-top)]">
+          <h2 id={titleId} className="py-2 text-xl font-bold">
+            Filters
+          </h2>
+          <Button variant="ghost" onClick={onClose} aria-label="Close filters">
+            <Icon name="close" /> Close
+          </Button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">{children}</div>
+        <div className="shrink-0 border-t border-fg px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <Button variant="primary" className="h-11 w-full" onClick={onClose}>
+            {total === undefined ? 'Show postings' : `Show ${plural(total, 'posting')}`}
+          </Button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 

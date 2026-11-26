@@ -9,7 +9,10 @@ import { errorText } from '../../api/client';
 import { updateListItems } from '../../api/events';
 import { Button, EmptyState, ErrorState, LoadingState, Spinner, cx } from '../../components/ui';
 import { plural } from '../../lib/format';
-import { showToast, toastError, undoLast } from '../../lib/toast';
+import { onUndone, showToast, toastError, undoLast } from '../../lib/toast';
+import { useDocumentTitle } from '../../lib/useDocumentTitle';
+import { useMediaQuery } from '../../lib/useMediaQuery';
+import { BulkBar } from './BulkBar';
 import { DetailPanel } from './DetailPanel';
 import { FilterBar, emptyPatch } from './FilterBar';
 import { hasActiveFilters, statusesOf, toPostingQuery, type JobSearch } from './filters';
@@ -18,6 +21,8 @@ import { RemoveApplicationDialog } from './RemoveApplicationDialog';
 import { ShortcutHelp } from './ShortcutHelp';
 import type { SwipeAction } from './swipe';
 import { STATUS_OF, useTriage } from './useTriage';
+import { DETAIL_FULL_SCREEN, PHONE } from './media';
+import { UndoControl } from './UndoControl';
 import { useRemoveApplication } from '../board/stages';
 
 export const PAGE_SIZE = 50;
@@ -26,10 +31,6 @@ function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false;
   if (t instanceof HTMLInputElement) return !['checkbox', 'radio', 'button', 'submit'].includes(t.type);
   return t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t.isContentEditable;
-}
-
-function isWide(): boolean {
-  return typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 1024px)').matches;
 }
 
 export function JobsPage() {
@@ -79,6 +80,17 @@ export function JobsPage() {
   const searchRef = useRef<HTMLInputElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const focusRowSoon = useRef(false);
+  /** The posting whose card takes focus once it is in the list, after the detail view closed, and until when to wait for it. */
+  const focusCardSoon = useRef<{ id: string; until: number; scrolled: boolean } | undefined>(undefined);
+  const phone = useMediaQuery(PHONE);
+  const fullScreen = useMediaQuery(DETAIL_FULL_SCREEN);
+
+  // The open posting names the page. The detail view shares this query, so it adds no request.
+  const openDetail = useQuery({ queryKey: qk.posting(search.id ?? ''), queryFn: () => api.posting(search.id!), enabled: !!search.id });
+  useDocumentTitle((search.id && openDetail.data?.title) || 'Jobs');
+
+  /** The posting that the detail view opened by itself after a triage. It counts as read only after a dwell. */
+  const [autoOpenedId, setAutoOpenedId] = useState<string | undefined>(undefined);
 
   // Keep the cursor on the selected posting, for example after a reload with `?id=`.
   useEffect(() => {
@@ -176,6 +188,32 @@ export function JobsPage() {
     if (lastVirtual.index >= items.length - 5 && list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage();
   }, [lastVirtual, items.length, list]);
 
+  // After the detail view closed, its card takes focus. A card outside the rendered rows is scrolled to once.
+  useEffect(() => {
+    const pending = focusCardSoon.current;
+    if (!pending) return;
+    // A render long after the close does not take focus.
+    if (Date.now() > pending.until) {
+      focusCardSoon.current = undefined;
+      return;
+    }
+    const el = document.getElementById(`row-${pending.id}`);
+    if (el) {
+      el.focus({ preventScroll: true });
+      focusCardSoon.current = undefined;
+      return;
+    }
+    const idx = items.findIndex((i) => i.id === pending.id);
+    if (idx < 0) {
+      // The posting left the list. The card under the cursor takes focus instead.
+      focusCardSoon.current = undefined;
+      focusRowSoon.current = true;
+    } else if (!pending.scrolled) {
+      pending.scrolled = true;
+      virtualizer.scrollToIndex(idx, { align: 'auto' });
+    }
+  });
+
   // Move DOM focus to the cursor row when the list had focus.
   useEffect(() => {
     if (!focusRowSoon.current || cursor < 0) return;
@@ -204,7 +242,10 @@ export function JobsPage() {
     if (listHasFocus()) focusRowSoon.current = true;
     setCursor(i);
     virtualizer.scrollToIndex(i, { align: 'auto' });
-    if (search.id && items[i]) openPosting(items[i].id, true);
+    if (search.id && items[i]) {
+      setAutoOpenedId(undefined);
+      openPosting(items[i].id, true);
+    }
     if (i >= items.length - 3 && list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage();
   };
 
@@ -229,6 +270,7 @@ export function JobsPage() {
     (ids: string[], action: TriageAction, label?: string, opts?: { keepSelection?: boolean }) => {
       if (ids.length === 0) return;
       const leaves = !statuses.includes(STATUS_OF[action]);
+      let returnTo: string | undefined;
       if (leaves && mounted.current && search.id && ids.includes(search.id)) {
         // Follow with the next posting, so triage in the detail view keeps going.
         const idx = items.findIndex((i) => i.id === search.id);
@@ -238,10 +280,13 @@ export function JobsPage() {
             .slice(0, Math.max(0, idx))
             .reverse()
             .find((i) => !ids.includes(i.id));
+        // The undo of this triage shows the posting again.
+        if (after) returnTo = search.id;
+        setAutoOpenedId(after?.id);
         openPosting(after?.id, true);
       }
       if (listHasFocus()) focusRowSoon.current = true;
-      triage.mutate({ ids, action, label });
+      triage.mutate({ ids, action, label, returnTo });
       setSelection((s) => {
         if (!opts?.keepSelection) return s.size ? new Set() : s;
         // A swipe acts on one card. The other cards stay selected.
@@ -303,17 +348,39 @@ export function JobsPage() {
     });
   }, []);
 
+  // An undo of a triage that moved the detail view on shows the earlier posting again, while this page is mounted.
+  const reopen = useRef<(id: string) => void>(() => {});
+  reopen.current = (id) => {
+    setAutoOpenedId(undefined);
+    openPosting(id, true);
+  };
+  useEffect(
+    () =>
+      onUndone((entry) => {
+        if (entry.kind === 'triage' && entry.returnTo && mounted.current) reopen.current(entry.returnTo);
+      }),
+    [],
+  );
+
   const onOpenRow = useCallback(
     (id: string, index: number) => {
       setCursor(index);
+      setAutoOpenedId(undefined);
       openPosting(id);
-      if (!isWide()) requestAnimationFrame(() => headingRef.current?.focus());
     },
     [openPosting],
   );
 
+  // While a posting is open, a focus from Tab leaves the cursor where it is, so the triage keys still act on the open posting.
+  // The cursor keys and a click still move it.
+  const openId = useRef(search.id);
+  openId.current = search.id;
+  const onFocusRow = useCallback((index: number) => {
+    if (!openId.current) setCursor(index);
+  }, []);
+
   const closeDetail = () => {
-    focusRowSoon.current = true;
+    focusCardSoon.current = search.id ? { id: search.id, until: Date.now() + 1000, scrolled: false } : undefined;
     openPosting(undefined);
   };
 
@@ -423,17 +490,33 @@ export function JobsPage() {
   }, []);
 
   const allLoadedSelected = items.length > 0 && selection.size === items.length;
+  const clearSelection = () => setSelection(new Set());
 
   return (
     <div ref={pageRef} className="flex h-full">
       <div
         className={cx('flex min-w-0 flex-col', !panelOpen && 'flex-1')}
         style={panelOpen ? { width: `${(columns / pageColumns) * 100}%`, flexShrink: 0 } : undefined}
+        // The full-screen detail covers the list. Focus and the screen reader stay in the detail.
+        inert={!!search.id && fullScreen}
       >
+        <h1 className="sr-only">Jobs</h1>
+        {search.id && (
+          <a
+            href="#posting-heading"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-accent focus:px-3 focus:py-2 focus:font-semibold focus:text-on-accent"
+            onClick={(e) => {
+              e.preventDefault();
+              headingRef.current?.focus();
+            }}
+          >
+            Go to the open posting
+          </a>
+        )}
         <FilterBar search={search} update={update} total={total} loading={list.isPending} searchRef={searchRef} />
 
-        <div className="flex h-9 shrink-0 items-center gap-2 border-b border-fg px-3 text-[13px]">
-          <label className="flex items-center gap-2">
+        <div className="flex h-9 shrink-0 items-center gap-2 border-b border-fg px-3 text-[13px] touch:h-11">
+          <label className="flex items-center gap-2 self-stretch">
             <input
               type="checkbox"
               className="size-4"
@@ -441,12 +524,18 @@ export function JobsPage() {
               ref={(el) => {
                 if (el) el.indeterminate = selection.size > 0 && !allLoadedSelected;
               }}
-              onChange={() => setSelection(allLoadedSelected ? new Set() : new Set(items.map((i) => i.id)))}
+              // In the mixed state the control clears the selection, as it does when every posting is selected.
+              onChange={() => setSelection(selection.size > 0 ? new Set() : new Set(items.map((i) => i.id)))}
               disabled={items.length === 0}
             />
             <span className={selection.size ? 'font-medium' : 'text-muted'}>{selection.size ? `${selection.size} selected` : 'Select all loaded'}</span>
           </label>
-          {selection.size > 0 ? (
+          {selection.size > 0 && phone && (
+            <Button size="sm" variant="ghost" onClick={clearSelection}>
+              Clear
+            </Button>
+          )}
+          {selection.size > 0 && !phone && (
             <div role="toolbar" aria-label="Bulk actions" className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
               <Button size="sm" onClick={() => doTriage([...selection], 'save')}>
                 Save
@@ -477,17 +566,20 @@ export function JobsPage() {
               <Button size="sm" variant="ghost" onClick={() => bulkOther.mutate({ ids: [...selection], action: 'unread' })}>
                 Mark unread
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setSelection(new Set())}>
+              <Button size="sm" variant="ghost" onClick={clearSelection}>
                 Clear
               </Button>
             </div>
-          ) : (
-            <span className="ml-auto">
-              <Button size="sm" variant="ghost" onClick={() => setHelpOpen(true)} aria-keyshortcuts="?">
+          )}
+          <span className="ml-auto flex min-w-0 items-center gap-1">
+            <UndoControl />
+            {selection.size === 0 && (
+              // Keyboard hints are for a keyboard. The `?` key still opens the list on a touch screen.
+              <Button size="sm" variant="ghost" className="touch:hidden" onClick={() => setHelpOpen(true)} aria-keyshortcuts="?">
                 Shortcuts <kbd className="ml-1 border border-line-strong px-1 font-mono text-[11px]">?</kbd>
               </Button>
-            </span>
-          )}
+            )}
+          </span>
         </div>
 
         <div
@@ -557,7 +649,7 @@ export function JobsPage() {
                         selected={selection.has(item.id)}
                         onOpen={onOpenRow}
                         onToggleSelect={toggleSelect}
-                        onFocusRow={setCursor}
+                        onFocusRow={onFocusRow}
                         onSwipe={onSwipe}
                         swipeLeaves={swipeLeaves}
                       />
@@ -580,6 +672,9 @@ export function JobsPage() {
             </div>
           )}
         </div>
+        {phone && selection.size > 0 && (
+          <BulkBar onTriage={(action) => doTriage([...selection], action)} onOther={(action) => bulkOther.mutate({ ids: [...selection], action })} />
+        )}
       </div>
 
       {search.id && (
@@ -592,6 +687,7 @@ export function JobsPage() {
             id={search.id}
             onClose={closeDetail}
             onTriage={doTriage}
+            autoOpened={search.id === autoOpenedId}
             onTagClick={(tag) => update({ tag, id: undefined })}
             headingRef={headingRef}
           />

@@ -7,6 +7,7 @@ import type { MatchSummary, PostingDetail, PostingListItem, ServerEvent } from '
 import { App } from '../../app/App';
 import { STATUS, makeItem, mockApi, renderApp } from '../../test-utils';
 import { resetToastsForTests } from '../../lib/toast';
+import { mockMedia } from '../../test/media';
 
 function rowOf(title: string): HTMLElement {
   return screen.getByText(title).closest('[role="listitem"]') as HTMLElement;
@@ -817,5 +818,606 @@ describe('swipe triage', () => {
       expect(deletes(api)).toEqual([]);
       expect(within(cardOf('Job 1')).getByText('Applied')).toBeInTheDocument();
     });
+  });
+});
+
+const TRIAGE_STATUS: Record<string, PostingListItem['triageStatus']> = { save: 'saved', dismiss: 'dismissed', restore: 'new', apply: 'applied' };
+
+/**
+ * A server that keeps the status of each posting. The list shows the new and saved postings, as the default list does.
+ * Triage and undo change the stored status, and each detail returns it.
+ */
+function postingServer(initial: PostingListItem[], extra: Record<string, Parameters<typeof mockApi>[0][string]> = {}) {
+  const all = new Map(initial.map((i) => [i.id, i]));
+  const visible = () => [...all.values()].filter((i) => i.triageStatus === 'new' || i.triageStatus === 'saved');
+  const routes: Parameters<typeof mockApi>[0] = {
+    ...baseRoutes(visible),
+    'POST /api/postings/bulk': (c) => {
+      const { ids, action } = c.body as { ids: string[]; action: string };
+      const status = TRIAGE_STATUS[action];
+      if (!status) return { previous: [], queued: ids.length };
+      const previous = ids.map((id) => ({ id, triageStatus: all.get(id)!.triageStatus }));
+      for (const id of ids) all.set(id, { ...all.get(id)!, triageStatus: status });
+      return { previous };
+    },
+    'POST /api/postings/restore': (c) => {
+      for (const p of (c.body as { previous: Array<{ id: string; triageStatus: PostingListItem['triageStatus'] }> }).previous) {
+        all.set(p.id, { ...all.get(p.id)!, triageStatus: p.triageStatus });
+      }
+      return { ok: true };
+    },
+  };
+  for (const item of initial) {
+    routes[`GET /api/postings/${item.id}`] = () => detailOf(all.get(item.id)!);
+    routes[`PATCH /api/postings/${item.id}`] = (c) => {
+      all.set(item.id, { ...all.get(item.id)!, unread: !(c.body as { read: boolean }).read });
+      return { previous: [] };
+    };
+  }
+  const api = mockApi({ ...routes, ...extra });
+  return { all, api };
+}
+
+const detailView = () => within(screen.getByRole('complementary', { name: 'Posting details' }));
+const markReadCalls = (api: ReturnType<typeof mockApi>, id: string) => api.calls.filter((c) => c.method === 'PATCH' && c.path === `/api/postings/${id}`);
+const restoreCalls = (api: ReturnType<typeof mockApi>) => api.calls.filter((c) => c.path === '/api/postings/restore');
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const bottomBar = () => document.documentElement.style.getPropertyValue('--bottom-bar');
+/** The button of a card, which opens its posting. */
+const cardButton = (title: string) => cardOf(title).querySelector<HTMLElement>('button[data-row-button]')!;
+
+/** Closes the undo message of this text with its close button. */
+async function closeToast(user: ReturnType<typeof userEvent.setup>, text: RegExp) {
+  const toast = (await screen.findByText(text)).closest('[role="status"]') as HTMLElement;
+  await user.click(within(toast).getByRole('button', { name: 'Close message' }));
+  await waitFor(() => expect(screen.queryByText(text, { selector: '[role="status"] *' })).not.toBeInTheDocument());
+}
+
+describe('undo after the message', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetToastsForTests();
+  });
+
+  it('shows an undo control in the job list that names the triage action once its message closes', async () => {
+    postingServer([makeItem('1', 90), makeItem('2', 70)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    await user.keyboard('d');
+    await screen.findByText(/Dismissed “Job 1”/);
+    // While the message shows, the message has the undo.
+    expect(screen.queryByRole('button', { name: /^Undo · / })).not.toBeInTheDocument();
+
+    await closeToast(user, /Dismissed “Job 1”/);
+    const control = await screen.findByRole('button', { name: 'Undo · Dismissed “Job 1”.' });
+    // The control stands in the top row of the job list, beside the selection.
+    expect(control.closest('div')?.parentElement).toContainElement(screen.getByRole('checkbox', { name: /Select all loaded/ }));
+  });
+
+  it('undoes the triage action from the undo control after the message has closed', async () => {
+    const { api } = postingServer([makeItem('1', 90), makeItem('2', 70)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    await user.keyboard('d');
+    await closeToast(user, /Dismissed “Job 1”/);
+
+    await user.click(await screen.findByRole('button', { name: 'Undo · Dismissed “Job 1”.' }));
+    await waitFor(() => expect(restoreCalls(api).map((c) => c.body)).toEqual([{ previous: [{ id: '1', triageStatus: 'new' }] }]));
+    expect(await screen.findByText('Job 1')).toBeInTheDocument();
+    // The undo ran, so nothing is left to undo.
+    expect(screen.queryByRole('button', { name: /^Undo · / })).not.toBeInTheDocument();
+  });
+
+  it('shows the dismissed posting again in the detail view, with its earlier status, when the user undoes the dismissal', async () => {
+    const { api } = postingServer([makeItem('1', 90), makeItem('2', 70), makeItem('3', 60)]);
+    const user = userEvent.setup();
+    const { history } = renderApp('/jobs?id=1');
+    await screen.findByRole('heading', { name: 'Job 1' });
+
+    await user.click(detailView().getByRole('button', { name: 'Dismiss' }));
+    // The detail view moves on to the next posting.
+    expect(await screen.findByRole('heading', { name: 'Job 2' })).toBeInTheDocument();
+    expect(history.location.search).toBe('?id=2');
+
+    const toast = (await screen.findByText(/Dismissed “Job 1”/)).closest('[role="status"]') as HTMLElement;
+    await user.click(within(toast).getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(restoreCalls(api)).toHaveLength(1));
+    expect(await screen.findByRole('heading', { name: 'Job 1' })).toBeInTheDocument();
+    expect(history.location.search).toBe('?id=1');
+    await waitFor(() => expect(detailView().getByText('New')).toBeInTheDocument());
+    expect(detailView().getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
+  });
+
+  it('stays on the next posting when the undo request fails', async () => {
+    const { api } = postingServer([makeItem('1', 90), makeItem('2', 70)], {
+      'POST /api/postings/restore': () => new Response(JSON.stringify({ error: 'Database is locked.' }), { status: 500 }),
+    });
+    const user = userEvent.setup();
+    const { history } = renderApp('/jobs?id=1');
+    await screen.findByRole('heading', { name: 'Job 1' });
+    await user.click(detailView().getByRole('button', { name: 'Dismiss' }));
+    await screen.findByRole('heading', { name: 'Job 2' });
+
+    await user.keyboard('u');
+    await waitFor(() => expect(restoreCalls(api)).toHaveLength(1));
+    expect(await screen.findByText(/Undo failed/)).toBeInTheDocument();
+    expect(history.location.search).toBe('?id=2');
+    expect(screen.getByRole('heading', { name: 'Job 2' })).toBeInTheDocument();
+  });
+
+  it('does not open the job list again when the user undoes from another page', async () => {
+    const { api } = postingServer([makeItem('1', 90), makeItem('2', 70)], { 'GET /api/applications': () => [] });
+    const user = userEvent.setup();
+    const { history } = renderApp('/jobs?id=1');
+    await screen.findByRole('heading', { name: 'Job 1' });
+    await user.click(detailView().getByRole('button', { name: 'Dismiss' }));
+    await screen.findByRole('heading', { name: 'Job 2' });
+
+    act(() => history.push('/board'));
+    const toast = (await screen.findByText(/Dismissed “Job 1”/)).closest('[role="status"]') as HTMLElement;
+    await user.click(within(toast).getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(restoreCalls(api)).toHaveLength(1));
+    await sleep(50);
+    expect(history.location.pathname).toBe('/board');
+  });
+});
+
+describe('detail action bar', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetToastsForTests();
+  });
+
+  it.each([
+    ['new', ['Save', 'Dismiss', 'Mark as applied']],
+    ['saved', ['Dismiss', 'Mark as applied']],
+    ['dismissed', ['Save', 'Restore', 'Mark as applied']],
+    ['applied', ['Dismiss', 'Open on board']],
+  ] as const)('holds the triage buttons of a %s posting in the bar at the bottom on a phone', async (status, labels) => {
+    mockMedia({ coarse: true, width: 430 });
+    postingServer([makeItem('1', 90, { triageStatus: status })]);
+    renderApp('/jobs?id=1');
+    await screen.findByRole('heading', { name: 'Job 1' });
+
+    const bar = await screen.findByRole('group', { name: 'Triage actions' });
+    const controls = [...bar.querySelectorAll('button, a')];
+    expect(controls.map((b) => b.textContent)).toEqual(labels);
+    for (const control of controls) expect(control).toHaveClass('h-11', 'flex-1');
+    // The bar is below the scroller, and the header keeps only Rescore.
+    const header = screen.getByRole('heading', { name: 'Job 1' }).closest('header') as HTMLElement;
+    for (const label of labels) expect(within(header).queryByRole('button', { name: label })).not.toBeInTheDocument();
+    expect(within(header).getByRole('button', { name: 'Rescore' })).toBeInTheDocument();
+    // The toasts stand above the bar.
+    expect(bottomBar()).toBe('600px');
+  });
+
+  it('dismisses from the bar and moves on to the next posting', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    const { api } = postingServer([makeItem('1', 90), makeItem('2', 70)]);
+    const user = userEvent.setup();
+    const { history } = renderApp('/jobs?id=1');
+    await screen.findByRole('heading', { name: 'Job 1' });
+    await user.click(within(await screen.findByRole('group', { name: 'Triage actions' })).getByRole('button', { name: 'Dismiss' }));
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1'], action: 'dismiss' }]));
+    expect(await screen.findByRole('heading', { name: 'Job 2' })).toBeInTheDocument();
+    expect(history.location.search).toBe('?id=2');
+  });
+
+  it('keeps the triage buttons in the detail header at 1440px', async () => {
+    mockMedia({ width: 1440 });
+    postingServer([makeItem('1', 90)]);
+    renderApp('/jobs?id=1');
+    const heading = await screen.findByRole('heading', { name: 'Job 1' });
+    const header = heading.closest('header') as HTMLElement;
+    for (const label of ['Save', 'Dismiss', 'Mark as applied', 'Rescore']) expect(within(header).getByRole('button', { name: label })).toHaveClass('h-7');
+    expect(screen.queryByRole('group', { name: 'Triage actions' })).not.toBeInTheDocument();
+    expect(bottomBar()).toBe('');
+  });
+
+  it('lets the toasts go back down when the detail view closes', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    postingServer([makeItem('1', 90)]);
+    const user = userEvent.setup();
+    renderApp('/jobs?id=1');
+    await screen.findByRole('group', { name: 'Triage actions' });
+    expect(bottomBar()).toBe('600px');
+    await user.click(screen.getByRole('button', { name: 'Close details' }));
+    await waitFor(() => expect(screen.queryByRole('complementary')).not.toBeInTheDocument());
+    expect(bottomBar()).toBe('');
+  });
+});
+
+describe('bulk actions', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetToastsForTests();
+  });
+
+  const selectAll = () => screen.getByRole('checkbox', { name: /Select all loaded|selected/ });
+
+  it('shows a mixed state on the select-all control when part of the list is selected', async () => {
+    postingServer([makeItem('1', 90), makeItem('2', 70), makeItem('3', 60)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    expect(selectAll()).not.toBePartiallyChecked();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 2' }));
+    expect(selectAll()).toBePartiallyChecked();
+    expect(selectAll()).not.toBeChecked();
+
+    // With every posting selected, the control is checked and no longer mixed.
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 1' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 3' }));
+    expect(selectAll()).toBeChecked();
+    expect(selectAll()).not.toBePartiallyChecked();
+  });
+
+  it('clears a partial selection when the user uses the select-all control', async () => {
+    postingServer([makeItem('1', 90), makeItem('2', 70), makeItem('3', 60)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 1' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 2' }));
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+
+    await user.click(selectAll());
+    expect(screen.queryByText(/selected$/)).not.toBeInTheDocument();
+    for (const n of [1, 2, 3]) expect(screen.getByRole('checkbox', { name: `Select Job ${n}` })).not.toBeChecked();
+    expect(selectAll()).not.toBeChecked();
+    expect(selectAll()).not.toBePartiallyChecked();
+
+    // From nothing selected, the control selects every loaded posting.
+    await user.click(selectAll());
+    expect(screen.getByText('3 selected')).toBeInTheDocument();
+  });
+
+  it('puts the bulk actions in a bar at the bottom of the list on a phone, with Clear beside the count', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    const { api } = postingServer([makeItem('1', 90), makeItem('2', 70), makeItem('3', 60)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    expect(screen.queryByRole('toolbar', { name: 'Bulk actions' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 1' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 2' }));
+
+    const bar = screen.getByRole('toolbar', { name: 'Bulk actions' });
+    expect(
+      within(bar)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Save', 'Dismiss', 'Applied']);
+    for (const b of within(bar).getAllByRole('button')) expect(b).toHaveClass('h-11');
+    const more = within(bar).getByRole('combobox', { name: 'More bulk actions' });
+    expect(more).toHaveDisplayValue('More');
+    expect(
+      within(more)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['More', 'Restore', 'Rescore', 'Analyze', 'Mark read', 'Mark unread']);
+    // The bar comes after the list, and the toasts stand above it.
+    expect(screen.getByRole('list', { name: /Job postings/ }).compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bottomBar()).toBe('600px');
+
+    // Clear stands beside the count in the top row.
+    const count = screen.getByText('2 selected');
+    const clear = screen.getByRole('button', { name: 'Clear' });
+    expect(count.closest('label')?.nextElementSibling).toBe(clear);
+
+    await user.click(within(bar).getByRole('button', { name: 'Dismiss' }));
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1', '2'], action: 'dismiss' }]));
+    await waitFor(() => expect(screen.queryByRole('toolbar', { name: 'Bulk actions' })).not.toBeInTheDocument());
+    expect(bottomBar()).toBe('');
+  });
+
+  it.each([
+    ['Restore', 'restore'],
+    ['Rescore', 'rescore'],
+    ['Analyze', 'analyze'],
+    ['Mark read', 'read'],
+    ['Mark unread', 'unread'],
+  ])('runs "%s" from the More menu at a narrow width and shows the menu label again', async (label, action) => {
+    mockMedia({ coarse: true, width: 430 });
+    const { api } = postingServer([makeItem('1', 90), makeItem('2', 70)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 1' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 2' }));
+
+    const more = screen.getByRole('combobox', { name: 'More bulk actions' });
+    await user.selectOptions(more, label);
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1', '2'], action }]));
+    // Restore keeps the selection only until it runs; the menu shows its label again either way.
+    if (screen.queryByRole('combobox', { name: 'More bulk actions' }))
+      expect(screen.getByRole('combobox', { name: 'More bulk actions' })).toHaveDisplayValue('More');
+  });
+
+  it('keeps every bulk action in the top row at 1440px', async () => {
+    mockMedia({ width: 1440 });
+    postingServer([makeItem('1', 90), makeItem('2', 70)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 1' }));
+    const toolbar = screen.getByRole('toolbar', { name: 'Bulk actions' });
+    expect(
+      within(toolbar)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Save', 'Dismiss', 'Restore', 'Applied', 'Rescore', 'Analyze', 'Mark read', 'Mark unread', 'Clear']);
+    expect(screen.queryByRole('combobox', { name: 'More bulk actions' })).not.toBeInTheDocument();
+    expect(bottomBar()).toBe('');
+  });
+});
+
+describe('unread tracking of an auto-opened posting', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetToastsForTests();
+  });
+
+  async function dismissFirst() {
+    const server = postingServer([makeItem('1', 90), makeItem('2', 70), makeItem('3', 60)]);
+    const user = userEvent.setup();
+    const utils = renderApp('/jobs?id=1');
+    await screen.findByRole('heading', { name: 'Job 1' });
+    await waitFor(() => expect(markReadCalls(server.api, '1')).toHaveLength(1));
+    await user.click(detailView().getByRole('button', { name: 'Dismiss' }));
+    await screen.findByRole('heading', { name: 'Job 2' });
+    return { ...server, ...utils, user };
+  }
+
+  it('keeps the next posting unread for 1.5 seconds after a triage opens it, then marks it read', async () => {
+    const { api } = await dismissFirst();
+    expect(markReadCalls(api, '2')).toHaveLength(0);
+    await sleep(1000);
+    expect(markReadCalls(api, '2')).toHaveLength(0);
+    expect(within(cardOf('Job 2')).getByText('Unread.')).toBeInTheDocument();
+
+    await waitFor(() => expect(markReadCalls(api, '2').map((c) => c.body)).toEqual([{ read: true }]), { timeout: 1500 });
+    await waitFor(() => expect(within(cardOf('Job 2')).queryByText('Unread.')).not.toBeInTheDocument());
+  });
+
+  it('leaves the next posting unread when the user closes it within 1.5 seconds', async () => {
+    const { api, user } = await dismissFirst();
+    await user.click(screen.getByRole('button', { name: 'Close details' }));
+    await sleep(1800);
+    expect(markReadCalls(api, '2')).toHaveLength(0);
+  });
+
+  it('leaves the next posting unread when the user moves to another posting within 1.5 seconds', async () => {
+    const { api, user, history } = await dismissFirst();
+    await user.keyboard('j');
+    await waitFor(() => expect(history.location.search).toBe('?id=3'));
+    // A posting the user opens marks read at once.
+    await waitFor(() => expect(markReadCalls(api, '3')).toHaveLength(1));
+    await sleep(1800);
+    expect(markReadCalls(api, '2')).toHaveLength(0);
+  });
+});
+
+describe('focus and the keyboard cursor', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetToastsForTests();
+  });
+
+  it('moves focus to the card of the posting when the user closes the detail view', async () => {
+    mockMedia({ width: 1440 });
+    postingServer([makeItem('1', 90), makeItem('2', 70), makeItem('3', 60)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 2');
+    await user.click(cardButton('Job 2'));
+    const heading = await screen.findByRole('heading', { name: 'Job 2' });
+    await user.click(heading);
+    expect(detailView().getByRole('heading', { name: 'Job 2' })).toHaveFocus();
+
+    await user.click(screen.getByRole('button', { name: 'Close details' }));
+    await waitFor(() => expect(cardButton('Job 2')).toHaveFocus());
+    expect(cardButton('Job 2')).toHaveAttribute('id', 'row-2');
+  });
+
+  it('moves focus to the card of the posting when the user closes the full-screen detail on a phone', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    postingServer([makeItem('1', 90), makeItem('2', 70)]);
+    const user = userEvent.setup();
+    renderApp('/jobs?id=2');
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Job 2' })).toHaveFocus());
+    await user.click(screen.getByRole('button', { name: 'Close details' }));
+    await waitFor(() => expect(cardButton('Job 2')).toHaveFocus());
+  });
+
+  it('focuses the detail heading when the posting arrives on a phone, and makes the list behind it inert', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    let release: () => void = () => {};
+    const arrived = new Promise<void>((r) => (release = r));
+    const items = [makeItem('1', 90), makeItem('2', 70)];
+    postingServer(items, {
+      'GET /api/postings/2': async () => {
+        await arrived;
+        return detailOf(items[1]!);
+      },
+    });
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 2');
+    const list = screen.getByRole('list', { name: /Job postings/ });
+    expect(list.closest('[inert]')).toBeNull();
+
+    await user.click(cardButton('Job 2'));
+    await screen.findByRole('complementary', { name: 'Posting details' });
+    expect(list.closest('[inert]')).not.toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Job 2', level: 2 })).not.toBeInTheDocument();
+
+    release();
+    const heading = await screen.findByRole('heading', { name: 'Job 2', level: 2 });
+    await waitFor(() => expect(heading).toHaveFocus());
+  });
+
+  it('leaves focus in the list beside the detail at 1440px when a posting opens', async () => {
+    mockMedia({ width: 1440 });
+    postingServer([makeItem('1', 90), makeItem('2', 70)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 2');
+    await user.click(cardButton('Job 2'));
+    await screen.findByRole('heading', { name: 'Job 2', level: 2 });
+    expect(cardButton('Job 2')).toHaveFocus();
+    expect(screen.getByRole('list', { name: /Job postings/ }).closest('[inert]')).toBeNull();
+  });
+
+  it('keeps the cursor on the open posting when Tab moves focus to another card, and moves it with the cursor keys', async () => {
+    mockMedia({ width: 1440 });
+    const { api } = postingServer([makeItem('1', 90), makeItem('2', 70), makeItem('3', 60)]);
+    const user = userEvent.setup();
+    const { history } = renderApp('/jobs?id=1');
+    await screen.findByRole('heading', { name: 'Job 1', level: 2 });
+    expect(cardOf('Job 1')).toHaveAttribute('aria-current', 'true');
+
+    act(() => cardButton('Job 3').focus());
+    expect(cardOf('Job 1')).toHaveAttribute('aria-current', 'true');
+    expect(cardOf('Job 3')).not.toHaveAttribute('aria-current');
+    // A triage key still acts on the open posting.
+    await user.keyboard('s');
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1'], action: 'save' }]));
+
+    await user.keyboard('j');
+    expect(cardOf('Job 2')).toHaveAttribute('aria-current', 'true');
+    await waitFor(() => expect(history.location.search).toBe('?id=2'));
+  });
+
+  it('moves the cursor with a focus from Tab while no posting is open', async () => {
+    postingServer([makeItem('1', 90), makeItem('2', 70)]);
+    renderApp('/jobs');
+    await screen.findByText('Job 2');
+    act(() => cardButton('Job 2').focus());
+    expect(cardOf('Job 2')).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('offers a skip link from the list into the open posting', async () => {
+    mockMedia({ width: 1440 });
+    postingServer([makeItem('1', 90)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    expect(screen.queryByRole('link', { name: 'Go to the open posting' })).not.toBeInTheDocument();
+    await user.click(cardButton('Job 1'));
+    const heading = await screen.findByRole('heading', { name: 'Job 1', level: 2 });
+
+    const skip = screen.getByRole('link', { name: 'Go to the open posting' });
+    expect(skip).toHaveClass('sr-only', 'focus:not-sr-only');
+    // It stands first in the list column, before the search.
+    expect(skip.compareDocumentPosition(screen.getByRole('searchbox')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(skip);
+    expect(heading).toHaveFocus();
+  });
+});
+
+describe('job list names and hints', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetToastsForTests();
+  });
+
+  it('has a visually hidden "Jobs" heading and titles the page after the open posting', async () => {
+    postingServer([makeItem('1', 90), makeItem('7', 82)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 7');
+    expect(screen.getByRole('heading', { name: 'Jobs', level: 1 })).toHaveClass('sr-only');
+    await waitFor(() => expect(document.title).toBe('Jobs · sieve'));
+
+    await user.click(cardButton('Job 7'));
+    await screen.findByRole('heading', { name: 'Job 7', level: 2 });
+    await waitFor(() => expect(document.title).toBe('Job 7 · sieve'));
+
+    await user.click(screen.getByRole('button', { name: 'Close details' }));
+    await waitFor(() => expect(document.title).toBe('Jobs · sieve'));
+  });
+
+  it('names a card by its title first, then its company, score and band', async () => {
+    postingServer([makeItem('1', 90), makeItem('2', null, { unread: false })]);
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    expect(cardButton('Job 1')).toHaveAccessibleName('Job 1 Company 1 · Copenhagen · Remote 90 Strong match Unread.');
+    expect(cardButton('Job 2')).toHaveAccessibleName(/^Job 2 Company 2 · Copenhagen · Remote Waiting/);
+    expect(cardButton('Job 1')).toHaveAccessibleDescription(/Jobindex/);
+  });
+
+  it('writes the foot of a card in 13px text', async () => {
+    postingServer([makeItem('1', 90)]);
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    // The foot is the last part of the card's description.
+    const foot = document.getElementById(cardButton('Job 1').getAttribute('aria-describedby')!.split(' ').at(-1)!)!;
+    expect(foot).toHaveTextContent(/^Jobindex/);
+    expect(foot).toHaveClass('text-[13px]');
+    expect(foot).not.toHaveClass('text-xs');
+  });
+
+  it('hides the keyboard hints on a touch screen, and the ? key still opens the shortcut list', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    postingServer([makeItem('1', 90)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    expect(screen.getByRole('button', { name: /Shortcuts/ })).toHaveClass('touch:hidden');
+    expect(screen.getByRole('searchbox')).toHaveAttribute('placeholder', 'Search jobs');
+    await user.keyboard('?');
+    expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
+  });
+
+  it('shows the "/" hint in the search field with a mouse', async () => {
+    mockMedia({ width: 1440 });
+    postingServer([makeItem('1', 90)]);
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    expect(screen.getByRole('searchbox')).toHaveAttribute('placeholder', 'Search jobs   /');
+  });
+
+  it('returns focus to the Shortcuts button when the shortcut list closes', async () => {
+    postingServer([makeItem('1', 90)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    const button = screen.getByRole('button', { name: /Shortcuts/ });
+    await user.click(button);
+    const dialog = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
+    // jsdom has no showModal, which moves focus into the dialog, so the test does.
+    act(() => within(dialog).getByRole('button', { name: 'Close' }).focus());
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(button).toHaveFocus();
+  });
+
+  it('closes the shortcut list on a tap on its backdrop and returns focus', async () => {
+    postingServer([makeItem('1', 90)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    const button = screen.getByRole('button', { name: /Shortcuts/ });
+    await user.click(button);
+    const dialog = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
+    act(() => within(dialog).getByRole('button', { name: 'Close' }).focus());
+    // A click inside the list keeps it open.
+    await user.click(within(dialog).getByText('Next posting'));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    // The backdrop belongs to the dialog element itself.
+    fireEvent.click(dialog);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(button).toHaveFocus();
   });
 });

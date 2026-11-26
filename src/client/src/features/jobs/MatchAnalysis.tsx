@@ -60,8 +60,8 @@ export function MatchAnalysis({
 
       {!pending && analysis?.error && (
         <div role="alert" className="border border-current px-3 py-2 text-[13px]">
-          <p className="font-bold">{c ? 'The last analysis failed. The earlier analysis is kept.' : 'The analysis failed.'}</p>
-          <p className="mt-1 break-words">{analysis.error}</p>
+          <p className="font-bold">{c ? 'The last analysis failed. The earlier analysis is kept.' : 'The analysis could not be made. Try again.'}</p>
+          <p className="mt-1 text-xs break-words text-muted">{analysis.error}</p>
         </div>
       )}
 
