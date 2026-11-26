@@ -6,6 +6,11 @@ import { useEffect, type RefObject } from 'react';
  */
 export const BOTTOM_BAR_VAR = '--bottom-bar';
 
+/** The status bar at the bottom of the shell, whose top edge the offset depends on. */
+function statusBar(): Element | null {
+  return document.querySelector('footer[aria-label="System status"]');
+}
+
 /** The mounted bars, in the order they mounted. */
 const bars: HTMLElement[] = [];
 
@@ -19,7 +24,7 @@ function offsetOf(bar: HTMLElement): number {
   const height = bar.offsetHeight;
   if (height === 0) return 0;
   const barTop = bar.getBoundingClientRect().top;
-  const status = document.querySelector('footer[aria-label="System status"]');
+  const status = statusBar();
   const statusTop = status?.getBoundingClientRect().top ?? 0;
   if (barTop === 0 || statusTop === 0) return height;
   return Math.max(0, Math.round(statusTop - barTop));
@@ -41,7 +46,7 @@ function update(): void {
 /**
  * Marks the element as the bar at the bottom edge while it is mounted.
  * Call it in the component that renders the bar, so the element mounts and unmounts with the call.
- * `--bottom-bar` follows its height as it resizes, and goes back when it unmounts.
+ * `--bottom-bar` follows its height and the status bar's as they resize, and goes back when it unmounts.
  */
 export function useBottomBar(ref: RefObject<HTMLElement | null>): void {
   useEffect(() => {
@@ -51,6 +56,9 @@ export function useBottomBar(ref: RefObject<HTMLElement | null>): void {
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);
+    // The offset depends on the status bar's top edge too, which moves when the status bar resizes.
+    const status = statusBar();
+    if (status) observer.observe(status);
     return () => {
       observer.disconnect();
       bars.splice(bars.indexOf(el), 1);

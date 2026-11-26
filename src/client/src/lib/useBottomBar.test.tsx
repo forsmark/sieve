@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { useRef } from 'react';
 import { BOTTOM_BAR_VAR, useBottomBar } from './useBottomBar';
 
@@ -20,11 +20,11 @@ function Bar({ height, top }: { height: number; top: number }) {
   );
 }
 
-/** The status bar, whose top edge stands at `top` px. */
-function statusBar(top: number): HTMLElement {
+/** The status bar, whose top edge stands at `top` px, or at the px a function gives. */
+function statusBar(top: number | (() => number)): HTMLElement {
   const footer = document.createElement('footer');
   footer.setAttribute('aria-label', 'System status');
-  footer.getBoundingClientRect = () => ({ top }) as DOMRect;
+  footer.getBoundingClientRect = () => ({ top: typeof top === 'function' ? top() : top }) as DOMRect;
   document.body.append(footer);
   return footer;
 }
@@ -56,5 +56,37 @@ describe('useBottomBar', () => {
   it('uses the bar height when there is no layout to measure', () => {
     render(<Bar height={52} top={0} />);
     expect(value()).toBe('52px');
+  });
+
+  it('measures again when the status bar resizes and its top edge moves', () => {
+    const observers: Array<{ cb: () => void; targets: Element[] }> = [];
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      private readonly entry: { cb: () => void; targets: Element[] };
+      constructor(cb: () => void) {
+        this.entry = { cb, targets: [] };
+        observers.push(this.entry);
+      }
+      observe(el: Element) {
+        this.entry.targets.push(el);
+      }
+      unobserve() {}
+      disconnect() {
+        this.entry.targets = [];
+      }
+    } as unknown as typeof ResizeObserver;
+    try {
+      let top = 854;
+      const footer = statusBar(() => top);
+      render(<Bar height={86} top={846} />);
+      expect(value()).toBe('8px');
+
+      // The status bar loses a line, so its top edge moves down while the bar keeps its size.
+      top = 870;
+      act(() => observers.filter((o) => o.targets.includes(footer)).forEach((o) => o.cb()));
+      expect(value()).toBe('24px');
+    } finally {
+      globalThis.ResizeObserver = original;
+    }
   });
 });
