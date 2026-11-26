@@ -143,3 +143,6 @@ The design, under Risks, has the store write the returned application into the c
 
 ### 2026-11-26: A typed interview date is stored on change only once its year is whole
 Typing a year into a filled date field changes its value at every digit, to the years 2, 20 and 202, and each one was stored. A change now stores a date only when its year has four digits and is 1900 or later. Blur, close and page hide store the rest, as the entry on the empty date says.
+
+### 2026-11-26: A store the browser refuses with `keepalive` goes once more without it
+The entry on the notch sends a body over 64 KB without `keepalive`. Browsers also share one 64 KB `keepalive` budget across the requests in flight, and a refused request fails like a lost network. A request sent with `keepalive` that fails that way now goes once more without it, and the error shows only when that fails too. A store made while the network is lost therefore also sends two requests, which both fail at once.
