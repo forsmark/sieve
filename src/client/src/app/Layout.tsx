@@ -54,8 +54,11 @@ function Shell({ authRequired }: { authRequired: boolean }) {
       >
         Skip to content
       </a>
-      {/* Opened from the home screen, the page runs under the device's status bar. The top bar keeps its 56px below it. */}
-      <header className="box-content flex h-14 shrink-0 items-stretch pt-[env(safe-area-inset-top)] gap-2.5 border-b border-fg px-3 sm:gap-8 sm:px-6">
+      {/*
+        Opened from the home screen, the page runs under the device's status bar. The top bar keeps its 56px below it.
+        The 56px hold the 1px rule, as they do without an inset.
+      */}
+      <header className="flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-stretch gap-2.5 border-b border-fg px-3 pt-[env(safe-area-inset-top)] sm:gap-8 sm:px-6">
         <Link to="/jobs" className="flex items-center text-xl leading-none font-extrabold tracking-tight sm:text-2xl" aria-label="sieve, go to jobs">
           sieve
         </Link>

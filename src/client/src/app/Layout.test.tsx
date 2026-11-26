@@ -68,8 +68,10 @@ describe('top bar', () => {
   it('keeps the top bar clear of the device status bar and the sides clear of the notch', async () => {
     setup('/jobs');
     const banner = await screen.findByRole('banner');
-    // The bar keeps its 56px, and the top inset adds to it.
-    expect(banner).toHaveClass('box-content', 'h-14', 'pt-[env(safe-area-inset-top)]');
+    // The bar keeps its 56px with the rule, as on main, and the top inset adds to it.
+    // A content-box height of 56px would add the 1px rule and move every page down by 1px.
+    expect(banner).toHaveClass('h-[calc(3.5rem+env(safe-area-inset-top))]', 'pt-[env(safe-area-inset-top)]', 'border-b');
+    expect(banner).not.toHaveClass('box-content');
     expect(banner.parentElement).toHaveClass('pr-[env(safe-area-inset-right)]', 'pl-[env(safe-area-inset-left)]');
   });
 
