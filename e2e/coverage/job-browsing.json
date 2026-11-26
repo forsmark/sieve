@@ -67,11 +67,20 @@
     },
     "User filters by unread": {
       "unit": "src/server/http/app.test.ts › filters by text, source, work arrangement, tag, age, and unread state"
+    },
+    "Next posting opens after a triage action": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › keeps the next posting unread for 1.5 seconds after a triage opens it, then marks it read"
     }
   },
   "Bulk actions": {
     "User dismisses a selection": {
       "unit": "src/client/src/features/jobs/JobsPage.test.tsx › dismisses a selection with one undo for the group"
+    },
+    "Part of the list is selected": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › shows a mixed state on the select-all control when part of the list is selected"
+    },
+    "User clears a partial selection": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › clears a partial selection when the user uses the select-all control"
     }
   },
   "Keyboard operation": {
@@ -83,6 +92,9 @@
     },
     "User reads the shortcut list": {
       "unit": "src/client/src/features/jobs/JobsPage.test.tsx › lists the keys for moving through the list and for each triage action"
+    },
+    "User closes the detail view": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › moves focus to the card of the posting when the user closes the detail view"
     }
   },
   "Live progress": {
@@ -189,6 +201,19 @@
     },
     "Vertical drag": {
       "unit": "src/client/src/features/jobs/JobsPage.test.tsx › changes no status on a mostly vertical drag"
+    }
+  },
+  "Undo after the message": {
+    "Message has closed": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › undoes the triage action from the undo control after the message has closed"
+    },
+    "Undo control in the job list": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › shows an undo control in the job list that names the triage action once its message closes"
+    }
+  },
+  "Undo returns to the posting": {
+    "User undoes a triage action from the detail view": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › shows the dismissed posting again in the detail view, with its earlier status, when the user undoes the dismissal"
     }
   },
   "Offline state": {
