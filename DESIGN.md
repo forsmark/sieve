@@ -10,7 +10,7 @@ colors:
   ground: "#27282b"
   ground-raised: "#323337"
   line: "#48494e"
-  line-strong: "#6e6f75"
+  line-strong: "#76777d"
   text: "#f5f3ee"
   muted: "#b9b8b2"
   faint: "#a3a29c"
@@ -137,6 +137,9 @@ components:
     typography: "{typography.label}"
     padding: "0 10px"
     height: "28px"
+  button-touch:
+    height: "44px"
+    width: "44px"
   input:
     backgroundColor: "transparent"
     textColor: "{colors.text}"
@@ -144,6 +147,14 @@ components:
     rounded: "{rounded.none}"
     padding: "6px 10px"
     height: "36px"
+  input-touch:
+    fontSize: "16px"
+    height: "44px"
+  slider-thumb:
+    backgroundColor: "{colors.field-yellow}"
+    rounded: "{rounded.none}"
+    width: "20px"
+    height: "20px"
   badge:
     backgroundColor: "transparent"
     textColor: "{colors.muted}"
@@ -215,7 +226,7 @@ components:
     backgroundColor: "{colors.field-yellow}"
     textColor: "{colors.ink}"
     rounded: "{rounded.none}"
-    padding: "10px 16px"
+    padding: "4px 4px 4px 16px"
 ---
 
 # Design System: Sieve
@@ -259,7 +270,7 @@ A dark grey ground with off-white text, and four flat fields that each carry one
 - **Dark grey ground** (`ground`): the page background, and the color of the channel between tiles.
 - **Raised ground** (`ground-raised`): job cards at rest, ground tiles (score parts, assessment, sources, board columns), and the hover fill of secondary and ghost buttons.
 - **Hairline** (`line`): quiet dividers such as the filter bar, the status bar, and the panel header.
-- **Strong hairline** (`line-strong`): borders of controls, badges, and skill labels; the scrollbar thumb.
+- **Strong hairline** (`line-strong`, #76777d): borders of controls, badges, and skill labels; the track of a slider; the scrollbar thumb. It has a contrast of 3.3:1 on the ground, so a control's border reaches 3:1.
 - **Off-white text** (`text`): body text on the ground. It also draws the 1px rule that closes the top bar and opens each form section, and it carries the small signals that are not a score: the unread marker, the unread count, the "ok" status dot, the checked checkbox, and the border of an emphasized badge.
 - **Muted text** (`muted`): secondary text on the ground.
 - **Faint text** (`faint`): the least important text on the ground, such as placeholders and the source line of a card.
@@ -338,8 +349,15 @@ Small markers are squares of 8px: the unread marker on a card and the status dot
 
 Controls are plain and exact: a 1px border, a transparent fill, and a change of fill or border on hover.
 
+### Touch screens
+A touch screen is a question of the pointer, not of the width: the rules below apply when the primary pointer is coarse (`@media (pointer: coarse)`, the `touch:` variant), at any width. A narrow desktop window keeps the mouse sizes, and a tablet gets the touch sizes. The layouts that need room on the screen follow the width breakpoints instead.
+
+**The Touch Target Rule.** On a touch screen every button, input, select, filter chip, segment, summary row, switch, and text link in a panel header has a hit area of at least 44 by 44px. A control whose text or look must stay small gets its area from padding or from an invisible `::after` that reaches 44px around it: the switch, the summary rows, and the text links in panel headers. With a mouse every control keeps the size given below.
+
+**The 16px Form Text Rule.** On a touch screen inputs, selects, and text areas use 16px text, so Safari on iOS does not zoom the page when one gets focus. The rule holds for every field, also one whose class sets a smaller text size. The page keeps pinch zoom: the viewport does not set `maximum-scale`.
+
 ### Buttons
-- **Shape:** square corners (0), 1px border, weight 600. The default height is 36px with 16px side padding in 14px text. The small size is 28px with 10px side padding in 13px text.
+- **Shape:** square corners (0), 1px border, weight 600. The default height is 36px with 16px side padding in 14px text. The small size is 28px with 10px side padding in 13px text. On a touch screen both sizes are 44px high and at least 44px wide, in the same text.
 - **Primary:** yellow fill and yellow border with ink text. Hover changes the fill to the lighter yellow. On a color field the primary button becomes an ink fill with off-white text.
 - **Secondary:** transparent with a strong hairline border and off-white text. Hover changes the border to the text color and the fill to the raised ground.
 - **Ghost:** no visible border. Hover fills with the raised ground.
@@ -373,22 +391,24 @@ The score numeral in a block of 44px height on a job card. The band shows as fil
 - **Application card:** a pink field with 12px padding: title in 15px weight 700, company, an inverted score block, the applied date, and a stage menu of 28px height that fills the card width and has no visible text label. The open card has a 2px inset ink outline. A dragged card has 50% opacity. Cards fade in and out in 150ms.
 
 ### Inputs / Fields
-- **Style:** transparent fill, 1px strong hairline border, square corners, 36px height, 14px text, faint placeholder. A label in 13px weight 500 stands above the control and a hint in 12px muted text below it.
+- **Style:** transparent fill, 1px strong hairline border, square corners, 36px height, 14px text, faint placeholder. On a touch screen the height is 44px and the text 16px; a text area keeps its height and gets the 16px text. A label in 13px weight 500 stands above the control and a hint in 12px muted text below it.
 - **Hover / Focus:** hover changes the border to the text color. Focus changes the border to yellow and adds the 2px yellow focus ring at 2px offset. On a color field both are ink. The caret is yellow on the ground and ink on a field.
-- **Select:** the same border and height as a text input, with the ground as fill. Inside a color field the fill is transparent, so the field shows through and the text is ink. The option list, which the browser draws, has a fixed pair of ground fill and off-white text.
-- **Checkbox:** a square of 16px with a 1px strong hairline border and no fill. Hover changes the border to the text color. Checked: a fill in the text color with a drawn check of 2px stroke and square ends.
-- **Switch:** a square track of 36 by 20px with a 1px border and a square thumb of 14px. On: yellow track with an ink thumb. Off: transparent track with a muted thumb.
-- **Segmented control:** segments inside one strong hairline border, divided by hairlines. The selected segment is yellow with ink text in weight 600.
-- **Status filter chip:** a 28px label with a checkbox. On: yellow fill with ink text. Off: strong hairline border with muted text.
+- **Select:** the same border and height as a text input, also on a touch screen, with the ground as fill. Inside a color field the fill is transparent, so the field shows through and the text is ink. The option list, which the browser draws, has a fixed pair of ground fill and off-white text.
+- **Checkbox:** a square of 16px with a 1px strong hairline border and no fill. Hover changes the border to the text color. Checked: a fill in the text color with a drawn check of 2px stroke and square ends. Mixed, when part of a group is checked: a border in the text color and a dash of 8 by 2px in the text color, with no fill.
+- **Switch:** a square track of 36 by 20px with a 1px border and a square thumb of 14px. On: yellow track with an ink thumb. Off: transparent track with a muted thumb. On a touch screen an invisible area of 44 by 44px around the track takes the tap; the track keeps its size.
+- **Slider:** a square thumb of 20px in the accent color (yellow on the ground, ink on a field) on a track of a 1px strong hairline, in a row of 20px. On a touch screen the row is 44px high.
+- **Segmented control:** segments inside one strong hairline border, divided by hairlines. The selected segment is yellow with ink text in weight 600. On a touch screen each segment is at least 44px high.
+- **Status filter chip:** a 28px label with a checkbox, 44px on a touch screen. On: yellow fill with ink text. Off: strong hairline border with muted text.
+- **Summary row:** the row that opens a folded part keeps its text size. On a touch screen padding makes it at least 44px high.
 - **Error:** a box with a 1px danger border on the danger ground, with a title in danger text.
 
 ### Navigation
 - **Top bar:** the lowercase wordmark, then text links in 14px weight 500. A link is muted at rest and off-white on hover. The current link is off-white with a 2px yellow line on the bottom edge of the bar. The unread count is an off-white block with ground-colored numerals; the application count is a pink block with ink numerals. Below 640px width the links are 13px and scroll sideways without a visible scrollbar.
-- **Status bar:** 12px muted text with square status dots (off-white for ok, danger for a fault, faint for unknown, a hollow square with a 1px off-white border for busy; no dot is yellow), ghost buttons of 24px height, and "Matching paused" as off-white text in weight 600 inside a 1px off-white border. Below 640px width the status text wraps above, and "Fetch now" and "Pause matching" sit on a row of their own as buttons of 44px height with a strong hairline border and 14px text, sharing the width. The pause button then names matching, because its label is no longer beside it.
+- **Status bar:** 12px muted text with square status dots (off-white for ok, danger for a fault, faint for unknown, a hollow square with a 1px off-white border for busy; no dot is yellow), ghost buttons of 24px height, and "Matching paused" as off-white text in weight 600 inside a 1px off-white border. Below 640px width the status text wraps above, and "Fetch now" and "Pause matching" sit on a row of their own as buttons of 44px height with a strong hairline border and 14px text, sharing the width. The pause button then names matching, because its label is no longer beside it. The connection item at the right end says "Live", "Connecting", or "Reconnecting" with its dot. While the device has no network it says "Offline" in off-white text with a danger dot instead, and an action that changes data fails at once with the error toast "The device is offline." instead of waiting.
 - **Text links:** every text link on the ground is off-white in weight 600 or 500 with a 2px yellow underline, in running text and for standalone links such as "Open posting". On hover the underline of a standalone link changes to the text color. On a color field the link is ink with a 2px ink underline. The section links in Settings are muted text in weight 500 with a strong hairline underline; hover changes both to the text color.
 
 ### Messages
-- **Toast and undo bar:** a yellow field with ink text in weight 500. An error toast is a danger border on the danger ground. A toast rises 8px and fades in over 160ms. Toasts stack just above the status bar: 12px above it below 640px width, 20px above it and at the right edge from 640px.
+- **Toast and undo bar:** a yellow field with ink text in weight 500, with 16px padding before the text and 4px around the buttons. An error toast is a danger border on the danger ground. The Undo button is 44px high and at least 64px wide, in weight 700 with a 2px underline. The close button is a 44 by 44px area around a 14px close icon, 16px after the Undo button. A toast rises 8px and fades in over 160ms. Toasts stack just above the status bar: 12px above it below 640px width, 20px above it and at the right edge from 640px. When a bar stands at the bottom edge, such as the detail action bar or the bulk bar, it sets `--bottom-bar` on the root element to its height, and the toasts stand that much higher.
 - **Notice:** a 1px bordered box in 13px text with no tinted fill. The border says the kind: a hairline for a neutral notice, the text color for a positive or emphasized notice, a dashed border in the text color for a caution, and a danger border on the danger ground for an error.
 
 ## Do's and Don'ts
