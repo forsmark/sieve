@@ -680,7 +680,7 @@ export function JobsPage() {
       {search.id && (
         <aside
           aria-label="Posting details"
-          className="fixed inset-0 z-30 flex flex-col bg-bg lg:static lg:z-auto lg:min-w-0 lg:flex-1 lg:border-l lg:border-fg"
+          className="fixed inset-0 z-30 flex flex-col bg-bg pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] lg:static lg:z-auto lg:p-0 lg:min-w-0 lg:flex-1 lg:border-l lg:border-fg"
         >
           <DetailPanel
             key={search.id}

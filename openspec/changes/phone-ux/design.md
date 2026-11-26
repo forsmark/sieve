@@ -131,3 +131,6 @@ The design stores the interview date on change. A date field also changes while 
 
 ### 2026-11-26: The full-screen panels keep clear of the notch too
 p8 pads only the top bar by the top safe area. With `black-translucent`, the page runs under the iPhone's status bar, and the job detail view and the application panel cover the screen below 1024px, outside the top bar and the shell's side padding. Their headers and Close buttons would sit under the clock and the notch. Both panels pad by the top, left and right insets below 1024px, as the top bar and the shell do. Application stores also use `keepalive`, so a store that starts on `pagehide` survives the page closing. Browsers refuse `keepalive` for bodies over 64 KB, so a larger body goes without it.
+
+### 2026-11-26: `--bottom-bar` holds how far a bar rises above the status bar
+The design sets `--bottom-bar` to the bar's height. The toasts stand above the status bar, and the full-screen detail covers the status bar, so its action bar's whole height raised the toasts by the status bar's height too much. The variable now holds how far the bar's top edge stands above the status bar's top edge: the whole height for the bulk bar, which stands above the status bar, and the height less the status bar's for the detail action bar.

@@ -9,12 +9,29 @@ export const BOTTOM_BAR_VAR = '--bottom-bar';
 /** The mounted bars, in the order they mounted. */
 const bars: HTMLElement[] = [];
 
+/**
+ * How far the toasts must rise for the bar. The toasts stand above the status bar, so the offset is how far
+ * the bar's top edge stands above the status bar's top edge. A bar above the status bar, such as the bulk bar,
+ * gives its whole height. A bar in a full-screen panel that covers the status bar, such as the detail action bar,
+ * gives its height less the status bar's. Without a layout, as in tests, it is the bar's height.
+ */
+function offsetOf(bar: HTMLElement): number {
+  const height = bar.offsetHeight;
+  if (height === 0) return 0;
+  const barTop = bar.getBoundingClientRect().top;
+  const status = document.querySelector('footer[aria-label="System status"]');
+  const statusTop = status?.getBoundingClientRect().top ?? 0;
+  if (barTop === 0 || statusTop === 0) return height;
+  return Math.max(0, Math.round(statusTop - barTop));
+}
+
 /** Sets the variable from the bar that mounted last and has a height. A bar hidden by CSS has none. */
 function update(): void {
   let height = 0;
   for (let i = bars.length - 1; i >= 0; i--) {
-    height = bars[i]!.offsetHeight;
-    if (height > 0) break;
+    if (bars[i]!.offsetHeight === 0) continue;
+    height = offsetOf(bars[i]!);
+    break;
   }
   const root = document.documentElement.style;
   if (height > 0) root.setProperty(BOTTOM_BAR_VAR, `${height}px`);
