@@ -1272,6 +1272,28 @@ describe('focus and the keyboard cursor', () => {
     await waitFor(() => expect(cardButton('Job 2')).toHaveFocus());
   });
 
+  it('moves focus to the card on a phone also when the page renders before the close commits, while the list is still inert', async () => {
+    const media = mockMedia({ coarse: true, width: 430 });
+    // jsdom ignores `inert`. A browser does not focus an element inside an inert subtree, so this focus does not either.
+    const focus = HTMLElement.prototype.focus;
+    const spy = vi.spyOn(HTMLElement.prototype, 'focus').mockImplementation(function (this: HTMLElement, options?: FocusOptions) {
+      if (!this.closest('[inert]')) focus.call(this, options);
+    });
+    try {
+      postingServer([makeItem('1', 90), makeItem('2', 70)]);
+      renderApp('/jobs?id=2');
+      await waitFor(() => expect(screen.getByRole('heading', { name: 'Job 2' })).toHaveFocus());
+      // Any render between the close and the commit of the navigation, here from a rotation, still finds the list inert.
+      act(() => {
+        fireEvent.click(screen.getByRole('button', { name: 'Close details' }));
+        media.set({ width: 700 });
+      });
+      await waitFor(() => expect(cardButton('Job 2')).toHaveFocus());
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('focuses the detail heading when the posting arrives on a phone, and makes the list behind it inert', async () => {
     mockMedia({ coarse: true, width: 430 });
     let release: () => void = () => {};

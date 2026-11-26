@@ -200,7 +200,8 @@ export function JobsPage() {
     const el = document.getElementById(`row-${pending.id}`);
     if (el) {
       el.focus({ preventScroll: true });
-      focusCardSoon.current = undefined;
+      // In a render before the close commits, the list is still inert and the focus does not take. A later render tries again.
+      if (document.activeElement === el) focusCardSoon.current = undefined;
       return;
     }
     const idx = items.findIndex((i) => i.id === pending.id);
