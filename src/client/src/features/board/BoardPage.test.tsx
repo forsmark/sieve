@@ -111,6 +111,29 @@ describe('application board', () => {
     await waitFor(() => expect(within(card).getByText(`Interview ${date}`)).toBeInTheDocument());
   });
 
+  it('removes an application from the panel after the confirmation, and the panel closes', async () => {
+    let apps = [app('1', 'applied'), app('2', 'interview')];
+    const api = mockApi({
+      ...base,
+      'GET /api/applications': () => apps,
+      'GET /api/applications/1/events': () => [],
+      'DELETE /api/applications/1': () => {
+        apps = apps.filter((a) => a.postingId !== '1');
+        return { ok: true };
+      },
+    });
+    const user = userEvent.setup();
+    renderApp('/board?app=1');
+    const panel = await screen.findByRole('complementary', { name: 'Application details' });
+    await user.click(await within(panel).findByRole('button', { name: 'Remove application' }));
+    expect(api.calls.some((c) => c.method === 'DELETE')).toBe(false);
+    await user.click(within(panel).getByRole('button', { name: 'Yes, remove it' }));
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Application details' })).not.toBeInTheDocument());
+    expect(screen.queryByText('This application does not exist.')).not.toBeInTheDocument();
+    await waitFor(() => expect(within(column('Applied')).queryByRole('listitem')).not.toBeInTheDocument());
+    expect(await screen.findByText('Application removed. The posting is saved in the job list.')).toBeInTheDocument();
+  });
+
   it('saves the notes and shows them when the application is opened again', async () => {
     let stored = app('1', 'applied');
     const api = mockApi({

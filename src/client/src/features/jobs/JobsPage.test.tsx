@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryHistory } from '@tanstack/react-router';
 import { QueryClient } from '@tanstack/react-query';
@@ -523,5 +523,232 @@ describe('jobs view', () => {
     // The keyboard cursor stays on its posting.
     expect(cardOf('Job 2')).toHaveAttribute('aria-current', 'true');
     expect(cardOf('Job 3')).not.toHaveAttribute('aria-current');
+  });
+});
+
+/**
+ * A finger swipe on the card of this title: down, a first move that locks the axis, a move to `dx`, and up.
+ * The browser sends a click after the finger lifts, so the helper does too. In tests every element is 800px
+ * wide, so the threshold is 140px. The steps follow each other at once, so a swipe below 40px never counts as a fling.
+ */
+function swipeCard(title: string, dx: number, { pointerType = 'touch', dy = 0 }: { pointerType?: string; dy?: number } = {}) {
+  const target = cardOf(title).querySelector('button[data-row-button]') as HTMLElement;
+  const at = (x: number, y: number) => ({ pointerId: 1, pointerType, clientX: x, clientY: y });
+  fireEvent.pointerDown(target, at(300, 300));
+  fireEvent.pointerMove(target, dy ? at(302, 300 + Math.sign(dy) * 20) : at(300 + Math.sign(dx) * 15, 300));
+  fireEvent.pointerMove(target, at(300 + dx, 300 + dy));
+  fireEvent.pointerUp(target, at(300 + dx, 300 + dy));
+  // The click that a browser may send after the gesture comes from the pointer, so its detail is 1.
+  fireEvent.click(target, { detail: 1 });
+}
+
+function swipeRoutes(items: () => PostingListItem[], onTriage: (ids: string[], action: string) => void = () => {}) {
+  return {
+    ...baseRoutes(items),
+    'POST /api/postings/bulk': (c: { body: unknown }) => {
+      const { ids, action } = c.body as { ids: string[]; action: string };
+      onTriage(ids, action);
+      return { previous: ids.map((id) => ({ id, triageStatus: items().find((i) => i.id === id)?.triageStatus ?? 'new' })) };
+    },
+  };
+}
+
+const triageCalls = (api: ReturnType<typeof mockApi>) => api.calls.filter((c) => c.path === '/api/postings/bulk').map((c) => c.body);
+
+async function undoToast(text: RegExp): Promise<HTMLElement> {
+  const toast = (await screen.findByText(text)).closest('[role="status"]') as HTMLElement;
+  expect(within(toast).getByRole('button', { name: 'Undo' })).toBeInTheDocument();
+  return toast;
+}
+
+describe('swipe triage', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetToastsForTests();
+  });
+
+  it('dismisses a new posting on a swipe to the left, removes its card, offers undo, and does not open it', async () => {
+    let items = [makeItem('1', 90), makeItem('2', 70)];
+    const api = mockApi(swipeRoutes(() => items, (ids) => (items = items.filter((i) => !ids.includes(i.id)))));
+    const { history } = renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    swipeCard('Job 1', -200);
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1'], action: 'dismiss' }]));
+    await waitFor(() => expect(screen.queryByText('Job 1')).not.toBeInTheDocument());
+    await undoToast(/Dismissed “Job 1”/);
+    expect(history.location.search).toBe('');
+  });
+
+  it('dismisses the open posting when the user leaves the page while its card slides out, and stays on the new page', async () => {
+    let items = [makeItem('1', 90), makeItem('2', 70)];
+    const api = mockApi({
+      ...swipeRoutes(() => items, (ids) => (items = items.filter((i) => !ids.includes(i.id)))),
+      'GET /api/applications': () => [],
+    });
+    const { history } = renderApp('/jobs?id=1');
+    await screen.findAllByText('Job 1');
+
+    swipeCard('Job 1', -200);
+    act(() => history.push('/board'));
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1'], action: 'dismiss' }]));
+    await new Promise((r) => setTimeout(r, 300));
+    expect(history.location.pathname).toBe('/board');
+  });
+
+  it('saves a new posting on a swipe to the right and keeps its card in the default list', async () => {
+    let items = [makeItem('1', 90)];
+    const api = mockApi(swipeRoutes(() => items, () => (items = [makeItem('1', 90, { triageStatus: 'saved' })])));
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    swipeCard('Job 1', 200);
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1'], action: 'save' }]));
+    await undoToast(/Saved “Job 1”/);
+    await waitFor(() => expect(within(cardOf('Job 1')).getByText('Saved')).toBeInTheDocument());
+  });
+
+  it('marks a saved posting as applied on a swipe to the right', async () => {
+    const items = [makeItem('1', 90, { triageStatus: 'saved' })];
+    const api = mockApi(swipeRoutes(() => items));
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    swipeCard('Job 1', 200);
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1'], action: 'apply' }]));
+    await undoToast(/Marked as applied “Job 1”/);
+  });
+
+  it('makes a saved posting new again on a swipe to the left, and the card stays', async () => {
+    let items = [makeItem('1', 90, { triageStatus: 'saved' })];
+    const api = mockApi(swipeRoutes(() => items, () => (items = [makeItem('1', 90)])));
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    swipeCard('Job 1', -200);
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1'], action: 'restore' }]));
+    await undoToast(/Restored “Job 1”/);
+    expect(cardOf('Job 1')).toBeInTheDocument();
+    await waitFor(() => expect(within(cardOf('Job 1')).queryByText('Saved')).not.toBeInTheDocument());
+  });
+
+  it('makes a dismissed posting new again on a swipe to the right', async () => {
+    const items = [makeItem('1', 90, { triageStatus: 'dismissed' })];
+    const api = mockApi(swipeRoutes(() => items));
+    renderApp('/jobs?status=all');
+    await screen.findByText('Job 1');
+
+    swipeCard('Job 1', 200);
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1'], action: 'restore' }]));
+    await undoToast(/Restored “Job 1”/);
+  });
+
+  it('changes nothing and opens nothing after a short swipe', async () => {
+    const items = [makeItem('1', 90)];
+    const api = mockApi(swipeRoutes(() => items));
+    const { history } = renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    swipeCard('Job 1', -30);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(triageCalls(api)).toEqual([]);
+    expect(history.location.search).toBe('');
+    expect(cardOf('Job 1')).toBeInTheDocument();
+  });
+
+  it('ignores a sideways mouse drag', async () => {
+    const items = [makeItem('1', 90)];
+    const api = mockApi(swipeRoutes(() => items));
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    swipeCard('Job 1', -200, { pointerType: 'mouse' });
+    await new Promise((r) => setTimeout(r, 300));
+    expect(triageCalls(api)).toEqual([]);
+    expect(within(cardOf('Job 1')).queryByText('Dismiss')).not.toBeInTheDocument();
+  });
+
+  it('changes no status on a mostly vertical drag', async () => {
+    const items = [makeItem('1', 90)];
+    const api = mockApi(swipeRoutes(() => items));
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    swipeCard('Job 1', -20, { dy: -250 });
+    await new Promise((r) => setTimeout(r, 300));
+    expect(triageCalls(api)).toEqual([]);
+    expect(cardOf('Job 1')).toBeInTheDocument();
+  });
+
+  it('acts on the swiped card only and keeps the other cards selected', async () => {
+    let items = [makeItem('1', 90), makeItem('2', 70), makeItem('3', 40)];
+    const api = mockApi(swipeRoutes(() => items, (ids) => (items = items.filter((i) => !ids.includes(i.id)))));
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 2' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select Job 3' }));
+
+    swipeCard('Job 1', -200);
+    await waitFor(() => expect(triageCalls(api)).toEqual([{ ids: ['1'], action: 'dismiss' }]));
+    await waitFor(() => expect(screen.queryByText('Job 1')).not.toBeInTheDocument());
+    expect(screen.getByRole('checkbox', { name: 'Select Job 2' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Select Job 3' })).toBeChecked();
+  });
+
+  describe('an applied posting swiped to the left', () => {
+    function applied() {
+      const items = [makeItem('1', 90, { triageStatus: 'applied' })];
+      return mockApi({
+        ...swipeRoutes(() => items),
+        'DELETE /api/applications/1': () => ({ ok: true }),
+      });
+    }
+    const deletes = (api: ReturnType<typeof mockApi>) => api.calls.filter((c) => c.method === 'DELETE');
+
+    it('returns the card and asks before it removes the application', async () => {
+      const api = applied();
+      renderApp('/jobs?status=all');
+      await screen.findByText('Job 1');
+
+      swipeCard('Job 1', -200);
+      const dialog = await screen.findByRole('dialog', { name: 'Remove the application?' });
+      expect(dialog).toHaveTextContent('“Job 1” at Company 1 goes back to saved. Its notes, stage history and interview date are deleted, and this can’t be undone.');
+      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+      const card = cardOf('Job 1').querySelector('[style]') as HTMLElement;
+      expect(card.style.transform).toBe('');
+      expect(deletes(api)).toEqual([]);
+      expect(triageCalls(api)).toEqual([]);
+    });
+
+    it('removes the application after the confirmation, with no undo', async () => {
+      const api = applied();
+      const user = userEvent.setup();
+      renderApp('/jobs?status=all');
+      await screen.findByText('Job 1');
+
+      swipeCard('Job 1', -200);
+      const dialog = await screen.findByRole('dialog', { name: 'Remove the application?' });
+      await user.click(within(dialog).getByRole('button', { name: 'Remove application' }));
+      await waitFor(() => expect(deletes(api).map((c) => c.path)).toEqual(['/api/applications/1']));
+      const toast = (await screen.findByText('Application removed. The posting is saved in the job list.')).closest('[role="status"]') as HTMLElement;
+      expect(within(toast).queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+
+    it('keeps the application when the user cancels', async () => {
+      const api = applied();
+      const user = userEvent.setup();
+      renderApp('/jobs?status=all');
+      await screen.findByText('Job 1');
+
+      swipeCard('Job 1', -200);
+      const dialog = await screen.findByRole('dialog', { name: 'Remove the application?' });
+      await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(deletes(api)).toEqual([]);
+      expect(within(cardOf('Job 1')).getByText('Applied')).toBeInTheDocument();
+    });
   });
 });

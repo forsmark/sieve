@@ -244,14 +244,14 @@ All corners are square, rules are 1px hairlines, and no surface casts a shadow. 
 A dark grey ground with off-white text, and four flat fields that each carry one meaning.
 
 ### Primary
-- **Yellow field** (`field-yellow`): the score and the primary action. It fills the score tile, the strong-match score block, the score bars, the opened job card, and the primary button. It also marks the selected state of a control (checked switch, selected segment, status filter chip that is on) and the outline of a selected card or a drop target. On the ground it is otherwise used only for the active navigation underline, the focus ring, text selection, and the 2px underline of text links. No status dot, badge, count, or notice is yellow. Information messages (toast, undo bar, first-run guide) are yellow fields.
+- **Yellow field** (`field-yellow`): the score and the primary action. It fills the score tile, the strong-match score block, the score bars, the opened job card, the primary button, and the space that a swipe to "Save" uncovers at the threshold. It also marks the selected state of a control (checked switch, selected segment, status filter chip that is on) and the outline of a selected card or a drop target. On the ground it is otherwise used only for the active navigation underline, the focus ring, text selection, and the 2px underline of text links. No status dot, badge, count, or notice is yellow. Information messages (toast, undo bar, first-run guide) are yellow fields.
 - **Yellow field, hover** (`field-yellow-strong`): the hover fill of the primary button only.
 
 ### Secondary
 - **Pale blue-grey field** (`field-blue`): facts and skills. It fills the "Matched skills" and "Facts" tiles, and it draws the 1px border of the "Missing skills" tile.
 
 ### Tertiary
-- **Pink field** (`field-pink`): the cover letter and applications. It fills the cover letter tile, the application cards on the board, and the application count in the navigation.
+- **Pink field** (`field-pink`): the cover letter and applications. It fills the cover letter tile, the application cards on the board, the application count in the navigation, and the space that a swipe to "Mark applied" uncovers at the threshold.
 - **Ground with a hairline border**: the expanded analysis. It is a judgment like the assessment, so it has no color field. The verdict is one word in the weight of the score numeral.
 - **Beige field** (`field-beige`): the posting text. It fills the "Description" tile and the stored posting copy in the application panel.
 
@@ -358,6 +358,7 @@ The score numeral in a block of 44px height on a job card. The band shows as fil
 - **Shape and size:** square, 184px high, 14px padding, raised ground fill.
 - **Content:** score block, band label, and score bar on top, title in at most 2 lines, a meta line, and a foot with badges, sources, and age. An unread posting has an 8px off-white square before its title (ink on the open card). A checkbox for selection sits in the top right corner.
 - **States:** hover lightens the fill. The card under the keyboard cursor has a 2px inset outline in the text color; a selected card has a 2px inset yellow outline. The arrow keys move the keyboard cursor in the grid: left and right by one card, up and down by one row. The opened card turns yellow with ink text, and the yellow fills the card from the top in 420ms.
+- **Swipe:** on a touch screen the card follows a finger sideways and uncovers the ground of its slot, and the slot clips the card. The uncovered space names the action of a release on the side the card leaves, in 15px: "Dismiss", "Save", "Mark applied", "Back to new", or "Remove application". Before the threshold the words are muted in weight 500 on the ground. At the threshold (30% of the card width, 72 to 140px) they turn weight 700, and the space takes the look of the action: "Save" a yellow field and "Mark applied" a pink field, both with ink text; "Dismiss" and "Back to new" off-white text in a 1px strong hairline frame; "Remove application" danger text in a 1px danger frame. After a release the card slides out of its slot, or back into place, in 180ms with the curve cubic-bezier(0.16, 1, 0.3, 1). With reduced motion set in the system, it moves at once.
 
 ### Mosaic tiles
 - **Shape:** square, 16px padding (20px from 640px width), a tile title in weight 700 at 1rem.

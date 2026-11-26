@@ -8,7 +8,7 @@ A personal job aggregator for one user. It fetches job postings from public job 
 - Removes duplicates of the same job across boards.
 - Derives a structured profile from your CV. You can correct it by hand.
 - Scores each posting in two stages. A language model extracts the facts of the posting and judges skills, experience, and preferences. Code checks location, spoken language, work arrangement, and excluded companies, and computes the total from your weights. You can remove location from the score in the preferences, which fits a search that already limits the location.
-- Shows a ranked list with filters, keyboard shortcuts, and an explanation for each score.
+- Shows a ranked list with filters, keyboard shortcuts, and an explanation for each score. On a phone, a swipe moves a posting one step along dismissed, new, saved, and applied: to the right toward applied, to the left toward dismissed. A swipe that would remove an application asks first.
 - Writes a cover letter for a posting from your CV. You can edit it, copy it, and download it as a PDF file.
 - Writes an expanded match analysis for the postings you select, with a verdict, strengths, gaps, and questions to ask.
 - Tracks applications on a board with stages, notes, and interview dates.

@@ -65,3 +65,22 @@ Triage runs through `doTriage(ids, action, label)` in `JobsPage.tsx`. It opens t
 ## Migration Plan
 
 Client only. Deploy as usual. To roll back, deploy the previous commit.
+
+## Changed during apply
+
+### 2026-11-26: The non-goals no longer exclude apply and restore by swipe
+
+The non-goal "Swipe … for other actions (apply, restore)" stayed from the first draft, which had only dismiss and save. The owner then chose the status line, and the table under "The status line" is what the owner approved at the gate. The build follows the table. The other non-goals hold.
+
+### 2026-11-26: The uncovered space is the ground, not the raised ground
+
+The card itself is the raised ground. A layer in the same color would hide the edge of the moving card before the threshold. The layer is the ground, the color of the channel between cards. DESIGN.md says so under the job card.
+
+### 2026-11-26: A card that stays after it slid out returns after a second
+
+"Slot reuse" assumed that the virtualizer hands a card to the next posting. It keys each slot by the posting id, so a card that leaves unmounts, and a reset on a new id never runs. The hook instead brings a card back when it is still in the list one second after it slid out. Task 1.2 checks this return in place of the reset.
+
+### 2026-11-26: The click guard stops a pointer click for 400ms, and a card on its way out keeps its swipe
+
+A browser often sends no click after a touch that moved, so a guard that waits for "the next click" stayed set and swallowed the next Enter on the card. The guard now stops only a pointer click (a `detail` above 0) in the 400ms after a sideways drag. A click from the keyboard or from assistive technology always goes through. A card that slides out ignores new touches and stops every click until it is gone or back, so a tap during the slide cannot cancel the swipe or open the posting. When the card unmounts before its slide out ends, for example by a fast scroll, the swipe still runs. When the user has left the jobs page by then, it changes the status and nothing else, so no next posting opens and the user stays on the new page.
+

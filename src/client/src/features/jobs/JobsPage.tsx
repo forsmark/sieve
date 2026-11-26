@@ -14,8 +14,11 @@ import { DetailPanel } from './DetailPanel';
 import { FilterBar, emptyPatch } from './FilterBar';
 import { hasActiveFilters, statusesOf, toPostingQuery, type JobSearch } from './filters';
 import { CARD_GAP, CARD_HEIGHT, CARD_MIN_WIDTH, JobRow, MAX_COLUMNS, listColumnsBesidePanel } from './JobRow';
+import { RemoveApplicationDialog } from './RemoveApplicationDialog';
 import { ShortcutHelp } from './ShortcutHelp';
+import type { SwipeAction } from './swipe';
 import { STATUS_OF, useTriage } from './useTriage';
+import { useRemoveApplication } from '../board/stages';
 
 export const PAGE_SIZE = 50;
 
@@ -210,11 +213,21 @@ export function JobsPage() {
   const hidden = status.data ? hiddenByDefault(status.data.counts) : null;
   const canFetch = status.data ? status.data.hasCv && status.data.searchTermCount > 0 : false;
 
+  // A swipe whose card is still sliding out when the user leaves the page runs as the page unmounts.
+  // It then changes the status and does not move the user back to a posting on this page.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   const doTriage = useCallback(
-    (ids: string[], action: TriageAction, label?: string) => {
+    (ids: string[], action: TriageAction, label?: string, opts?: { keepSelection?: boolean }) => {
       if (ids.length === 0) return;
       const leaves = !statuses.includes(STATUS_OF[action]);
-      if (leaves && search.id && ids.includes(search.id)) {
+      if (leaves && mounted.current && search.id && ids.includes(search.id)) {
         // Follow with the next posting, so triage in the detail view keeps going.
         const idx = items.findIndex((i) => i.id === search.id);
         const after = items.slice(idx + 1).find((i) => !ids.includes(i.id)) ?? items.slice(0, Math.max(0, idx)).reverse().find((i) => !ids.includes(i.id));
@@ -222,9 +235,31 @@ export function JobsPage() {
       }
       if (listHasFocus()) focusRowSoon.current = true;
       triage.mutate({ ids, action, label });
-      setSelection((s) => (s.size ? new Set() : s));
+      setSelection((s) => {
+        if (!opts?.keepSelection) return s.size ? new Set() : s;
+        // A swipe acts on one card. The other cards stay selected.
+        return ids.some((id) => s.has(id)) ? new Set([...s].filter((id) => !ids.includes(id))) : s;
+      });
     },
     [items, openPosting, search.id, statuses, triage],
+  );
+
+  // ---- Swipes on touch screens
+
+  const [removing, setRemoving] = useState<PostingListItem | null>(null);
+  const removeApplication = useRemoveApplication();
+  // The swipe handlers stay the same across renders, so a change of the list does not render every card again.
+  const triageRef = useRef(doTriage);
+  triageRef.current = doTriage;
+  const onSwipe = useCallback((item: PostingListItem, action: SwipeAction) => {
+    // Leaving "applied" deletes the application, so a swipe only asks.
+    if (action === 'remove-application') setRemoving(item);
+    else triageRef.current([item.id], action, item.title, { keepSelection: true });
+  }, []);
+  const statusKey = statuses.join(',');
+  const swipeLeaves = useCallback(
+    (action: SwipeAction) => action !== 'remove-application' && !statusKey.split(',').includes(STATUS_OF[action]),
+    [statusKey],
   );
 
   const bulkOther = useMutation({
@@ -284,6 +319,7 @@ export function JobsPage() {
   handler.current = (e: KeyboardEvent) => {
     if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
     if (isTypingTarget(e.target)) return;
+    if (removing) return;
     if (helpOpen) {
       if (e.key === '?') {
         e.preventDefault();
@@ -518,6 +554,8 @@ export function JobsPage() {
                         onOpen={onOpenRow}
                         onToggleSelect={toggleSelect}
                         onFocusRow={setCursor}
+                        onSwipe={onSwipe}
+                        swipeLeaves={swipeLeaves}
                       />
                     ) : (
                       <div role="listitem" className="flex h-full items-center justify-center text-[13px] text-muted">
@@ -555,6 +593,14 @@ export function JobsPage() {
       )}
 
       {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
+      {removing && (
+        <RemoveApplicationDialog
+          item={removing}
+          busy={removeApplication.isPending}
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => removeApplication.mutate(removing.id, { onSettled: () => setRemoving(null) })}
+        />
+      )}
     </div>
   );
 }

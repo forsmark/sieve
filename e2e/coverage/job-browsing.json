@@ -144,5 +144,51 @@
     "Deleted posting comes back": {
       "unit": "src/server/ingestion/clear.test.ts › stores a deleted posting as new and unread when a source returns it again, and scores it again"
     }
+  },
+  "Swipe triage": {
+    "User swipes a new posting to the left": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › dismisses a new posting on a swipe to the left, removes its card, offers undo, and does not open it"
+    },
+    "User swipes a new posting to the right": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › saves a new posting on a swipe to the right and keeps its card in the default list"
+    },
+    "User swipes a saved posting to the right": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › marks a saved posting as applied on a swipe to the right"
+    },
+    "User swipes a saved posting to the left": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › makes a saved posting new again on a swipe to the left, and the card stays"
+    },
+    "User swipes a dismissed posting to the right": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › makes a dismissed posting new again on a swipe to the right"
+    },
+    "Swipe past the end of the line": {
+      "unit": "src/client/src/features/jobs/JobsList.test.tsx › does not move a card past the end of the status line"
+    },
+    "User swipes an applied posting to the left": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › returns the card and asks before it removes the application"
+    },
+    "User confirms the removal by swipe": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › removes the application after the confirmation, with no undo"
+    },
+    "User cancels the removal by swipe": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › keeps the application when the user cancels"
+    },
+    "Mouse drag": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › ignores a sideways mouse drag"
+    },
+    "Swipe while cards are selected": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › acts on the swiped card only and keeps the other cards selected"
+    }
+  },
+  "Swipe feedback": {
+    "Swipe in progress": {
+      "unit": "src/client/src/features/jobs/JobsList.test.tsx › names the action of a release and changes its look at the threshold"
+    },
+    "Short swipe": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › changes nothing and opens nothing after a short swipe"
+    },
+    "Vertical drag": {
+      "unit": "src/client/src/features/jobs/JobsPage.test.tsx › changes no status on a mostly vertical drag"
+    }
   }
 }

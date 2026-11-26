@@ -4,7 +4,7 @@ import type { ApplicationStage } from '../../../../shared/schemas';
 import { api } from '../../api/endpoints';
 import { qk } from '../../api/keys';
 import { errorText } from '../../api/client';
-import { toastError } from '../../lib/toast';
+import { showToast, toastError } from '../../lib/toast';
 
 export const STAGE_LABEL: Record<ApplicationStage, string> = {
   applied: 'Applied',
@@ -38,3 +38,23 @@ export function useMoveApplication() {
   });
 }
 
+/**
+ * Removes the application of a posting. The posting returns to "saved". The board and the job list share it,
+ * so both show the same message and refresh the same data. A removal has no undo.
+ */
+/** `onRemoved` runs with the mutation's own success, so it runs also when the component that asked has unmounted. */
+export function useRemoveApplication({ onRemoved }: { onRemoved?: () => void } = {}) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postingId: string) => api.removeApplication(postingId),
+    onSuccess: (_r, postingId) => {
+      qc.setQueryData<ApplicationDto[]>(qk.applications, (list) => list?.filter((a) => a.postingId !== postingId));
+      void qc.invalidateQueries({ queryKey: qk.postingsAll });
+      void qc.invalidateQueries({ queryKey: qk.posting(postingId) });
+      void qc.invalidateQueries({ queryKey: qk.status });
+      showToast({ message: 'Application removed. The posting is saved in the job list.', tone: 'info' });
+      onRemoved?.();
+    },
+    onError: (e) => toastError(errorText(e)),
+  });
+}

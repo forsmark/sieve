@@ -9,7 +9,7 @@ import { errorText } from '../../api/client';
 import { Badge, Button, ConfirmButton, ErrorState, Field, Select, Spinner, TextArea, TextInput, Icon } from '../../components/ui';
 import { dateOnly, dateTime, fromLocalInput, toLocalInput } from '../../lib/format';
 import { showToast, toastError } from '../../lib/toast';
-import { STAGE_LABEL, useMoveApplication } from './stages';
+import { STAGE_LABEL, useMoveApplication, useRemoveApplication } from './stages';
 import { CoverLetterForPosting } from '../jobs/CoverLetter';
 
 export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClose: () => void }) {
@@ -29,18 +29,7 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
     onError: (e) => toastError(`Not saved. ${errorText(e)}`),
   });
 
-  const remove = useMutation({
-    mutationFn: () => api.removeApplication(app.postingId),
-    onSuccess: () => {
-      qc.setQueryData<ApplicationDto[]>(qk.applications, (list) => list?.filter((a) => a.postingId !== app.postingId));
-      void qc.invalidateQueries({ queryKey: qk.postingsAll });
-      void qc.invalidateQueries({ queryKey: qk.posting(app.postingId) });
-      void qc.invalidateQueries({ queryKey: qk.status });
-      showToast({ message: 'Application removed. The posting is saved in the job list.', tone: 'info' });
-      onClose();
-    },
-    onError: (e) => toastError(errorText(e)),
-  });
+  const remove = useRemoveApplication({ onRemoved: onClose });
 
   const notesDirty = notes !== (app.notes ?? '');
   const interviewDirty = interview !== toLocalInput(app.interviewAt);
@@ -167,7 +156,7 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
 
         <section className="border-t border-line pt-4">
           <p className="mb-2 text-[13px] text-muted">Removing deletes the application and its history. The posting returns to the job list as saved.</p>
-          <ConfirmButton label="Remove application" confirmLabel="Yes, remove it" onConfirm={() => remove.mutate()} busy={remove.isPending} size="sm" />
+          <ConfirmButton label="Remove application" confirmLabel="Yes, remove it" onConfirm={() => remove.mutate(app.postingId)} busy={remove.isPending} size="sm" />
         </section>
       </div>
     </div>

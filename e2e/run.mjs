@@ -20,6 +20,7 @@ import { assert, assertEqual, createApi, createReporter, launchBrowser, sleep, u
 import { startStubLlm } from './stub-llm.mjs';
 import { runFirstStart } from './scenario-first-start.mjs';
 import { runKeyboardTriage } from './scenario-keyboard-triage.mjs';
+import { runSwipe } from './scenario-swipe.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -169,6 +170,7 @@ async function main() {
   const ctx = { page, api, t, base, claudeLog };
   await runFirstStart(ctx);
   await runKeyboardTriage(ctx);
+  await runSwipe(ctx);
 
   t.section('After the scenarios');
   await t.check('matching: the stub model answered the extraction and the judgment of each posting', async () => {

@@ -269,3 +269,70 @@ describe('jobs list with 2000 postings', () => {
     expect(excluded.getByText('Excluded: On site only')).toBeInTheDocument();
   });
 });
+
+describe('swipe feedback on a card', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** Puts a finger on the card of this title and moves it sideways by each offset in turn, without lifting it. */
+  function moveFinger(title: string, ...offsets: number[]) {
+    const target = cardOf(title).querySelector('button[data-row-button]') as HTMLElement;
+    const at = (dx: number) => ({ pointerId: 1, pointerType: 'touch', clientX: 300 + dx, clientY: 300 });
+    fireEvent.pointerDown(target, at(0));
+    for (const dx of offsets) fireEvent.pointerMove(target, at(dx));
+  }
+  const layerOf = (title: string) => cardOf(title).querySelector<HTMLElement>('[data-swipe-action]');
+  const movingCard = (title: string) => cardOf(title).querySelector('button[data-row-button]')?.parentElement as HTMLElement;
+
+  it('names the action of a release and changes its look at the threshold', async () => {
+    setup([makeItem('1', 90), makeItem('2', 80, { triageStatus: 'saved' }), makeItem('3', 70, { triageStatus: 'saved' })]);
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+
+    // Every element is 800px wide in tests, so the threshold is 140px.
+    moveFinger('Job 1', -15, -60);
+    expect(layerOf('Job 1')).toHaveTextContent('Dismiss');
+    expect(layerOf('Job 1')).toHaveAttribute('data-armed', 'false');
+    expect(movingCard('Job 1').style.transform).toBe('translateX(-60px)');
+    moveFinger('Job 1', -200);
+    expect(layerOf('Job 1')).toHaveAttribute('data-armed', 'true');
+    fireEvent.pointerCancel(cardOf('Job 1').querySelector('button[data-row-button]') as HTMLElement, { pointerId: 1, pointerType: 'touch' });
+
+    moveFinger('Job 2', 15, 200);
+    expect(layerOf('Job 2')).toHaveTextContent('Mark applied');
+    expect(layerOf('Job 2')).toHaveAttribute('data-armed', 'true');
+    expect(layerOf('Job 2')).toHaveClass('bg-field-pink', 'text-ink');
+    fireEvent.pointerCancel(cardOf('Job 2').querySelector('button[data-row-button]') as HTMLElement, { pointerId: 1, pointerType: 'touch' });
+
+    moveFinger('Job 3', -15, -60);
+    expect(layerOf('Job 3')).toHaveTextContent('Back to new');
+  });
+
+  it('names Save, and Remove application in the danger look, past the threshold', async () => {
+    setup([makeItem('1', 90), makeItem('2', 80, { triageStatus: 'applied' })]);
+    renderApp('/jobs?status=all');
+    await screen.findByText('Job 1');
+
+    moveFinger('Job 1', 15, 200);
+    expect(layerOf('Job 1')).toHaveTextContent('Save');
+    expect(layerOf('Job 1')).toHaveClass('bg-field-yellow', 'text-ink');
+    fireEvent.pointerCancel(cardOf('Job 1').querySelector('button[data-row-button]') as HTMLElement, { pointerId: 1, pointerType: 'touch' });
+
+    moveFinger('Job 2', -15, -200);
+    expect(layerOf('Job 2')).toHaveTextContent('Remove application');
+    expect(layerOf('Job 2')).toHaveClass('text-danger');
+  });
+
+  it('does not move a card past the end of the status line', async () => {
+    setup([makeItem('1', 90, { triageStatus: 'dismissed' }), makeItem('2', 80, { triageStatus: 'applied' })]);
+    renderApp('/jobs?status=all');
+    await screen.findByText('Job 1');
+
+    moveFinger('Job 1', -15, -200);
+    expect(layerOf('Job 1')).toBeNull();
+    expect(movingCard('Job 1').style.transform).toBe('');
+
+    moveFinger('Job 2', 15, 200);
+    expect(layerOf('Job 2')).toBeNull();
+    expect(movingCard('Job 2').style.transform).toBe('');
+  });
+});
