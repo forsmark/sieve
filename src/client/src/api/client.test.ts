@@ -79,6 +79,37 @@ describe('keepalive', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/applications/1', expect.objectContaining({ keepalive: false }));
   });
 
+  it('counts the body in bytes, so a body of fewer characters but more than 64 KB goes without keepalive', async () => {
+    const fetchMock = stubFetch();
+    // 40,000 characters of two bytes each in UTF-8.
+    await request('/api/applications/1', { method: 'PATCH', body: { notes: 'ø'.repeat(40_000) }, keepalive: true });
+    expect(fetchMock).toHaveBeenCalledWith('/api/applications/1', expect.objectContaining({ keepalive: false }));
+  });
+
+  it('sends the request again without keepalive when the browser refuses keepalive', async () => {
+    // Browsers share one 64 KB keepalive budget across the requests in flight, and refuse a request beyond it.
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      if (init.keepalive) throw new TypeError('Failed to fetch');
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(request('/api/applications/1', { method: 'PATCH', body: { notes: 'Call back.' }, keepalive: true })).resolves.toEqual({ ok: true });
+    expect(fetchMock.mock.calls.map(([, init]) => init.keepalive)).toEqual([true, false]);
+  });
+
+  it('tries a failed request once more only when it went with keepalive', async () => {
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const withKeepalive = await request('/api/applications/1', { method: 'PATCH', body: {}, keepalive: true }).catch((e: unknown) => e);
+    expect(withKeepalive).toBeInstanceOf(ApiRequestError);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    fetchMock.mockClear();
+    await request('/api/status').catch(() => {});
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('sends no keepalive unless the caller asks', async () => {
     const fetchMock = stubFetch();
     await request('/api/status');

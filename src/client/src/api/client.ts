@@ -24,7 +24,10 @@ export interface RequestOptions {
   /** A plain object becomes JSON. FormData is sent as multipart. */
   body?: unknown;
   signal?: AbortSignal;
-  /** Let the request outlive the page, as for a store on `pagehide`. Browsers refuse it for bodies over 64 KB. */
+  /**
+   * Let the request outlive the page, as for a store on `pagehide`. Browsers refuse it for bodies over 64 KB, counted
+   * across the keepalive requests in flight. A larger body goes without it, and a refused request goes again without it.
+   */
   keepalive?: boolean;
   /** Return the body of these error statuses instead of throwing. */
   acceptStatus?: number[];
@@ -61,8 +64,16 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   }
   let res: Response;
   try {
-    const keepalive = opts.keepalive === true && (body === undefined || (typeof body === 'string' && body.length < 60_000));
-    res = await fetch(apiPath(path), { method: opts.method ?? 'GET', headers, body, signal: opts.signal, credentials: 'same-origin', keepalive });
+    const keepalive = opts.keepalive === true && (body === undefined || (typeof body === 'string' && new TextEncoder().encode(body).length < 60_000));
+    const init: RequestInit = { method: opts.method ?? 'GET', headers, body, signal: opts.signal, credentials: 'same-origin' };
+    try {
+      res = await fetch(apiPath(path), { ...init, keepalive });
+    } catch (err) {
+      // Browsers share one 64 KB keepalive budget across the requests in flight, and refuse a request beyond it
+      // with a TypeError. The request goes once more without keepalive.
+      if (!keepalive || !(err instanceof TypeError)) throw err;
+      res = await fetch(apiPath(path), { ...init, keepalive: false });
+    }
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
     throw new ApiRequestError(0, 'The server cannot be reached. Check that it is running.', null);
