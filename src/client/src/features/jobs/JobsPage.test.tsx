@@ -6,7 +6,7 @@ import { QueryClient } from '@tanstack/react-query';
 import type { MatchSummary, PostingDetail, PostingListItem, ServerEvent } from '../../../../shared/api';
 import { App } from '../../app/App';
 import { STATUS, makeItem, mockApi, renderApp } from '../../test-utils';
-import { resetToastsForTests } from '../../lib/toast';
+import { resetToastsForTests, showUndoToast } from '../../lib/toast';
 import { mockMedia } from '../../test/media';
 
 function rowOf(title: string): HTMLElement {
@@ -899,6 +899,30 @@ describe('undo after the message', () => {
     // At 375px the control shortens with an ellipsis. "Select all loaded" keeps its line instead of wrapping in the 44px row.
     expect(selectAll.closest('label')).toHaveClass('shrink-0', 'whitespace-nowrap');
     expect(control).toHaveClass('min-w-0', 'shrink');
+  });
+
+  it('keeps the triage undo, its control and the u key when a stage move on the board came after it', async () => {
+    const { api } = postingServer([makeItem('1', 90), makeItem('2', 70)]);
+    const user = userEvent.setup();
+    renderApp('/jobs');
+    await screen.findByText('Job 1');
+    await user.keyboard('d');
+    await closeToast(user, /Dismissed “Job 1”/);
+    await screen.findByRole('button', { name: 'Undo · Dismissed “Job 1”.' });
+
+    // A stage move on the board, as `useMoveApplication` reports it.
+    const stageUndo = vi.fn(async () => {});
+    act(() => void showUndoToast({ kind: 'stage', message: 'Moved to Interview.', undo: stageUndo }));
+    await closeToast(user, /Moved to Interview/);
+    expect(screen.getByRole('button', { name: 'Undo · Dismissed “Job 1”.' })).toBeInTheDocument();
+
+    await user.keyboard('u');
+    await waitFor(() => expect(restoreCalls(api).map((c) => c.body)).toEqual([{ previous: [{ id: '1', triageStatus: 'new' }] }]));
+    expect(stageUndo).not.toHaveBeenCalled();
+    // Nothing of the job list is left to undo. The stage move stays for the board.
+    await user.keyboard('u');
+    expect(await screen.findByText('Nothing to undo.')).toBeInTheDocument();
+    expect(stageUndo).not.toHaveBeenCalled();
   });
 
   it('undoes the triage action from the undo control after the message has closed', async () => {

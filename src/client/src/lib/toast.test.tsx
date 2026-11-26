@@ -104,20 +104,20 @@ describe('toaster offset', () => {
 });
 
 describe('undo store', () => {
-  it('lets the u key path and a store reader see the same entry, and a new undoable action replaces it', async () => {
+  it('lets the u key path and a store reader see the same entry, and a new undoable action of the same kind replaces it', async () => {
     const first = vi.fn(async () => {});
     const second = vi.fn(async () => {});
-    const { result } = renderHook(() => useLastUndo());
+    const { result } = renderHook(() => useLastUndo('triage'));
     expect(result.current).toBeNull();
 
     act(() => void showUndoToast({ kind: 'triage', message: 'Dismissed “Job 1”.', undo: first, returnTo: 'p1' }));
     expect(result.current).toMatchObject({ kind: 'triage', message: 'Dismissed “Job 1”.', toastShown: true, returnTo: 'p1' });
-    expect(getLastUndo()).toBe(result.current);
+    expect(getLastUndo('triage')).toBe(result.current);
 
-    act(() => void showUndoToast({ kind: 'stage', message: 'Moved to Interview.', undo: second }));
-    expect(result.current).toMatchObject({ kind: 'stage', message: 'Moved to Interview.', toastShown: true });
+    act(() => void showUndoToast({ kind: 'triage', message: 'Saved “Job 2”.', undo: second }));
+    expect(result.current).toMatchObject({ kind: 'triage', message: 'Saved “Job 2”.', toastShown: true });
     expect(result.current).not.toHaveProperty('returnTo');
-    expect(getLastUndo()).toBe(result.current);
+    expect(getLastUndo('triage')).toBe(result.current);
 
     // The u key runs the entry the reader sees, the second one.
     let done = false;
@@ -128,7 +128,31 @@ describe('undo store', () => {
     expect(second).toHaveBeenCalledTimes(1);
     expect(first).not.toHaveBeenCalled();
     expect(result.current).toBeNull();
-    expect(await undoLast()).toBe(false);
+    expect(await undoLast('triage')).toBe(false);
+  });
+
+  it('keeps the latest undo of each kind, so a stage move neither replaces the triage undo nor runs in its place', async () => {
+    vi.useFakeTimers();
+    const triage = vi.fn(async () => {});
+    const stage = vi.fn(async () => {});
+    const { result } = renderHook(() => ({ triage: useLastUndo('triage'), stage: useLastUndo('stage'), any: useLastUndo() }));
+    act(() => void showUndoToast({ kind: 'triage', message: 'Dismissed “Job 1”.', undo: triage }));
+    act(() => void showUndoToast({ kind: 'stage', message: 'Moved to Interview.', undo: stage }));
+    expect(result.current.triage).toMatchObject({ kind: 'triage', message: 'Dismissed “Job 1”.' });
+    expect(result.current.stage).toMatchObject({ kind: 'stage', message: 'Moved to Interview.' });
+    // Without a kind, the newest of all kinds.
+    expect(result.current.any).toBe(result.current.stage);
+
+    // Both toasts close. The triage entry stays reachable without its toast.
+    act(() => void vi.advanceTimersByTime(8000));
+    expect(result.current.triage).toMatchObject({ message: 'Dismissed “Job 1”.', toastShown: false });
+
+    await act(async () => void (await undoLast('triage')));
+    expect(triage).toHaveBeenCalledTimes(1);
+    expect(stage).not.toHaveBeenCalled();
+    expect(result.current.triage).toBeNull();
+    expect(result.current.stage).toMatchObject({ message: 'Moved to Interview.' });
+    expect(await undoLast('triage')).toBe(false);
   });
 
   it('runs an undo at most once, from its toast and from the u key', async () => {
@@ -178,6 +202,58 @@ describe('undo store', () => {
       for (let i = 0; i < 4; i++) showToast({ message: `Note ${i}`, tone: 'info' });
     });
     expect(result.current).toMatchObject({ message: 'Saved “Job 1”.', toastShown: false });
+  });
+
+  it('lets the user try a failed undo again, from the u key path and the store, with its toast closed', async () => {
+    let fail = true;
+    const undo = vi.fn(async () => {
+      if (fail) throw new Error('Undo failed.');
+    });
+    const { result } = renderHook(() => useLastUndo('triage'));
+    act(() => void showUndoToast({ kind: 'triage', message: 'Dismissed “Job 1”.', undo, returnTo: 'p1' }));
+
+    await act(async () => void (await undoLast('triage')));
+    expect(undo).toHaveBeenCalledTimes(1);
+    expect(result.current).toMatchObject({ kind: 'triage', message: 'Dismissed “Job 1”.', toastShown: false, returnTo: 'p1' });
+
+    fail = false;
+    let done = false;
+    await act(async () => {
+      done = await undoLast('triage');
+    });
+    expect(done).toBe(true);
+    expect(undo).toHaveBeenCalledTimes(2);
+    expect(result.current).toBeNull();
+    expect(await undoLast('triage')).toBe(false);
+  });
+
+  it('keeps the newer undo of the same kind when an older undo fails while the newer action is taken', async () => {
+    let reject: (e: Error) => void = () => {};
+    const first = vi.fn(() => new Promise<void>((_resolve, r) => (reject = r)));
+    const { result } = renderHook(() => useLastUndo('triage'));
+    act(() => void showUndoToast({ kind: 'triage', message: 'Dismissed “Job 1”.', undo: first }));
+    let running: Promise<boolean> = Promise.resolve(false);
+    act(() => void (running = undoLast('triage')));
+    act(() => void showUndoToast({ kind: 'triage', message: 'Saved “Job 2”.', undo: async () => {} }));
+    await act(async () => {
+      reject(new Error('Undo failed.'));
+      await running;
+    });
+    expect(result.current).toMatchObject({ message: 'Saved “Job 2”.' });
+  });
+
+  it('puts a failed undo back when only an undo of another kind came meanwhile', async () => {
+    let reject: (e: Error) => void = () => {};
+    const { result } = renderHook(() => useLastUndo('triage'));
+    act(() => void showUndoToast({ kind: 'triage', message: 'Dismissed “Job 1”.', undo: () => new Promise<void>((_resolve, r) => (reject = r)) }));
+    let running: Promise<boolean> = Promise.resolve(false);
+    act(() => void (running = undoLast('triage')));
+    act(() => void showUndoToast({ kind: 'stage', message: 'Moved to Offer.', undo: async () => {} }));
+    await act(async () => {
+      reject(new Error('Undo failed.'));
+      await running;
+    });
+    expect(result.current).toMatchObject({ message: 'Dismissed “Job 1”.', toastShown: false });
   });
 
   it('tells listeners after an undo has reverted its action, and not when it failed', async () => {

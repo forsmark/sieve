@@ -453,7 +453,7 @@ export function JobsPage() {
         break;
       case 'u':
         e.preventDefault();
-        void undoLast().then((done) => {
+        void undoLast('triage').then((done) => {
           if (!done) showToast({ message: 'Nothing to undo.', tone: 'info' }, 2000);
         });
         break;

@@ -134,3 +134,6 @@ p8 pads only the top bar by the top safe area. With `black-translucent`, the pag
 
 ### 2026-11-26: `--bottom-bar` holds how far a bar rises above the status bar
 The design sets `--bottom-bar` to the bar's height. The toasts stand above the status bar, and the full-screen detail covers the status bar, so its action bar's whole height raised the toasts by the status bar's height too much. The variable now holds how far the bar's top edge stands above the status bar's top edge: the whole height for the bulk bar, which stands above the status bar, and the height less the status bar's for the detail action bar.
+
+### 2026-11-26: One latest undo for each kind, not one shared latest undo
+The design keeps one latest undo, which a triage and a stage move both replace. A stage move on the board then took the place of the job list's triage undo: the job list lost its undo control, and `u` on the job page undid the stage move instead. The store now keeps the latest entry of each kind. A new entry replaces only the entry of its kind. The `u` key and the undo control of the job list run the latest triage. A stage move keeps its own toast. An undo that fails counts as not done: its entry comes back, with its toast closed, unless a newer action of its kind took its place meanwhile.
