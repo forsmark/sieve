@@ -52,7 +52,11 @@ export async function runSwipe({ page, api, t, base }) {
     // The earlier scenarios may leave postings in other statuses. Every posting starts as new here.
     const others = (await api.get('/api/postings?status=all&limit=50')).items.filter((i) => i.triageStatus !== 'new');
     if (others.length) await api.post('/api/postings/restore', { previous: others.map((i) => ({ id: i.id, triageStatus: 'new' })) });
-    assertEqual(Object.values(await allStatuses()).filter((s) => s !== 'new'), [], 'postings with another status than "new"');
+    assertEqual(
+      Object.values(await allStatuses()).filter((s) => s !== 'new'),
+      [],
+      'postings with another status than "new"',
+    );
     await page.send('Emulation.setDeviceMetricsOverride', { width: 430, height: 932, deviceScaleFactor: 2, mobile: true });
     await page.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
     await page.goto(`${base}/jobs`);
@@ -96,7 +100,10 @@ export async function runSwipe({ page, api, t, base }) {
     await page.waitFor(`!${DIALOG}`, { message: 'the dialog to close' });
     await sleep(300);
     assertEqual(await statusOf(second), 'applied', 'status after Cancel');
-    assert((await api.get('/api/applications')).some((a) => a.postingId === second), 'the application after Cancel');
+    assert(
+      (await api.get('/api/applications')).some((a) => a.postingId === second),
+      'the application after Cancel',
+    );
   });
 
   await t.check('a mostly vertical drag on a card scrolls the list and changes no status', async () => {

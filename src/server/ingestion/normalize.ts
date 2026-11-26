@@ -5,7 +5,13 @@ const COMPANY_SUFFIXES = /\b(a\/s|aps|as|ab|oy|bv|sa|sl|ltd|limited|inc|gmbh|llc
 const SENIORITY_WORDS = /\b(senior|junior|lead|sr|jr|staff|principal|associate|mid|mid-level|head of)\b\.?/gi;
 
 const ENTITIES: Record<string, string> = {
-  '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'", '&nbsp;': ' ',
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&apos;': "'",
+  '&nbsp;': ' ',
 };
 
 export function decodeEntities(text: string): string {
@@ -17,7 +23,12 @@ export function decodeEntities(text: string): string {
 
 /** Removes markup and keeps paragraph breaks. */
 export function htmlToText(input: string): string {
-  if (!/[<&]/.test(input)) return input.replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (!/[<&]/.test(input))
+    return input
+      .replace(/\r\n?/g, '\n')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
   const text = input
     .replace(/\r\n?/g, '\n')
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
@@ -86,8 +97,12 @@ const MAX_DESCRIPTION = 20_000;
 
 /** Returns the common shape, or null when a required field is missing or the link is not valid. */
 export function normalizePosting(raw: RawPosting): NormalizedPosting | null {
-  const title = decodeEntities(String(raw.title ?? '')).replace(/\s+/g, ' ').trim();
-  const company = decodeEntities(String(raw.company ?? '')).replace(/\s+/g, ' ').trim();
+  const title = decodeEntities(String(raw.title ?? ''))
+    .replace(/\s+/g, ' ')
+    .trim();
+  const company = decodeEntities(String(raw.company ?? ''))
+    .replace(/\s+/g, ' ')
+    .trim();
   const externalId = String(raw.externalId ?? '').trim();
   if (!title || !company || !externalId) return null;
   let url: URL;

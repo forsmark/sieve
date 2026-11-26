@@ -15,8 +15,17 @@ const TEXT = 'Dear Acme, I build reliable web applications and want to do that f
 
 function letter(extra: Partial<CoverLetterDto> = {}): CoverLetterDto {
   return {
-    postingId: ID, state: 'ready', text: TEXT, language: 'English', instruction: null, error: null, model: 'm', edited: false,
-    generatedAt: '2026-11-10T08:00:00Z', updatedAt: '2026-11-10T08:00:00Z', ...extra,
+    postingId: ID,
+    state: 'ready',
+    text: TEXT,
+    language: 'English',
+    instruction: null,
+    error: null,
+    model: 'm',
+    edited: false,
+    generatedAt: '2026-11-10T08:00:00Z',
+    updatedAt: '2026-11-10T08:00:00Z',
+    ...extra,
   };
 }
 

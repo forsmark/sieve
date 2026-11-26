@@ -23,7 +23,17 @@ function excludedMatch(excludedReason: string, totalScore: number | null = null)
 }
 
 function detailOf(item: PostingListItem, extra: Partial<PostingDetail> = {}): PostingDetail {
-  return { ...item, description: 'Build things.', facts: null, sourceLinks: [], application: null, match: null, coverLetter: null, matchAnalysis: null, ...extra };
+  return {
+    ...item,
+    description: 'Build things.',
+    facts: null,
+    sourceLinks: [],
+    application: null,
+    match: null,
+    coverLetter: null,
+    matchAnalysis: null,
+    ...extra,
+  };
 }
 
 /** An event stream that the test writes to, as the server does. */
@@ -148,9 +158,7 @@ describe('jobs view', () => {
     await user.keyboard('d');
     await screen.findByText(/Dismissed “Job 1”/);
     await user.keyboard('u');
-    await waitFor(() =>
-      expect(api.calls.find((c) => c.path === '/api/postings/restore')?.body).toEqual({ previous: [{ id: '1', triageStatus: 'saved' }] }),
-    );
+    await waitFor(() => expect(api.calls.find((c) => c.path === '/api/postings/restore')?.body).toEqual({ previous: [{ id: '1', triageStatus: 'saved' }] }));
   });
 
   it('puts the row back and reports the error when the server rejects the action', async () => {
@@ -212,9 +220,21 @@ describe('jobs view', () => {
         sourceLinks: [{ id: '7', source: 'jobindex', url: item.url, primary: true }],
         application: null,
         match: {
-          state: 'scored', totalScore: 82, stale: false, excludedReason: null, failReason: null, skillsScore: 90, experienceScore: 80,
-          preferenceScore: 70, locationScore: 60, matchedSkills: ['React'], missingSkills: ['Go'], assessment: 'Good fit.', softViolations: [],
-          provider: 'local', model: 'm',
+          state: 'scored',
+          totalScore: 82,
+          stale: false,
+          excludedReason: null,
+          failReason: null,
+          skillsScore: 90,
+          experienceScore: 80,
+          preferenceScore: 70,
+          locationScore: 60,
+          matchedSkills: ['React'],
+          missingSkills: ['Go'],
+          assessment: 'Good fit.',
+          softViolations: [],
+          provider: 'local',
+          model: 'm',
         },
       }),
       'PATCH /api/postings/7': () => ({ previous: [] }),
@@ -236,7 +256,16 @@ describe('jobs view', () => {
         queries.push(url.search);
         return { items: [item], total: 1, nextOffset: null };
       },
-      'GET /api/postings/7': () => ({ ...item, description: 'Build things.', facts: null, sourceLinks: [], application: null, match: null, coverLetter: null, matchAnalysis: null }),
+      'GET /api/postings/7': () => ({
+        ...item,
+        description: 'Build things.',
+        facts: null,
+        sourceLinks: [],
+        application: null,
+        match: null,
+        coverLetter: null,
+        matchAnalysis: null,
+      }),
       'PATCH /api/postings/7': () => ({ previous: [] }),
     });
     const { history } = renderApp('/jobs?id=7&work=remote&minScore=70');
@@ -491,8 +520,21 @@ describe('jobs view', () => {
       'GET /api/postings/3': () =>
         detailOf(items[2]!, {
           match: {
-            state: 'scored', totalScore: 80, stale: false, excludedReason: null, failReason: null, skillsScore: 80, experienceScore: 80,
-            preferenceScore: 80, locationScore: 80, matchedSkills: [], missingSkills: [], assessment: 'ok', softViolations: [], provider: null, model: null,
+            state: 'scored',
+            totalScore: 80,
+            stale: false,
+            excludedReason: null,
+            failReason: null,
+            skillsScore: 80,
+            experienceScore: 80,
+            preferenceScore: 80,
+            locationScore: 80,
+            matchedSkills: [],
+            missingSkills: [],
+            assessment: 'ok',
+            softViolations: [],
+            provider: null,
+            model: null,
           },
         }),
     });
@@ -570,7 +612,12 @@ describe('swipe triage', () => {
 
   it('dismisses a new posting on a swipe to the left, removes its card, offers undo, and does not open it', async () => {
     let items = [makeItem('1', 90), makeItem('2', 70)];
-    const api = mockApi(swipeRoutes(() => items, (ids) => (items = items.filter((i) => !ids.includes(i.id)))));
+    const api = mockApi(
+      swipeRoutes(
+        () => items,
+        (ids) => (items = items.filter((i) => !ids.includes(i.id))),
+      ),
+    );
     const { history } = renderApp('/jobs');
     await screen.findByText('Job 1');
 
@@ -584,7 +631,10 @@ describe('swipe triage', () => {
   it('dismisses the open posting when the user leaves the page while its card slides out, and stays on the new page', async () => {
     let items = [makeItem('1', 90), makeItem('2', 70)];
     const api = mockApi({
-      ...swipeRoutes(() => items, (ids) => (items = items.filter((i) => !ids.includes(i.id)))),
+      ...swipeRoutes(
+        () => items,
+        (ids) => (items = items.filter((i) => !ids.includes(i.id))),
+      ),
       'GET /api/applications': () => [],
     });
     const { history } = renderApp('/jobs?id=1');
@@ -599,7 +649,12 @@ describe('swipe triage', () => {
 
   it('saves a new posting on a swipe to the right and keeps its card in the default list', async () => {
     let items = [makeItem('1', 90)];
-    const api = mockApi(swipeRoutes(() => items, () => (items = [makeItem('1', 90, { triageStatus: 'saved' })])));
+    const api = mockApi(
+      swipeRoutes(
+        () => items,
+        () => (items = [makeItem('1', 90, { triageStatus: 'saved' })]),
+      ),
+    );
     renderApp('/jobs');
     await screen.findByText('Job 1');
 
@@ -622,7 +677,12 @@ describe('swipe triage', () => {
 
   it('makes a saved posting new again on a swipe to the left, and the card stays', async () => {
     let items = [makeItem('1', 90, { triageStatus: 'saved' })];
-    const api = mockApi(swipeRoutes(() => items, () => (items = [makeItem('1', 90)])));
+    const api = mockApi(
+      swipeRoutes(
+        () => items,
+        () => (items = [makeItem('1', 90)]),
+      ),
+    );
     renderApp('/jobs');
     await screen.findByText('Job 1');
 
@@ -683,7 +743,12 @@ describe('swipe triage', () => {
 
   it('acts on the swiped card only and keeps the other cards selected', async () => {
     let items = [makeItem('1', 90), makeItem('2', 70), makeItem('3', 40)];
-    const api = mockApi(swipeRoutes(() => items, (ids) => (items = items.filter((i) => !ids.includes(i.id)))));
+    const api = mockApi(
+      swipeRoutes(
+        () => items,
+        (ids) => (items = items.filter((i) => !ids.includes(i.id))),
+      ),
+    );
     const user = userEvent.setup();
     renderApp('/jobs');
     await screen.findByText('Job 1');
@@ -714,7 +779,9 @@ describe('swipe triage', () => {
 
       swipeCard('Job 1', -200);
       const dialog = await screen.findByRole('dialog', { name: 'Remove the application?' });
-      expect(dialog).toHaveTextContent('“Job 1” at Company 1 goes back to saved. Its notes, stage history and interview date are deleted, and this can’t be undone.');
+      expect(dialog).toHaveTextContent(
+        '“Job 1” at Company 1 goes back to saved. Its notes, stage history and interview date are deleted, and this can’t be undone.',
+      );
       expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
       const card = cardOf('Job 1').querySelector('[style]') as HTMLElement;
       expect(card.style.transform).toBe('');

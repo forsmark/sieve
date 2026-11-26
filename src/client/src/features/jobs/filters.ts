@@ -90,7 +90,18 @@ export function jobSearchToParams(s: JobSearch): URLSearchParams {
   const p = new URLSearchParams();
   const clean = parseJobSearch(s as Record<string, unknown>);
   const order: Array<keyof JobSearch> = [
-    'q', 'status', 'source', 'work', 'minScore', 'tag', 'maxAgeDays', 'unread', 'showExcluded', 'showDuplicates', 'sort', 'id',
+    'q',
+    'status',
+    'source',
+    'work',
+    'minScore',
+    'tag',
+    'maxAgeDays',
+    'unread',
+    'showExcluded',
+    'showDuplicates',
+    'sort',
+    'id',
   ];
   for (const key of order) {
     const v = clean[key];

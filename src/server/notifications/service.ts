@@ -30,7 +30,9 @@ export function subscribeUrl(s: NotificationSettings): string | null {
 }
 
 /** Saves the settings. The first time notifications are enabled, the system generates the topic. */
-export function saveNotificationSettings(patch: Partial<Pick<NotificationSettings, 'enabled' | 'server' | 'threshold' | 'windowSeconds'>>): NotificationSettings {
+export function saveNotificationSettings(
+  patch: Partial<Pick<NotificationSettings, 'enabled' | 'server' | 'threshold' | 'windowSeconds'>>,
+): NotificationSettings {
   const current = getSetting('notifications');
   const next: NotificationSettings = { ...current, ...patch };
   next.threshold = Math.max(0, Math.min(100, Math.round(next.threshold)));

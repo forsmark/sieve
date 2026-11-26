@@ -75,7 +75,11 @@ async function stopProcess(child) {
 }
 
 async function main() {
-  for (const [name, port] of [['server', PORT], ['stub model', STUB_PORT], ['Chrome debugging', CHROME_PORT]]) {
+  for (const [name, port] of [
+    ['server', PORT],
+    ['stub model', STUB_PORT],
+    ['Chrome debugging', CHROME_PORT],
+  ]) {
     if (!(await portIsFree(port))) throw new Error(`Port ${port} for the ${name} is in use. Stop the other process or set another port.`);
   }
 
@@ -112,10 +116,13 @@ async function main() {
   runToEnd('seed.ts prepare', ...tsx('e2e/seed.ts', 'prepare', stubUrl), env);
 
   const stub = await startStubLlm(STUB_PORT);
-  cleanups.push(() => new Promise((r) => {
-    stub.server.closeAllConnections();
-    stub.server.close(r);
-  }));
+  cleanups.push(
+    () =>
+      new Promise((r) => {
+        stub.server.closeAllConnections();
+        stub.server.close(r);
+      }),
+  );
 
   const [node, serverArgs] = tsx('src/server/index.ts');
   const server = spawn(node, serverArgs, { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -153,12 +160,20 @@ async function main() {
   await t.check('setup: every source is disabled and the schedule is paused', async () => {
     const [sources, schedule] = await Promise.all([api.get('/api/sources'), api.get('/api/schedule')]);
     assert(sources.length > 0, 'GET /api/sources returned no source');
-    assertEqual(sources.filter((s) => s.enabled).map((s) => s.id), [], 'enabled sources');
+    assertEqual(
+      sources.filter((s) => s.enabled).map((s) => s.id),
+      [],
+      'enabled sources',
+    );
     assertEqual(schedule.paused, true, 'schedule paused');
   });
   const seeded = await t.check('setup: 12 postings are stored through the ingestion code', async () => {
     const results = JSON.parse(runToEnd('seed.ts postings', ...tsx('e2e/seed.ts', 'postings', stubUrl), env));
-    assertEqual(results.map((r) => r.status), Array(12).fill('new'), 'ingestion results');
+    assertEqual(
+      results.map((r) => r.status),
+      Array(12).fill('new'),
+      'ingestion results',
+    );
     const list = await api.get('/api/postings?status=all&limit=50');
     assertEqual(list.total, 12, 'GET /api/postings total');
   });
@@ -180,7 +195,11 @@ async function main() {
   await t.check('network: no fetch run started, so no job board was contacted', async () => {
     assertEqual(await api.get('/api/runs'), [], 'GET /api/runs');
     const sources = await api.get('/api/sources');
-    assertEqual(sources.filter((s) => s.enabled).map((s) => s.id), [], 'enabled sources');
+    assertEqual(
+      sources.filter((s) => s.enabled).map((s) => s.id),
+      [],
+      'enabled sources',
+    );
   });
   await t.check('browser: no uncaught exception, console error, or failed request', async () => {
     assertEqual([...new Set(page.problems)], [], 'problems in the page');

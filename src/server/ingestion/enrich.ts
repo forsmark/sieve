@@ -162,7 +162,9 @@ export function queueLivenessChecks(limit = 20): number {
               OR link_checked_at < ?)
        ORDER BY link_checked_at ASC LIMIT ?`,
     )
-    .all(isoAfter(-LIVENESS_MIN_AGE_DAYS * DAY), isoAfter(-LIVENESS_UNKNOWN_RETRY_DAYS * DAY), isoAfter(-LIVENESS_INTERVAL_DAYS * DAY), limit) as Array<{ id: string }>;
+    .all(isoAfter(-LIVENESS_MIN_AGE_DAYS * DAY), isoAfter(-LIVENESS_UNKNOWN_RETRY_DAYS * DAY), isoAfter(-LIVENESS_INTERVAL_DAYS * DAY), limit) as Array<{
+    id: string;
+  }>;
   let queued = 0;
   for (const r of rows) if (enqueue('liveness', r.id, { priority: -1 })) queued++;
   return queued;

@@ -1,5 +1,13 @@
 import { z } from 'zod';
-import { InvalidOutputError, ProviderUnavailableError, providerJsonSchema, type GenerateOptions, type HealthResult, type LlmClient, type Message } from './types';
+import {
+  InvalidOutputError,
+  ProviderUnavailableError,
+  providerJsonSchema,
+  type GenerateOptions,
+  type HealthResult,
+  type LlmClient,
+  type Message,
+} from './types';
 
 export interface OpenAiClientConfig {
   baseUrl: string;
@@ -10,7 +18,11 @@ export interface OpenAiClientConfig {
 }
 
 function parseJsonLoose(text: string): unknown {
-  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
+  const trimmed = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/```$/, '')
+    .trim();
   return JSON.parse(trimmed);
 }
 

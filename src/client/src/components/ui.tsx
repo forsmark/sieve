@@ -1,4 +1,13 @@
-import { useId, useState, type Ref, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import {
+  useId,
+  useState,
+  type Ref,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react';
 import { scoreBand } from '../../../shared/schemas';
 import type { MatchSummary } from '../../../shared/api';
 import { twMerge } from 'tailwind-merge';
@@ -110,17 +119,7 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
 }
 
 /** Label above a control. The child receives the generated id. */
-export function Field({
-  label,
-  hint,
-  children,
-  className,
-}: {
-  label: string;
-  hint?: ReactNode;
-  children: (id: string) => ReactNode;
-  className?: string;
-}) {
+export function Field({ label, hint, children, className }: { label: string; hint?: ReactNode; children: (id: string) => ReactNode; className?: string }) {
   const id = useId();
   return (
     <div className={cx('flex flex-col gap-1', className)}>
@@ -163,10 +162,7 @@ export function Switch({
       >
         <span
           aria-hidden
-          className={cx(
-            'inline-block size-3.5 transition-transform',
-            checked ? 'translate-x-[18px] bg-on-accent' : 'translate-x-[2px] bg-muted',
-          )}
+          className={cx('inline-block size-3.5 transition-transform', checked ? 'translate-x-[18px] bg-on-accent' : 'translate-x-[2px] bg-muted')}
         />
       </button>
       <div className="min-w-0">
@@ -215,17 +211,7 @@ export function Segmented<T extends string>({
 }
 
 /** Editor for a list of short strings, entered as comma-separated text. */
-export function ListInput({
-  value,
-  onChange,
-  id,
-  placeholder,
-}: {
-  value: string[];
-  onChange: (v: string[]) => void;
-  id?: string;
-  placeholder?: string;
-}) {
+export function ListInput({ value, onChange, id, placeholder }: { value: string[]; onChange: (v: string[]) => void; id?: string; placeholder?: string }) {
   const [text, setText] = useState(value.join(', '));
   const [synced, setSynced] = useState(value);
   if (synced !== value && value.join(', ') !== splitList(text).join(', ')) {
@@ -259,10 +245,7 @@ export function splitList(text: string): string[] {
 export function Spinner({ small, label }: { small?: boolean; label?: string }) {
   return (
     <span role={label ? 'status' : undefined} className="inline-flex items-center gap-2">
-      <span
-        aria-hidden
-        className={cx('inline-block animate-spin border-2 border-current border-r-transparent opacity-70', small ? 'size-3' : 'size-4')}
-      />
+      <span aria-hidden className={cx('inline-block animate-spin border-2 border-current border-r-transparent opacity-70', small ? 'size-3' : 'size-4')} />
       {label && <span className="text-muted">{label}</span>}
     </span>
   );
@@ -323,7 +306,11 @@ export function MatchCell({ match, compact }: { match: MatchSummary | null; comp
       <span className="flex flex-col items-start gap-0.5">
         <ScoreBadge score={match?.totalScore ?? null} showLabel={!compact} />
         <span className="flex gap-1">
-          {match?.stale && <Badge tone="warn" title="This score comes from an older profile or preferences">Stale</Badge>}
+          {match?.stale && (
+            <Badge tone="warn" title="This score comes from an older profile or preferences">
+              Stale
+            </Badge>
+          )}
           {state === 'in_progress' && <Badge tone="accent">Rescoring</Badge>}
           {state === 'excluded' && <Badge tone="danger">Excluded</Badge>}
         </span>
@@ -379,7 +366,19 @@ export function EmptyState({ title, children, action }: { title: string; childre
   );
 }
 
-export function Section({ title, description, children, actions, id }: { title: string; description?: ReactNode; children: ReactNode; actions?: ReactNode; id?: string }) {
+export function Section({
+  title,
+  description,
+  children,
+  actions,
+  id,
+}: {
+  title: string;
+  description?: ReactNode;
+  children: ReactNode;
+  actions?: ReactNode;
+  id?: string;
+}) {
   const headingId = useId();
   return (
     <section id={id} aria-labelledby={headingId} className="border-t border-fg">
@@ -417,7 +416,15 @@ const ICON_PATHS = {
 /** Drawn icons in one stroke weight. Each one is decorative, so its control needs a text label. */
 export function Icon({ name, className }: { name: keyof typeof ICON_PATHS; className?: string }) {
   return (
-    <svg aria-hidden viewBox="0 0 16 16" className={cx('inline-block size-3.5 shrink-0', className)} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="square">
+    <svg
+      aria-hidden
+      viewBox="0 0 16 16"
+      className={cx('inline-block size-3.5 shrink-0', className)}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="square"
+    >
       <path d={ICON_PATHS[name]} />
     </svg>
   );

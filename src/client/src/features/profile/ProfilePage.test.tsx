@@ -17,8 +17,15 @@ const STRUCTURED: StructuredProfile = {
 
 function profile(extra: Partial<ProfileDto> = {}): ProfileDto {
   return {
-    hasCv: true, cvText: 'Jane Doe. Frontend developer.', derived: STRUCTURED, effective: STRUCTURED, hasEdits: false,
-    deriveState: 'idle', deriveError: null, updatedAt: '2026-11-01T10:00:00Z', ...extra,
+    hasCv: true,
+    cvText: 'Jane Doe. Frontend developer.',
+    derived: STRUCTURED,
+    effective: STRUCTURED,
+    hasEdits: false,
+    deriveState: 'idle',
+    deriveError: null,
+    updatedAt: '2026-11-01T10:00:00Z',
+    ...extra,
   };
 }
 
@@ -40,7 +47,9 @@ async function setup(initial: ProfileDto, routes: Parameters<typeof mockApi>[0] 
   const imports = () =>
     api.fn.mock.calls
       .filter(([input, init]) => String(input) === '/api/profile/cv' && init?.method === 'POST')
-      .map(([, init]) => (init!.body instanceof FormData ? Object.fromEntries(init!.body.entries()) : (JSON.parse(String(init!.body)) as Record<string, unknown>)));
+      .map(([, init]) =>
+        init!.body instanceof FormData ? Object.fromEntries(init!.body.entries()) : (JSON.parse(String(init!.body)) as Record<string, unknown>),
+      );
   return { api, user, section, imports };
 }
 

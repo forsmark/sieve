@@ -38,9 +38,12 @@ const server = serve({ fetch: app.fetch, port: config.port, hostname: config.hos
     log('info', `only the gateway user ${JSON.stringify(config.edgeAllowedUser)} is let in`);
   } else if (!config.authPassword) {
     const local = config.host === '127.0.0.1' || config.host === 'localhost' || config.host === '::1';
-    log(local ? 'info' : 'warn', local
-      ? 'no AUTH_PASSWORD is set, so the server accepts only local connections'
-      : `no AUTH_PASSWORD is set and HOST is ${config.host}: every machine that can reach this port has full access`);
+    log(
+      local ? 'info' : 'warn',
+      local
+        ? 'no AUTH_PASSWORD is set, so the server accepts only local connections'
+        : `no AUTH_PASSWORD is set and HOST is ${config.host}: every machine that can reach this port has full access`,
+    );
   }
 });
 

@@ -122,9 +122,7 @@ function CvSection({ profile }: { profile: ProfileDto }) {
         {profile.cvText && (
           <details className="text-[13px]">
             <summary className="cursor-pointer text-muted">Show the stored CV text</summary>
-            <pre className="mt-2 max-h-72 overflow-auto border border-line bg-surface-2 p-3 font-sans text-[13px] whitespace-pre-wrap">
-              {profile.cvText}
-            </pre>
+            <pre className="mt-2 max-h-72 overflow-auto border border-line bg-surface-2 p-3 font-sans text-[13px] whitespace-pre-wrap">{profile.cvText}</pre>
           </details>
         )}
         <div>

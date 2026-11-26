@@ -14,7 +14,12 @@ describe('effectsFor: SSE event to query invalidation', () => {
     [{ type: 'queue.changed' }, [['status'], ['activity']], [], false],
     [{ type: 'llm.status', available: false }, [['status'], ['llm']], [], false],
     [{ type: 'profile.updated' }, [['profile'], ['status']], [], true],
-    [{ type: 'application.updated', postingId: 'p1' }, [['applications'], ['application-events', 'p1'], ['posting', 'p1'], ['status'], ['clear-preview']], ['p1'], false],
+    [
+      { type: 'application.updated', postingId: 'p1' },
+      [['applications'], ['application-events', 'p1'], ['posting', 'p1'], ['status'], ['clear-preview']],
+      ['p1'],
+      false,
+    ],
     [{ type: 'postings.cleared' }, [['status'], ['activity'], ['posting'], ['clear-preview'], ['backups'], ['logs']], [], true],
   ];
 
@@ -88,9 +93,24 @@ describe('list refresher', () => {
 
 function item(id: string, score: number | null): PostingListItem {
   return {
-    id, title: `Job ${id}`, company: 'Acme', location: null, source: 'remotive', sources: ['remotive'], url: 'https://x', postedAt: null,
-    firstSeenAt: '2026-11-01T00:00:00Z', triageStatus: 'new', triageOrigin: null, unread: true, linkStatus: 'active', lacksDescription: false,
-    duplicateOf: null, workArrangement: null, tags: [], match: score === null ? null : { state: 'scored', totalScore: score, stale: false, excludedReason: null },
+    id,
+    title: `Job ${id}`,
+    company: 'Acme',
+    location: null,
+    source: 'remotive',
+    sources: ['remotive'],
+    url: 'https://x',
+    postedAt: null,
+    firstSeenAt: '2026-11-01T00:00:00Z',
+    triageStatus: 'new',
+    triageOrigin: null,
+    unread: true,
+    linkStatus: 'active',
+    lacksDescription: false,
+    duplicateOf: null,
+    workArrangement: null,
+    tags: [],
+    match: score === null ? null : { state: 'scored', totalScore: score, stale: false, excludedReason: null },
   };
 }
 
@@ -104,10 +124,34 @@ describe('row patcher', () => {
       pages: [{ items: [item('a', 90), item('b', null), item('c', 40)], total: 3, nextOffset: null }],
       pageParams: [0],
     });
-    const detail = { ...item('b', 95), description: null, facts: null, sourceLinks: [], application: null,
-      match: { state: 'scored', totalScore: 95, stale: false, excludedReason: null, failReason: null, skillsScore: 1, experienceScore: 1,
-        preferenceScore: 1, locationScore: 1, matchedSkills: [], missingSkills: [], assessment: 'ok', softViolations: [], provider: null, model: null } };
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(detail), { status: 200 })));
+    const detail = {
+      ...item('b', 95),
+      description: null,
+      facts: null,
+      sourceLinks: [],
+      application: null,
+      match: {
+        state: 'scored',
+        totalScore: 95,
+        stale: false,
+        excludedReason: null,
+        failReason: null,
+        skillsScore: 1,
+        experienceScore: 1,
+        preferenceScore: 1,
+        locationScore: 1,
+        matchedSkills: [],
+        missingSkills: [],
+        assessment: 'ok',
+        softViolations: [],
+        provider: null,
+        model: null,
+      },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify(detail), { status: 200 })),
+    );
     const patcher = createRowPatcher(qc, 0);
     patcher.add(['b', 'not-cached']);
     await patcher.flush();
@@ -128,17 +172,47 @@ describe('row patcher', () => {
     ];
     qc.setQueryData<InfiniteData<PostingListResponse, number>>(key, { pages: pages(), pageParams: [0, 2] });
     qc.setQueryData<InfiniteData<PostingListResponse, number>>(newest, { pages: pages(), pageParams: [0, 2] });
-    const detail = { ...item('d', 70), description: null, facts: null, sourceLinks: [], application: null,
-      match: { state: 'scored', totalScore: 70, stale: false, excludedReason: null, failReason: null, skillsScore: 1, experienceScore: 1,
-        preferenceScore: 1, locationScore: 1, matchedSkills: [], missingSkills: [], assessment: 'ok', softViolations: [], provider: null, model: null } };
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(detail), { status: 200 })));
+    const detail = {
+      ...item('d', 70),
+      description: null,
+      facts: null,
+      sourceLinks: [],
+      application: null,
+      match: {
+        state: 'scored',
+        totalScore: 70,
+        stale: false,
+        excludedReason: null,
+        failReason: null,
+        skillsScore: 1,
+        experienceScore: 1,
+        preferenceScore: 1,
+        locationScore: 1,
+        matchedSkills: [],
+        missingSkills: [],
+        assessment: 'ok',
+        softViolations: [],
+        provider: null,
+        model: null,
+      },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify(detail), { status: 200 })),
+    );
     const patcher = createRowPatcher(qc, 0);
     patcher.add(['d'], true);
     await patcher.flush();
     const ids = (k: typeof key | typeof newest) => qc.getQueryData<InfiniteData<PostingListResponse, number>>(k)!.pages.map((p) => p.items.map((i) => i.id));
-    expect(ids(key)).toEqual([['a', 'd'], ['b', 'c']]);
+    expect(ids(key)).toEqual([
+      ['a', 'd'],
+      ['b', 'c'],
+    ]);
     // A list in date order keeps its order.
-    expect(ids(newest)).toEqual([['a', 'b'], ['c', 'd']]);
+    expect(ids(newest)).toEqual([
+      ['a', 'b'],
+      ['c', 'd'],
+    ]);
   });
 
   it('requests a list refetch when a score arrives for a posting that is not loaded', async () => {

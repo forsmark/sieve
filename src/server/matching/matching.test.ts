@@ -67,7 +67,12 @@ describe('constraints in code', () => {
   });
 
   it('excludes a work arrangement the user does not accept when that constraint is hard, and adds a penalty when it is soft', () => {
-    const hard = evaluateConstraints(posting, facts({ workArrangement: 'onsite' }), PROFILE, prefs({ workArrangements: ['remote'], workArrangementMode: 'hard' }));
+    const hard = evaluateConstraints(
+      posting,
+      facts({ workArrangement: 'onsite' }),
+      PROFILE,
+      prefs({ workArrangements: ['remote'], workArrangementMode: 'hard' }),
+    );
     expect(hard.excludedReason).toBe('work arrangement: onsite');
     const soft = evaluateConstraints(posting, facts({ workArrangement: 'onsite' }), PROFILE, prefs({ workArrangements: ['remote'] }));
     expect(soft).toEqual({ excludedReason: null, softViolations: [{ kind: 'work_arrangement', detail: 'onsite' }] });
@@ -75,7 +80,11 @@ describe('constraints in code', () => {
 
   it('never excludes and never adds a penalty for an unknown fact', () => {
     const p = prefs({
-      locations: ['Copenhagen'], locationMode: 'hard', languageMode: 'hard', workArrangements: ['remote'], workArrangementMode: 'hard',
+      locations: ['Copenhagen'],
+      locationMode: 'hard',
+      languageMode: 'hard',
+      workArrangements: ['remote'],
+      workArrangementMode: 'hard',
     });
     const unknown = facts({ location: NOWHERE, workArrangement: null, requiredLanguages: [] });
     expect(evaluateConstraints(posting, unknown, PROFILE, p)).toEqual({ excludedReason: null, softViolations: [] });
@@ -114,7 +123,12 @@ describe('scores in code', () => {
     const scores = { skills: 80, experience: 70, preferences: 60, location: 100 };
     const w = DEFAULT_PREFERENCES.weights;
     expect(totalScore(scores, w, [{ kind: 'language', detail: 'German' }])).toBe(77 - SOFT_PENALTY.language);
-    expect(totalScore(scores, w, [{ kind: 'language', detail: 'x' }, { kind: 'work_arrangement', detail: 'onsite' }])).toBe(32);
+    expect(
+      totalScore(scores, w, [
+        { kind: 'language', detail: 'x' },
+        { kind: 'work_arrangement', detail: 'onsite' },
+      ]),
+    ).toBe(32);
     expect(totalScore({ skills: 10, experience: 10, preferences: 10, location: 10 }, w, [{ kind: 'language', detail: 'x' }])).toBe(0);
   });
 });
@@ -128,13 +142,25 @@ describe('pipeline', () => {
     await whenIdle();
     expect(getFacts(id)).toEqual(FACTS);
     expect(matchOf(id)).toMatchObject({
-      state: 'scored', skills_score: 80, experience_score: 70, preference_score: 60, location_score: 100, total_score: 77,
-      provider: 'local', model: 'stub-model',
+      state: 'scored',
+      skills_score: 80,
+      experience_score: 70,
+      preference_score: 60,
+      location_score: 100,
+      total_score: 77,
+      provider: 'local',
+      model: 'stub-model',
     });
     const detail = getPostingDetail(id)!;
     expect(detail.match).toMatchObject({
-      matchedSkills: ['TypeScript'], missingSkills: ['React'], assessment: JUDGMENT.assessment, stale: false,
-      skillsScore: 80, experienceScore: 70, preferenceScore: 60, locationScore: 100,
+      matchedSkills: ['TypeScript'],
+      missingSkills: ['React'],
+      assessment: JUDGMENT.assessment,
+      stale: false,
+      skillsScore: 80,
+      experienceScore: 70,
+      preferenceScore: 60,
+      locationScore: 100,
     });
     expect(stub.calls).toMatchObject({ extract: 1, judge: 1 });
     // The same posting in the list now has its score.
@@ -262,7 +288,11 @@ describe('rescore planner', () => {
   beforeEach(() => saveProfileEdits(PROFILE));
 
   async function seed(): Promise<string[]> {
-    const ids = [add({ externalId: '1' }), add({ externalId: '2', title: 'Data Engineer' }), add({ externalId: '3', title: 'Backend Developer', company: 'Beta Corp' })];
+    const ids = [
+      add({ externalId: '1' }),
+      add({ externalId: '2', title: 'Data Engineer' }),
+      add({ externalId: '3', title: 'Backend Developer', company: 'Beta Corp' }),
+    ];
     await whenIdle();
     stub.calls.extract = 0;
     stub.calls.judge = 0;

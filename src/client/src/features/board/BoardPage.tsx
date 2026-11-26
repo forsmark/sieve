@@ -184,13 +184,7 @@ function Card({
         'cursor-grab active:cursor-grabbing',
       )}
     >
-      <button
-        type="button"
-        onClick={onOpen}
-        onKeyDown={onKeyDown}
-        aria-keyshortcuts="Shift+ArrowLeft Shift+ArrowRight"
-        className="block w-full text-left"
-      >
+      <button type="button" onClick={onOpen} onKeyDown={onKeyDown} aria-keyshortcuts="Shift+ArrowLeft Shift+ArrowRight" className="block w-full text-left">
         <span className="line-clamp-2 text-[15px] leading-snug font-bold">{app.snapshot.title}</span>
         <span className="mt-0.5 block truncate text-[13px] text-muted">{app.snapshot.company}</span>
       </button>

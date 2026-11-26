@@ -204,11 +204,26 @@ a {
   }
 }
 
-.tile-yellow { background: var(--field-yellow); --tile-color: var(--field-yellow); }
-.tile-blue { background: var(--field-blue); --tile-color: var(--field-blue); }
-.tile-pink { background: var(--field-pink); --tile-color: var(--field-pink); }
-.tile-beige { background: var(--field-beige); --tile-color: var(--field-beige); }
-.tile-ground { background: var(--surface-2); --tile-color: var(--surface-2); }
+.tile-yellow {
+  background: var(--field-yellow);
+  --tile-color: var(--field-yellow);
+}
+.tile-blue {
+  background: var(--field-blue);
+  --tile-color: var(--field-blue);
+}
+.tile-pink {
+  background: var(--field-pink);
+  --tile-color: var(--field-pink);
+}
+.tile-beige {
+  background: var(--field-beige);
+  --tile-color: var(--field-beige);
+}
+.tile-ground {
+  background: var(--surface-2);
+  --tile-color: var(--surface-2);
+}
 
 /* Checkboxes are square, with a hairline border and a drawn check. */
 input[type='checkbox'] {

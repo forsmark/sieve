@@ -47,7 +47,14 @@ function Harness() {
 
 function setup(initial: MatchAnalysisDto | null, routes: Parameters<typeof mockApi>[0] = {}) {
   const detail = (): PostingDetail => ({
-    ...makeItem(ID, 80), description: 'Build things.', facts: null, sourceLinks: [], application: null, match: null, coverLetter: null, matchAnalysis: initial,
+    ...makeItem(ID, 80),
+    description: 'Build things.',
+    facts: null,
+    sourceLinks: [],
+    application: null,
+    match: null,
+    coverLetter: null,
+    matchAnalysis: initial,
   });
   const apiMock = mockApi({ [`GET /api/postings/${ID}`]: detail, ...routes });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -122,7 +129,14 @@ describe('expanded match analysis', () => {
     let applied = false;
     const { api: mock, user } = setup(scored(false), {
       [`GET /api/postings/${ID}`]: () => ({
-        ...makeItem(ID, applied ? 81 : 64), description: null, facts: null, sourceLinks: [], application: null, match: null, coverLetter: null, matchAnalysis: scored(applied),
+        ...makeItem(ID, applied ? 81 : 64),
+        description: null,
+        facts: null,
+        sourceLinks: [],
+        application: null,
+        match: null,
+        coverLetter: null,
+        matchAnalysis: scored(applied),
       }),
       [`POST ${PATH}/apply-score`]: () => {
         applied = true;

@@ -3,9 +3,9 @@ import { nowIso } from './clock';
 
 /** Typed settings with defaults. Every setting is one JSON value in the settings table. */
 export interface SettingsMap {
-  'search': { terms: string[]; region: string };
+  search: { terms: string[]; region: string };
   'sources.disabled': string[];
-  'llm': {
+  llm: {
     provider: 'local' | 'claude-code';
     baseUrl: string;
     model: string;
@@ -13,7 +13,7 @@ export interface SettingsMap {
     claudeEffort: 'low' | 'medium';
   };
   'matching.paused': boolean;
-  'notifications': {
+  notifications: {
     enabled: boolean;
     server: string;
     topic: string | null;
@@ -21,17 +21,17 @@ export interface SettingsMap {
     windowSeconds: number;
   };
   'app.baseUrl': string;
-  'backup': { intervalHours: number; keep: number; lastAt: string | null };
+  backup: { intervalHours: number; keep: number; lastAt: string | null };
 }
 
 export const SETTING_DEFAULTS: SettingsMap = {
-  'search': { terms: [], region: '' },
+  search: { terms: [], region: '' },
   'sources.disabled': [],
-  'llm': { provider: 'local', baseUrl: 'http://localhost:11434', model: 'gemma3:27b', apiKey: '', claudeEffort: 'low' },
+  llm: { provider: 'local', baseUrl: 'http://localhost:11434', model: 'gemma3:27b', apiKey: '', claudeEffort: 'low' },
   'matching.paused': false,
-  'notifications': { enabled: false, server: 'https://ntfy.sh', topic: null, threshold: 80, windowSeconds: 120 },
+  notifications: { enabled: false, server: 'https://ntfy.sh', topic: null, threshold: 80, windowSeconds: 120 },
   'app.baseUrl': 'http://localhost:3000',
-  'backup': { intervalHours: 6, keep: 10, lastAt: null },
+  backup: { intervalHours: 6, keep: 10, lastAt: null },
 };
 
 export function getSetting<K extends keyof SettingsMap>(key: K): SettingsMap[K] {

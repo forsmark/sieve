@@ -89,7 +89,10 @@ export function stubLlm(): StubLlm {
       scores: { skills: 95, experience: 90, preferences: 70 },
     }),
     lastLetterInput: '',
-    letter: () => ({ language: 'English', letter: `Dear hiring team,\n\n${'I build web applications with TypeScript. '.repeat(4)}\n\nBest regards,\nJane Doe` }),
+    letter: () => ({
+      language: 'English',
+      letter: `Dear hiring team,\n\n${'I build web applications with TypeScript. '.repeat(4)}\n\nBest regards,\nJane Doe`,
+    }),
     facts: () => FACTS,
     judgment: () => JUDGMENT,
     profile: () => PROFILE,
@@ -98,7 +101,10 @@ export function stubLlm(): StubLlm {
       provider: 'local',
       model: 'stub-model',
       async generateObject<T>(schema: z.ZodType<T>, messages: Array<{ role: string; content: string }>, opts?: { name?: string }): Promise<T> {
-        const user = messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n');
+        const user = messages
+          .filter((m) => m.role === 'user')
+          .map((m) => m.content)
+          .join('\n');
         let raw: unknown;
         if (opts?.name === 'posting_facts') {
           stub.calls.extract++;
@@ -153,5 +159,7 @@ export function postingOf(id: string) {
 }
 
 export function tasksOf(kind?: string) {
-  return (kind ? sqlite.prepare('SELECT * FROM tasks WHERE kind = ? ORDER BY id').all(kind) : sqlite.prepare('SELECT * FROM tasks ORDER BY id').all()) as Array<Record<string, any>>;
+  return (kind ? sqlite.prepare('SELECT * FROM tasks WHERE kind = ? ORDER BY id').all(kind) : sqlite.prepare('SELECT * FROM tasks ORDER BY id').all()) as Array<
+    Record<string, any>
+  >;
 }

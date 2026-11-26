@@ -10,7 +10,7 @@ export function extractJobText(html: string): string | null {
   for (const script of root.querySelectorAll('script[type="application/ld+json"]')) {
     try {
       const data = JSON.parse(script.text);
-      const items = Array.isArray(data) ? data : data['@graph'] ?? [data];
+      const items = Array.isArray(data) ? data : (data['@graph'] ?? [data]);
       for (const item of items) {
         if (item && item['@type'] === 'JobPosting' && typeof item.description === 'string') {
           const text = htmlToText(item.description);

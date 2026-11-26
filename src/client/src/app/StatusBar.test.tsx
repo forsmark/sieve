@@ -113,7 +113,11 @@ describe('status bar', () => {
     server.status = { ...STATUS, activeRunId: 3 };
     server.runs = [
       {
-        id: 3, trigger: 'manual', state: 'running', startedAt: '2026-11-10T14:00:00Z', endedAt: null,
+        id: 3,
+        trigger: 'manual',
+        state: 'running',
+        startedAt: '2026-11-10T14:00:00Z',
+        endedAt: null,
         sources: [
           { source: 'jobindex', state: 'completed', found: 41, added: 7, invalid: 0, error: null },
           { source: 'remoteok', state: 'running', found: 13, added: 4, invalid: 0, error: null },

@@ -86,16 +86,16 @@ export function FilterBar({
         <label className="sr-only" htmlFor="job-sort">
           Sort order
         </label>
-        <Select id="job-sort" className="w-auto" value={search.sort ?? 'score'} onChange={(e) => update({ sort: e.target.value === 'newest' ? 'newest' : undefined })}>
+        <Select
+          id="job-sort"
+          className="w-auto"
+          value={search.sort ?? 'score'}
+          onChange={(e) => update({ sort: e.target.value === 'newest' ? 'newest' : undefined })}
+        >
           <option value="score">Best match first</option>
           <option value="newest">Newest first</option>
         </Select>
-        <Button
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => setOpen((o) => !o)}
-          variant={filterCount > 0 ? 'primary' : 'secondary'}
-        >
+        <Button aria-expanded={open} aria-controls={panelId} onClick={() => setOpen((o) => !o)} variant={filterCount > 0 ? 'primary' : 'secondary'}>
           Filters{filterCount > 0 ? ` (${filterCount})` : ''}
         </Button>
         <span className="tabular min-w-24 text-[13px] text-muted" aria-live="polite">

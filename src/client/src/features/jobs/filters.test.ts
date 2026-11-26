@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  clearFilters, hasActiveFilters, jobSearchToParams, normalizeStatus, parseJobSearch, parseSearchString, stringifySearchObject, toPostingQuery,
+  clearFilters,
+  hasActiveFilters,
+  jobSearchToParams,
+  normalizeStatus,
+  parseJobSearch,
+  parseSearchString,
+  stringifySearchObject,
+  toPostingQuery,
   type JobSearch,
 } from './filters';
 

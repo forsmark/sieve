@@ -10,7 +10,14 @@ import type { HttpResult, RateLimitedClient, SourceAdapter } from '../sources/ad
 import { listRuns, startFetchRun } from '../sources/runner';
 import { FACTS, PROFILE, fakeClock, matchOf, postingOf, raw, resetAll, stubLlm, tasksOf } from '../testing/helpers';
 import {
-  classifyLiveness, extractJobText, mergeDescription, queueLivenessChecks, registerEnrichHandler, registerLivenessHandler, setEnrichClientForTests, setLivenessFetchForTests,
+  classifyLiveness,
+  extractJobText,
+  mergeDescription,
+  queueLivenessChecks,
+  registerEnrichHandler,
+  registerLivenessHandler,
+  setEnrichClientForTests,
+  setLivenessFetchForTests,
 } from './enrich';
 import { ingestPosting, needsEnrichment, separateDuplicate } from './ingest';
 import { htmlToText, isSimilarTitle, normalizeCompany, normalizePosting, normalizeTitle } from './normalize';
@@ -47,7 +54,10 @@ describe('normalization', () => {
   it('discards a posting without a title, a company, or a valid link and counts it as invalid in the run history', async () => {
     setSetting('search', { terms: [], region: '' });
     const board: SourceAdapter = {
-      id: 'board', name: 'Board', supports: { keywords: false, region: false }, rate: { minDelayMs: 0, maxConcurrent: 1 },
+      id: 'board',
+      name: 'Board',
+      supports: { keywords: false, region: false },
+      rate: { minDelayMs: 0, maxConcurrent: 1 },
       async *search() {
         yield raw({ externalId: 'ok' });
         yield raw({ externalId: 'no-title', title: '' });
@@ -111,7 +121,10 @@ describe('upsert', () => {
     const withText = idOf(ingestPosting('a', raw()));
     const withoutText = idOf(ingestPosting('a', raw({ externalId: 'job-2', title: 'Backend Developer', description: 'Short.' })));
     expect(sqlite.prepare('SELECT state FROM matches WHERE posting_id = ?').get(withText)).toEqual({ state: 'waiting' });
-    expect(tasksOf().map((t) => [t.kind, t.subject_id])).toEqual([['extract', withText], ['enrich', withoutText]]);
+    expect(tasksOf().map((t) => [t.kind, t.subject_id])).toEqual([
+      ['extract', withText],
+      ['enrich', withoutText],
+    ]);
   });
 });
 
@@ -125,14 +138,16 @@ describe('duplicates', () => {
   it('treats titles that differ by a seniority word or a legal suffix as the same job', () => {
     const first = idOf(ingestPosting('jobindex', raw({ title: 'Frontend Developer', company: 'Acme A/S' })));
     expect(ingestPosting('linkedin', raw({ externalId: 'x', title: 'Senior Frontend Developer', company: 'Acme ApS' }))).toMatchObject({
-      status: 'duplicate', duplicateOf: first,
+      status: 'duplicate',
+      duplicateOf: first,
     });
   });
 
   it('finds a duplicate with extra words in the title through the company index', () => {
     const first = idOf(ingestPosting('jobindex', raw({ title: 'Frontend Developer' })));
     expect(ingestPosting('linkedin', raw({ externalId: 'x', title: 'Frontend Developer - Platform Team' }))).toMatchObject({
-      status: 'duplicate', duplicateOf: first,
+      status: 'duplicate',
+      duplicateOf: first,
     });
     expect(isSimilarTitle('Frontend Developer', 'Frontend Developer, Copenhagen')).toBe(true);
   });

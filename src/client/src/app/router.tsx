@@ -38,9 +38,21 @@ const boardRoute = createRoute({
   component: lazyRouteComponent(() => import('../features/board/BoardPage'), 'BoardPage'),
 });
 
-const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', component: lazyRouteComponent(() => import('../features/profile/ProfilePage'), 'ProfilePage') });
-const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings', component: lazyRouteComponent(() => import('../features/settings/SettingsPage'), 'SettingsPage') });
-const activityRoute = createRoute({ getParentRoute: () => rootRoute, path: '/activity', component: lazyRouteComponent(() => import('../features/activity/ActivityPage'), 'ActivityPage') });
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/profile',
+  component: lazyRouteComponent(() => import('../features/profile/ProfilePage'), 'ProfilePage'),
+});
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: lazyRouteComponent(() => import('../features/settings/SettingsPage'), 'SettingsPage'),
+});
+const activityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/activity',
+  component: lazyRouteComponent(() => import('../features/activity/ActivityPage'), 'ActivityPage'),
+});
 
 const routeTree = rootRoute.addChildren([indexRoute, jobsRoute, boardRoute, profileRoute, settingsRoute, activityRoute]);
 

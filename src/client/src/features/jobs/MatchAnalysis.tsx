@@ -79,7 +79,8 @@ export function MatchAnalysis({
                 <span className="font-bold">Revised score: {analysis?.proposedTotal ?? 'not available'}</span>
                 {currentScore !== null && <span> (now {currentScore})</span>}
                 <span className="tabular block text-xs">
-                  Skills {c.scores.skills}, experience {c.scores.experience}, preferences {c.scores.preferences}. Location and the rules come from your settings.
+                  Skills {c.scores.skills}, experience {c.scores.experience}, preferences {c.scores.preferences}. Location and the rules come from your
+                  settings.
                 </span>
               </p>
               {analysis?.scoreApplied ? (
@@ -119,7 +120,8 @@ export function MatchAnalysis({
                   {c.gaps.map((g, i) => (
                     <li key={i}>
                       <p className="font-semibold">
-                        {g.point} <span className="ml-1 border border-current px-1 text-[11px] font-bold tracking-wide uppercase">{SEVERITY_LABEL[g.severity]}</span>
+                        {g.point}{' '}
+                        <span className="ml-1 border border-current px-1 text-[11px] font-bold tracking-wide uppercase">{SEVERITY_LABEL[g.severity]}</span>
                       </p>
                       <p className="text-[13px] leading-relaxed">{g.mitigation}</p>
                     </li>
@@ -155,7 +157,16 @@ export function MatchAnalysis({
         <Button size="sm" variant={c ? 'secondary' : 'primary'} onClick={() => run.mutate()} busy={pending}>
           {c ? 'Run again' : 'Run expanded analysis'}
         </Button>
-        {c && !pending && <ConfirmButton label="Remove" confirmLabel="Remove the analysis" onConfirm={() => remove.mutate()} busy={remove.isPending} size="sm" variant="secondary" />}
+        {c && !pending && (
+          <ConfirmButton
+            label="Remove"
+            confirmLabel="Remove the analysis"
+            onConfirm={() => remove.mutate()}
+            busy={remove.isPending}
+            size="sm"
+            variant="secondary"
+          />
+        )}
         {c && analysis?.generatedAt && (
           <span className="text-xs">
             Written {analysis.generatedAt.slice(0, 10)}
@@ -164,9 +175,9 @@ export function MatchAnalysis({
         )}
       </div>
       <p className="max-w-[70ch] text-xs">
-        Fable 5.2 compares the full posting with your CV and preferences through the claude command. Your CV text and the posting text are sent to
-        Anthropic. The analysis changes the score only when you select "Use this score". A later change of your CV or preferences scores the posting
-        again and replaces it. Check its claims against the posting.
+        Fable 5.2 compares the full posting with your CV and preferences through the claude command. Your CV text and the posting text are sent to Anthropic.
+        The analysis changes the score only when you select "Use this score". A later change of your CV or preferences scores the posting again and replaces it.
+        Check its claims against the posting.
       </p>
     </div>
   );

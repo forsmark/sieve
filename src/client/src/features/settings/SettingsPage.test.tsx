@@ -6,8 +6,14 @@ import { STATUS, mockApi, renderApp } from '../../test-utils';
 import { resetToastsForTests } from '../../lib/toast';
 
 const LLM: LlmSettingsDto = {
-  provider: 'local', baseUrl: 'http://localhost:11434', model: 'local-model', apiKey: '', claudeEffort: 'low',
-  claudeModel: 'claude-haiku-5-5', writingModel: 'claude-fable-5-2', writingEffort: 'medium',
+  provider: 'local',
+  baseUrl: 'http://localhost:11434',
+  model: 'local-model',
+  apiKey: '',
+  claudeEffort: 'low',
+  claudeModel: 'claude-haiku-5-5',
+  writingModel: 'claude-fable-5-2',
+  writingEffort: 'medium',
 };
 
 function source(id: string, name: string, keywords: boolean): SourceDto {
@@ -121,7 +127,9 @@ describe('settings', () => {
     // The request carries the entered settings, and the result names both checks.
     await waitFor(() =>
       expect(api.calls.find((c) => c.method === 'PUT' && c.path === '/api/llm')?.body).toMatchObject({
-        provider: 'local', baseUrl: 'http://gpu-box:11434', model: 'qwen3',
+        provider: 'local',
+        baseUrl: 'http://gpu-box:11434',
+        model: 'qwen3',
       }),
     );
     const result = await section.findByText(/Provider:/);
@@ -147,7 +155,9 @@ describe('postings', () => {
       'POST /api/postings/clear': (call) => {
         const confirmed = call.body as { delete: number; saved: number };
         if (confirmed.delete !== server.preview.delete || confirmed.saved !== server.preview.saved) {
-          return new Response(JSON.stringify({ error: 'The postings changed after the page counted them. Check the new counts and delete again.' }), { status: 409 });
+          return new Response(JSON.stringify({ error: 'The postings changed after the page counted them. Check the new counts and delete again.' }), {
+            status: 409,
+          });
         }
         const result = { deleted: server.preview.delete, kept: server.preview.keep, backup: 'sieve-20261125-200000.db' };
         server.preview = { delete: 0, keep: server.preview.keep, withApplication: server.preview.withApplication, saved: 0 };
@@ -205,7 +215,11 @@ describe('postings', () => {
     setupClear({ delete: 20, keep: 3, withApplication: 2, saved: 0 });
     const section = within(await screen.findByRole('region', { name: 'Postings' }));
 
-    expect(await section.findByText('23 postings are stored. 2 have an application, and 1 is another listing of a job you applied to. These stay when you delete the others.')).toBeInTheDocument();
+    expect(
+      await section.findByText(
+        '23 postings are stored. 2 have an application, and 1 is another listing of a job you applied to. These stay when you delete the others.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('disables the button while a fetch run is active and says why', async () => {

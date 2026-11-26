@@ -181,8 +181,17 @@ async function handleJudge(ctx: TaskContext): Promise<void> {
            assessment = ?, judge_version = ?, provider = ?, model = ?, updated_at = ? WHERE posting_id = ?`,
       )
       .run(
-        data.skillsFit, data.experienceFit, data.preferenceFit, JSON.stringify(data.matchedSkills), JSON.stringify(data.missingSkills),
-        data.assessment, versions.judgeVersion, provider, model, nowIso(), posting.id,
+        data.skillsFit,
+        data.experienceFit,
+        data.preferenceFit,
+        JSON.stringify(data.matchedSkills),
+        JSON.stringify(data.missingSkills),
+        data.assessment,
+        versions.judgeVersion,
+        provider,
+        model,
+        nowIso(),
+        posting.id,
       );
     // The score step can wait, for example while matching is paused. The posting then shows "waiting".
     if (!wasScored) setState(posting.id, 'waiting');

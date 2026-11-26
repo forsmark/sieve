@@ -78,7 +78,13 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
             {(id) => <TextInput id={id} type="datetime-local" value={interview} onChange={(e) => setInterview(e.target.value)} />}
           </Field>
           <div className="flex gap-2">
-            <Button size="sm" variant="primary" disabled={!interviewDirty} busy={save.isPending && save.variables?.interviewAt !== undefined} onClick={() => save.mutate({ interviewAt: fromLocalInput(interview) })}>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={!interviewDirty}
+              busy={save.isPending && save.variables?.interviewAt !== undefined}
+              onClick={() => save.mutate({ interviewAt: fromLocalInput(interview) })}
+            >
               Save date
             </Button>
             {app.interviewAt && (
@@ -101,7 +107,13 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
             {(id) => <TextArea id={id} rows={6} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Contacts, salary talks, next steps" />}
           </Field>
           <div>
-            <Button size="sm" variant="primary" disabled={!notesDirty} busy={save.isPending && save.variables?.notes !== undefined} onClick={() => save.mutate({ notes: notes || null })}>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={!notesDirty}
+              busy={save.isPending && save.variables?.notes !== undefined}
+              onClick={() => save.mutate({ notes: notes || null })}
+            >
               Save notes
             </Button>
           </div>
@@ -132,9 +144,7 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
             Stored copy of the posting
             {expired && <Badge tone="warn">Original link expired</Badge>}
           </h3>
-          {expired && (
-            <p className="mb-2 text-[13px]">The original posting is no longer available. This is the copy saved when you applied.</p>
-          )}
+          {expired && <p className="mb-2 text-[13px]">The original posting is no longer available. This is the copy saved when you applied.</p>}
           <details open={expired} className="field bg-field-beige p-4">
             <summary className="cursor-pointer text-[13px] font-semibold">Description and facts</summary>
             {s.facts?.summary && <p className="mt-2 text-[13px]">{s.facts.summary}</p>}
@@ -156,7 +166,13 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
 
         <section className="border-t border-line pt-4">
           <p className="mb-2 text-[13px] text-muted">Removing deletes the application and its history. The posting returns to the job list as saved.</p>
-          <ConfirmButton label="Remove application" confirmLabel="Yes, remove it" onConfirm={() => remove.mutate(app.postingId)} busy={remove.isPending} size="sm" />
+          <ConfirmButton
+            label="Remove application"
+            confirmLabel="Yes, remove it"
+            onConfirm={() => remove.mutate(app.postingId)}
+            busy={remove.isPending}
+            size="sm"
+          />
         </section>
       </div>
     </div>

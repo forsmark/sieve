@@ -94,10 +94,13 @@ function nextPage(data: unknown): string | null {
 
 function matchesTerms(terms: string[], e: Entry): boolean {
   if (terms.length === 0) return true;
-  const haystack = [e.posting.title, e.posting.description?.replace(/<[^>]+>/g, ' ') ?? '', ...e.keywords]
-    .join(' ')
-    .toLowerCase();
-  return terms.some((term) => term.toLowerCase().split(/\s+/).every((word) => haystack.includes(word)));
+  const haystack = [e.posting.title, e.posting.description?.replace(/<[^>]+>/g, ' ') ?? '', ...e.keywords].join(' ').toLowerCase();
+  return terms.some((term) =>
+    term
+      .toLowerCase()
+      .split(/\s+/)
+      .every((word) => haystack.includes(word)),
+  );
 }
 
 function matchesRegion(region: string, e: Entry): boolean {

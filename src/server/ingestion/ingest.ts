@@ -8,10 +8,7 @@ import { getAdapter } from '../sources/registry';
 import { isSimilarTitle, normalizePosting } from './normalize';
 
 export type IngestResult =
-  | { status: 'invalid' }
-  | { status: 'existing'; id: string }
-  | { status: 'duplicate'; id: string; duplicateOf: string }
-  | { status: 'new'; id: string };
+  { status: 'invalid' } | { status: 'existing'; id: string } | { status: 'duplicate'; id: string; duplicateOf: string } | { status: 'new'; id: string };
 
 /** A description shorter than this is treated as missing, and the enrich task fetches the page. */
 export const MIN_DESCRIPTION_LENGTH = 200;
@@ -22,7 +19,13 @@ export function priorityFor(postedAt: string | null, firstSeenAt: string): numbe
 }
 
 /** Enqueues the first pipeline step for a primary posting. */
-export function enqueuePipeline(posting: { id: string; description: string | null; posted_at: string | null; first_seen_at: string; lacks_description?: number }): void {
+export function enqueuePipeline(posting: {
+  id: string;
+  description: string | null;
+  posted_at: string | null;
+  first_seen_at: string;
+  lacks_description?: number;
+}): void {
   const priority = priorityFor(posting.posted_at, posting.first_seen_at);
   if (needsEnrichment(posting)) enqueue('enrich', posting.id, { priority });
   else enqueue('extract', posting.id, { priority });
@@ -35,7 +38,8 @@ export function enqueuePipeline(posting: { id: string; description: string | nul
 export function needsEnrichment(posting: { id: string; description: string | null; lacks_description?: number }): boolean {
   if (posting.lacks_description) return false;
   if (!posting.description || posting.description.length < MIN_DESCRIPTION_LENGTH) return true;
-  const row = sqlite.prepare('SELECT source, enriched_at FROM postings WHERE id = ?').get(posting.id) as { source: string; enriched_at: string | null } | undefined;
+  const row = sqlite.prepare('SELECT source, enriched_at FROM postings WHERE id = ?').get(posting.id) as
+    { source: string; enriched_at: string | null } | undefined;
   return !!row && row.enriched_at === null && getAdapter(row.source)?.teaserOnly === true;
 }
 
@@ -72,8 +76,7 @@ export function ingestPosting(source: string, raw: RawPosting): IngestResult {
     const existing = sqlite
       .prepare('SELECT id, description, duplicate_of, posted_at, first_seen_at FROM postings WHERE source = ? AND external_id = ?')
       .get(source, n.externalId) as
-      | { id: string; description: string | null; duplicate_of: string | null; posted_at: string | null; first_seen_at: string }
-      | undefined;
+      { id: string; description: string | null; duplicate_of: string | null; posted_at: string | null; first_seen_at: string } | undefined;
 
     if (existing) {
       const gainsDescription =
@@ -114,9 +117,7 @@ export function ingestPosting(source: string, raw: RawPosting): IngestResult {
 
 /** The user says that a posting is not a duplicate. It becomes a primary record and gets scored. */
 export function separateDuplicate(id: string): boolean {
-  const row = sqlite
-    .prepare('SELECT id, description, posted_at, first_seen_at, duplicate_of, lacks_description FROM postings WHERE id = ?')
-    .get(id) as
+  const row = sqlite.prepare('SELECT id, description, posted_at, first_seen_at, duplicate_of, lacks_description FROM postings WHERE id = ?').get(id) as
     | { id: string; description: string | null; posted_at: string | null; first_seen_at: string; duplicate_of: string | null; lacks_description: number }
     | undefined;
   if (!row || !row.duplicate_of) return false;

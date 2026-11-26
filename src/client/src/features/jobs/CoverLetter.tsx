@@ -51,7 +51,15 @@ export function CoverLetter({ postingId, letter }: { postingId: string; letter: 
   const instructionField = (
     <Field label="Instruction for this letter (optional)" hint='For example "mention my open source work" or "at most 200 words".'>
       {(id) => (
-        <TextArea id={id} rows={2} maxLength={2000} value={instruction} onChange={(e) => setInstruction(e.target.value)} disabled={pending} className="min-h-14" />
+        <TextArea
+          id={id}
+          rows={2}
+          maxLength={2000}
+          value={instruction}
+          onChange={(e) => setInstruction(e.target.value)}
+          disabled={pending}
+          className="min-h-14"
+        />
       )}
     </Field>
   );
@@ -120,7 +128,14 @@ export function CoverLetter({ postingId, letter }: { postingId: string; letter: 
           {instructionField}
           <div>
             {hasText ? (
-              <ConfirmButton label="Regenerate" confirmLabel="Replace the current letter" onConfirm={() => generate.mutate()} busy={pending} size="sm" variant="secondary" />
+              <ConfirmButton
+                label="Regenerate"
+                confirmLabel="Replace the current letter"
+                onConfirm={() => generate.mutate()}
+                busy={pending}
+                size="sm"
+                variant="secondary"
+              />
             ) : (
               <Button size="sm" variant="primary" onClick={() => generate.mutate()} busy={pending}>
                 Generate cover letter
@@ -128,8 +143,8 @@ export function CoverLetter({ postingId, letter }: { postingId: string; letter: 
             )}
           </div>
           <p className="text-xs text-muted">
-            Fable 5.2 writes the letter through the claude command, in the language of the posting. Your CV text and the posting text are sent to
-            Anthropic. Check every claim before you send the letter.
+            Fable 5.2 writes the letter through the claude command, in the language of the posting. Your CV text and the posting text are sent to Anthropic.
+            Check every claim before you send the letter.
           </p>
         </div>
       </details>

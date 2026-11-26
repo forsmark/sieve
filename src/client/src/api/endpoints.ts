@@ -1,7 +1,29 @@
 import type {
-  ActivityDto, ApplicationDto, ApplicationEventDto, BackupDto, BulkAction, ClearPreviewDto, ClearResultDto, CoverLetterDto, HealthDto, LlmSettingsDto, LogDto, MatchAnalysisDto, NotificationSettingsDto,
-  PostingDetail, PostingListResponse, PostingQuery, PreferencesSaveResult, ProfileDto, RescorePlanDto, RunDto, ScheduleDto, SourceDto,
-  StatusDto, TriageAction, TriageResult,
+  ActivityDto,
+  ApplicationDto,
+  ApplicationEventDto,
+  BackupDto,
+  BulkAction,
+  ClearPreviewDto,
+  ClearResultDto,
+  CoverLetterDto,
+  HealthDto,
+  LlmSettingsDto,
+  LogDto,
+  MatchAnalysisDto,
+  NotificationSettingsDto,
+  PostingDetail,
+  PostingListResponse,
+  PostingQuery,
+  PreferencesSaveResult,
+  ProfileDto,
+  RescorePlanDto,
+  RunDto,
+  ScheduleDto,
+  SourceDto,
+  StatusDto,
+  TriageAction,
+  TriageResult,
 } from '../../../shared/api';
 import type { ApplicationStage, Preferences, StructuredProfile, TriageStatus } from '../../../shared/schemas';
 import { apiPath, request, toQueryString } from './client';
@@ -54,13 +76,10 @@ export const api = {
   status: () => request<StatusDto>('/api/status'),
 
   // Postings
-  listPostings: (q: PostingQuery, signal?: AbortSignal) =>
-    request<PostingListResponse>(`/api/postings${toQueryString({ ...q })}`, { signal }),
+  listPostings: (q: PostingQuery, signal?: AbortSignal) => request<PostingListResponse>(`/api/postings${toQueryString({ ...q })}`, { signal }),
   posting: (id: string) => request<PostingDetail>(`/api/postings/${encodeURIComponent(id)}`),
-  bulk: (ids: string[], action: BulkAction) =>
-    request<TriageResult & { queued?: number }>('/api/postings/bulk', { method: 'POST', body: { ids, action } }),
-  triage: (ids: string[], action: TriageAction) =>
-    request<TriageResult>('/api/postings/bulk', { method: 'POST', body: { ids, action } }),
+  bulk: (ids: string[], action: BulkAction) => request<TriageResult & { queued?: number }>('/api/postings/bulk', { method: 'POST', body: { ids, action } }),
+  triage: (ids: string[], action: TriageAction) => request<TriageResult>('/api/postings/bulk', { method: 'POST', body: { ids, action } }),
   restore: (previous: Array<{ id: string; triageStatus: TriageStatus }>) =>
     request<{ ok: true }>('/api/postings/restore', { method: 'POST', body: { previous } }),
   markRead: (id: string, read: boolean) =>
@@ -85,8 +104,7 @@ export const api = {
     return request<ProfileDto>('/api/profile/cv', { method: 'POST', body: form });
   },
   pasteCv: (text: string, edits: 'keep' | 'discard') => request<ProfileDto>('/api/profile/cv', { method: 'POST', body: { text, edits } }),
-  saveProfile: (profile: StructuredProfile) =>
-    request<{ profile: ProfileDto; plan: RescorePlanDto }>('/api/profile', { method: 'PUT', body: profile }),
+  saveProfile: (profile: StructuredProfile) => request<{ profile: ProfileDto; plan: RescorePlanDto }>('/api/profile', { method: 'PUT', body: profile }),
   derive: () => request<ProfileDto>('/api/profile/derive', { method: 'POST' }),
   discardEdits: () => request<{ profile: ProfileDto; plan: RescorePlanDto }>('/api/profile/edits', { method: 'DELETE' }),
   preferences: () => request<Preferences>('/api/preferences'),
@@ -95,8 +113,7 @@ export const api = {
 
   // Sources, search, schedule, runs
   sources: () => request<SourceDto[]>('/api/sources'),
-  setSourceEnabled: (id: string, enabled: boolean) =>
-    request<SourceDto[]>(`/api/sources/${encodeURIComponent(id)}`, { method: 'PATCH', body: { enabled } }),
+  setSourceEnabled: (id: string, enabled: boolean) => request<SourceDto[]>(`/api/sources/${encodeURIComponent(id)}`, { method: 'PATCH', body: { enabled } }),
   search: () => request<SearchSettings>('/api/search'),
   saveSearch: (s: SearchSettings) => request<SearchSettings>('/api/search', { method: 'PUT', body: s }),
   schedule: () => request<ScheduleDto>('/api/schedule'),
@@ -118,8 +135,7 @@ export const api = {
 
   // Notifications
   notifications: () => request<NotificationSettingsDto>('/api/notifications'),
-  saveNotifications: (patch: NotificationPatch) =>
-    request<NotificationSettingsDto>('/api/notifications', { method: 'PUT', body: patch }),
+  saveNotifications: (patch: NotificationPatch) => request<NotificationSettingsDto>('/api/notifications', { method: 'PUT', body: patch }),
   regenerateTopic: () => request<NotificationSettingsDto>('/api/notifications/regenerate', { method: 'POST' }),
   /** The server answers 502 with `ok: false` when ntfy fails. */
   testNotification: () => request<{ ok: boolean; error?: string }>('/api/notifications/test', { method: 'POST', acceptStatus: [502] }),

@@ -111,10 +111,7 @@ describe('linkedinAdapter.search', () => {
 describe('linkedinAdapter.fetchDescription', () => {
   it('reads the guest job-posting endpoint through ctx.http', async () => {
     const { ctx, urls } = fakeCtx(() => postingFixture);
-    const description = await linkedinAdapter.fetchDescription!(
-      { externalId: '4488435682', url: 'https://dk.linkedin.com/jobs/view/x-4488435682' },
-      ctx,
-    );
+    const description = await linkedinAdapter.fetchDescription!({ externalId: '4488435682', url: 'https://dk.linkedin.com/jobs/view/x-4488435682' }, ctx);
     expect(urls).toEqual(['https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/4488435682']);
     expect(description).toContain('Teton is redefining');
   });

@@ -82,7 +82,12 @@ export function DetailPanel({
           <span className="hidden lg:inline">Close</span>
         </Button>
         {detail.data && (
-          <a href={detail.data.url} target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold underline decoration-accent decoration-2 hover:decoration-fg">
+          <a
+            href={detail.data.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] font-semibold underline decoration-accent decoration-2 hover:decoration-fg"
+          >
             Open posting <Icon name="arrow-up-right" />
             <span className="sr-only"> (opens in a new tab)</span>
           </a>
@@ -168,7 +173,11 @@ function Detail({
               Mark as applied
             </Button>
           ) : (
-            <Link to="/board" search={{ app: d.id }} className="inline-flex h-7 items-center border border-line-strong px-2.5 text-[13px] font-semibold hover:border-fg hover:bg-surface-2">
+            <Link
+              to="/board"
+              search={{ app: d.id }}
+              className="inline-flex h-7 items-center border border-line-strong px-2.5 text-[13px] font-semibold hover:border-fg hover:bg-surface-2"
+            >
               Open on board
             </Link>
           )}
@@ -178,14 +187,16 @@ function Detail({
         </div>
       </header>
 
-      {d.linkStatus === 'expired' && (
-        <Notice tone="warn">This posting may no longer be available. The link at the source has expired.</Notice>
-      )}
+      {d.linkStatus === 'expired' && <Notice tone="warn">This posting may no longer be available. The link at the source has expired.</Notice>}
       {d.duplicateOf && (
         <Notice tone="neutral">
           <p>This posting is a duplicate of another posting.</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Link to="/jobs" search={(prev) => ({ ...prev, id: d.duplicateOf ?? undefined })} className="text-[13px] font-semibold underline decoration-accent decoration-2">
+            <Link
+              to="/jobs"
+              search={(prev) => ({ ...prev, id: d.duplicateOf ?? undefined })}
+              className="text-[13px] font-semibold underline decoration-accent decoration-2"
+            >
               Show the original
             </Link>
             <Button size="sm" onClick={onSeparate} busy={separating}>
@@ -208,7 +219,12 @@ function Detail({
             <Tile color="blue" className="col-span-6 @md:col-span-3 @md:notch-down" order={2} title={`Matched skills (${m.matchedSkills.length})`}>
               <SkillList label="Matched skills" skills={m.matchedSkills} />
             </Tile>
-            <Tile color="ground" className="col-span-6 border border-field-blue @md:col-span-3 @max-md:notch-down" order={3} title={`Missing skills (${m.missingSkills.length})`}>
+            <Tile
+              color="ground"
+              className="col-span-6 border border-field-blue @md:col-span-3 @max-md:notch-down"
+              order={3}
+              title={`Missing skills (${m.missingSkills.length})`}
+            >
               <SkillList label="Missing skills" skills={m.missingSkills} />
             </Tile>
           </>
@@ -252,7 +268,10 @@ function Detail({
                 label="Salary"
                 value={
                   f.salary
-                    ? `${[f.salary.min, f.salary.max].filter((n) => n !== null).map((n) => n!.toLocaleString()).join(' to ')} ${f.salary.currency} per ${f.salary.period}`
+                    ? `${[f.salary.min, f.salary.max]
+                        .filter((n) => n !== null)
+                        .map((n) => n!.toLocaleString())
+                        .join(' to ')} ${f.salary.currency} per ${f.salary.period}`
                     : null
                 }
               />
@@ -289,7 +308,12 @@ function Detail({
           <ul className="flex flex-wrap gap-x-5 gap-y-1">
             {d.sourceLinks.map((s) => (
               <li key={s.id} className="flex items-center gap-2">
-                <a href={s.url} target="_blank" rel="noopener noreferrer" className="font-semibold underline decoration-accent decoration-2 hover:decoration-fg">
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold underline decoration-accent decoration-2 hover:decoration-fg"
+                >
                   {sourceName(s.source)}
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
@@ -330,7 +354,14 @@ function Tile({
 }) {
   return (
     <section
-      className={cx('tile p-4 sm:p-5', `tile-${color}`, color !== 'ground' && 'field', notch === 'right' && '@md:notch-right @max-md:notch-down', notch === 'down' && 'notch-down', className)}
+      className={cx(
+        'tile p-4 sm:p-5',
+        `tile-${color}`,
+        color !== 'ground' && 'field',
+        notch === 'right' && '@md:notch-right @max-md:notch-down',
+        notch === 'down' && 'notch-down',
+        className,
+      )}
       style={{ animation: `tile-in 420ms cubic-bezier(0.16, 1, 0.3, 1) ${order * 45}ms backwards` }}
     >
       {title && <h3 className="mb-3 text-base font-bold">{title}</h3>}
@@ -363,7 +394,12 @@ function ScoreTiles({ m, onRescore, rescoring }: { m: MatchDetail | null; onResc
   const { label } = scoreBand(m.totalScore);
   return (
     <>
-      <Tile color={m.totalScore !== null ? 'yellow' : 'ground'} className={cx('col-span-6 flex flex-col', hasParts && '@md:col-span-2')} notch={hasParts ? 'right' : undefined} order={0}>
+      <Tile
+        color={m.totalScore !== null ? 'yellow' : 'ground'}
+        className={cx('col-span-6 flex flex-col', hasParts && '@md:col-span-2')}
+        notch={hasParts ? 'right' : undefined}
+        order={0}
+      >
         <h3 className="text-base font-bold">Score</h3>
         {m.totalScore !== null ? (
           <p className="mt-auto pt-4">
@@ -413,7 +449,9 @@ function ScoreTiles({ m, onRescore, rescoring }: { m: MatchDetail | null; onResc
               );
             })}
           </dl>
-          {weightOf && <p className="mt-3 text-xs text-muted">The total is the average of the counted parts by weight. Conflicts with your preferences lower it.</p>}
+          {weightOf && (
+            <p className="mt-3 text-xs text-muted">The total is the average of the counted parts by weight. Conflicts with your preferences lower it.</p>
+          )}
         </Tile>
       )}
     </>
@@ -454,4 +492,3 @@ function Notice({ children, tone }: { children: ReactNode; tone: 'warn' | 'neutr
     </div>
   );
 }
-

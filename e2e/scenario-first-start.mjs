@@ -22,8 +22,10 @@ const STUB_SKILL = 'Fakelang';
 const SEARCH_TERM = 'platform engineer';
 
 const GUIDE = 'document.querySelector(\'aside[aria-label="Getting started"]\')';
-const byText = (selector, text) => `[...document.querySelectorAll(${JSON.stringify(selector)})].find((el) => el.textContent.trim() === ${JSON.stringify(text)})`;
-const toastWith = (text) => `[...document.querySelectorAll('[aria-live] [role=status], [aria-live] [role=alert]')].some((el) => el.textContent.includes(${JSON.stringify(text)}))`;
+const byText = (selector, text) =>
+  `[...document.querySelectorAll(${JSON.stringify(selector)})].find((el) => el.textContent.trim() === ${JSON.stringify(text)})`;
+const toastWith = (text) =>
+  `[...document.querySelectorAll('[aria-live] [role=status], [aria-live] [role=alert]')].some((el) => el.textContent.includes(${JSON.stringify(text)}))`;
 
 export async function runFirstStart({ page, api, t, base, claudeLog }) {
   t.section('Scenario 1: first start and CV import');
@@ -54,10 +56,10 @@ export async function runFirstStart({ page, api, t, base, claudeLog }) {
 
   await t.check('profile: the derived profile shows the headline and a skill from the fake claude command', async () => {
     // The digest is a queued task. The page shows a status line until the profile exists.
-    await page.waitFor(
-      `[...document.querySelectorAll('input')].some((i) => i.value === ${JSON.stringify(STUB_HEADLINE)})`,
-      { timeout: 20_000, message: 'the derived headline in the profile editor' },
-    );
+    await page.waitFor(`[...document.querySelectorAll('input')].some((i) => i.value === ${JSON.stringify(STUB_HEADLINE)})`, {
+      timeout: 20_000,
+      message: 'the derived headline in the profile editor',
+    });
     const skill = await page.evaluate('document.querySelector(\'[aria-label="Skill 1 name"]\')?.value');
     assertEqual(skill, STUB_SKILL, 'first skill in the profile editor');
   });
@@ -68,11 +70,19 @@ export async function runFirstStart({ page, api, t, base, claudeLog }) {
     assert(profile.cvText.includes(CV_MARKER), 'GET /api/profile: the stored CV text does not contain the pasted text');
     assertEqual(profile.deriveState, 'idle', 'deriveState');
     assertEqual(profile.derived?.headline, STUB_HEADLINE, 'derived headline');
-    assertEqual(profile.effective?.skills.map((s) => s.name), [STUB_SKILL, 'TypeScript'], 'effective skills');
+    assertEqual(
+      profile.effective?.skills.map((s) => s.name),
+      [STUB_SKILL, 'TypeScript'],
+      'effective skills',
+    );
   });
 
   await t.check('server: the CV digest ran the claude command with the CV text on standard input', async () => {
-    const calls = readFileSync(claudeLog, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+    const calls = readFileSync(claudeLog, 'utf8')
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l));
     const digest = calls.filter((c) => c.isProfile);
     assert(digest.length >= 1, 'the fake claude command got no candidate profile call');
     assert(digest[0].prompt.includes(CV_MARKER), 'the prompt of the claude command does not contain the CV text');

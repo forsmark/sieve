@@ -36,9 +36,7 @@ export function markInterruptedRuns(): void {
 }
 
 async function runSource(runId: number, adapter: SourceAdapter, query: SearchQuery, opts: RunOptions): Promise<void> {
-  const update = sqlite.prepare(
-    `UPDATE fetch_run_sources SET state = ?, found = ?, added = ?, invalid = ?, error = ? WHERE run_id = ? AND source = ?`,
-  );
+  const update = sqlite.prepare(`UPDATE fetch_run_sources SET state = ?, found = ?, added = ?, invalid = ?, error = ? WHERE run_id = ? AND source = ?`);
   let found = 0;
   let added = 0;
   let invalid = 0;
@@ -114,9 +112,7 @@ async function execute(runId: number, opts: RunOptions): Promise<number> {
  */
 export function startFetchRun(trigger: RunTrigger, opts: RunOptions = {}): { runId: number; done: Promise<number> } | null {
   if (activeRun) return null;
-  const info = sqlite
-    .prepare(`INSERT INTO fetch_runs (trigger, state, started_at) VALUES (?, 'running', ?)`)
-    .run(trigger, nowIso());
+  const info = sqlite.prepare(`INSERT INTO fetch_runs (trigger, state, started_at) VALUES (?, 'running', ?)`).run(trigger, nowIso());
   const runId = Number(info.lastInsertRowid);
   activeRunId = runId;
   activeRun = execute(runId, opts)
@@ -143,7 +139,11 @@ export interface RunView {
 
 export function listRuns(limit = 20): RunView[] {
   const runs = sqlite.prepare(`SELECT * FROM fetch_runs ORDER BY id DESC LIMIT ?`).all(limit) as Array<{
-    id: number; trigger: string; state: string; started_at: string; ended_at: string | null;
+    id: number;
+    trigger: string;
+    state: string;
+    started_at: string;
+    ended_at: string | null;
   }>;
   const sources = sqlite.prepare(`SELECT * FROM fetch_run_sources WHERE run_id = ? ORDER BY source`);
   return runs.map((r) => ({
@@ -157,8 +157,6 @@ export function listRuns(limit = 20): RunView[] {
 }
 
 export function lastCompletedRunAt(): string | null {
-  const row = sqlite.prepare(`SELECT ended_at FROM fetch_runs WHERE state = 'completed' ORDER BY id DESC LIMIT 1`).get() as
-    | { ended_at: string }
-    | undefined;
+  const row = sqlite.prepare(`SELECT ended_at FROM fetch_runs WHERE state = 'completed' ORDER BY id DESC LIMIT 1`).get() as { ended_at: string } | undefined;
   return row?.ended_at ?? null;
 }

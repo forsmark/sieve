@@ -32,7 +32,10 @@ const JOBS: Array<[title: string, company: string, location: string]> = [
 ];
 
 if (mode === 'prepare') {
-  setSetting('sources.disabled', listAdapters().map((a) => a.id));
+  setSetting(
+    'sources.disabled',
+    listAdapters().map((a) => a.id),
+  );
   updateSchedule({ paused: true });
   setSetting('llm', { provider: 'local', baseUrl, model: 'stub', apiKey: '', claudeEffort: 'low' });
   console.log(JSON.stringify({ disabledSources: listAdapters().map((a) => a.id) }));
@@ -48,7 +51,7 @@ if (mode === 'prepare') {
       // The links point at the stub server. The host "localhost" is rejected by the ingestion code.
       url: `${baseUrl}/job/${externalId}`,
       description: `${company} looks for a ${title} in ${location}. `.repeat(8),
-      postedAt: new Date(Date.now() - (i + 1) * day / 4).toISOString(),
+      postedAt: new Date(Date.now() - ((i + 1) * day) / 4).toISOString(),
     });
     return { title, ...result };
   });

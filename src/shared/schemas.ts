@@ -12,9 +12,7 @@ export const PostingFacts = z.object({
   workArrangement: WorkArrangement.nullable(),
   location: z.object({ city: z.string().nullable(), country: z.string().nullable() }),
   requiredLanguages: z.array(z.string()),
-  salary: z
-    .object({ min: z.number().nullable(), max: z.number().nullable(), currency: z.string(), period: z.string() })
-    .nullable(),
+  salary: z.object({ min: z.number().nullable(), max: z.number().nullable(), currency: z.string(), period: z.string() }).nullable(),
   summary: z.string(),
 });
 export type PostingFacts = z.infer<typeof PostingFacts>;

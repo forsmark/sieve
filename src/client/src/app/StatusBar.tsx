@@ -77,9 +77,7 @@ export function StatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
                   <span className="text-fg">Fetching</span>
                   {activeRun && (
                     <span className="hidden sm:inline">
-                      {activeRun.sources
-                        .map((src) => `${sourceName(src.source)} ${src.state === 'running' ? 'running' : `${src.found} found`}`)
-                        .join(', ')}
+                      {activeRun.sources.map((src) => `${sourceName(src.source)} ${src.state === 'running' ? 'running' : `${src.found} found`}`).join(', ')}
                     </span>
                   )}
                 </>
@@ -94,13 +92,26 @@ export function StatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
                 </>
               )}
             </span>
-            <Button size="sm" variant="ghost" className={ACTION_BUTTON} onClick={() => fetchNow.mutate()} busy={fetchNow.isPending} disabled={s.activeRunId != null}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className={ACTION_BUTTON}
+              onClick={() => fetchNow.mutate()}
+              busy={fetchNow.isPending}
+              disabled={s.activeRunId != null}
+            >
               Fetch now
             </Button>
           </Item>
 
           <Item className="max-sm:py-0.5">
-            <span title={Object.entries(s.queue).map(([k, v]) => `${k}: ${v}`).join(', ') || 'Queue is empty'}>
+            <span
+              title={
+                Object.entries(s.queue)
+                  .map(([k, v]) => `${k}: ${v}`)
+                  .join(', ') || 'Queue is empty'
+              }
+            >
               Queue <span className="tabular text-fg">{s.queueTotal}</span>
             </span>
           </Item>

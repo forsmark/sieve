@@ -6,7 +6,13 @@ import { STATUS, mockApi, renderApp } from '../../test-utils';
 import { resetToastsForTests } from '../../lib/toast';
 
 const OFF: NotificationSettingsDto = {
-  enabled: false, server: 'https://ntfy.sh', topic: null, subscribeUrl: null, threshold: 75, windowSeconds: 60, appBaseUrl: 'http://localhost:3000',
+  enabled: false,
+  server: 'https://ntfy.sh',
+  topic: null,
+  subscribeUrl: null,
+  threshold: 75,
+  windowSeconds: 60,
+  appBaseUrl: 'http://localhost:3000',
 };
 const ON: NotificationSettingsDto = { ...OFF, enabled: true, topic: 'sieve-abc123', subscribeUrl: 'https://ntfy.sh/sieve-abc123' };
 

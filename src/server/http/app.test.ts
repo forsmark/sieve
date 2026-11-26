@@ -98,8 +98,15 @@ describe('health and live events', () => {
   it('reports the state of the system', async () => {
     const { json } = await call('GET', '/api/status');
     expect(json).toMatchObject({
-      authRequired: false, profileReady: false, hasCv: false, activeRunId: null, queueTotal: 0, matchingPaused: false,
-      llmProvider: 'local', searchTermCount: 0, counts: { new: 0, saved: 0, applied: 0, dismissed: 0 },
+      authRequired: false,
+      profileReady: false,
+      hasCv: false,
+      activeRunId: null,
+      queueTotal: 0,
+      matchingPaused: false,
+      llmProvider: 'local',
+      searchTermCount: 0,
+      counts: { new: 0, saved: 0, applied: 0, dismissed: 0 },
     });
   });
 });
@@ -172,8 +179,14 @@ describe('sources, search, schedule, and runs', () => {
     expect(json[0]).toMatchObject({ enabled: true, lastResult: null });
     expect(json.every((s: any) => typeof s.supports.keywords === 'boolean' && s.name)).toBe(true);
 
-    sqlite.prepare(`INSERT INTO fetch_runs (trigger, state, started_at, ended_at) VALUES ('manual', 'completed', '2026-05-01T00:00:00.000Z', '2026-05-01T00:01:00.000Z')`).run();
-    sqlite.prepare(`INSERT INTO fetch_run_sources (run_id, source, state, found, added, invalid, error) VALUES (1, 'jobindex', 'failed', 4, 2, 1, 'HTTP 500')`).run();
+    sqlite
+      .prepare(
+        `INSERT INTO fetch_runs (trigger, state, started_at, ended_at) VALUES ('manual', 'completed', '2026-05-01T00:00:00.000Z', '2026-05-01T00:01:00.000Z')`,
+      )
+      .run();
+    sqlite
+      .prepare(`INSERT INTO fetch_run_sources (run_id, source, state, found, added, invalid, error) VALUES (1, 'jobindex', 'failed', 4, 2, 1, 'HTTP 500')`)
+      .run();
     const after = (await call('GET', '/api/sources')).json.find((s: any) => s.id === 'jobindex');
     expect(after.lastResult).toEqual({ source: 'jobindex', state: 'failed', found: 4, added: 2, invalid: 1, error: 'HTTP 500' });
     expect(after.lastRunAt).toBe('2026-05-01T00:00:00.000Z');
@@ -219,7 +232,10 @@ describe('sources, search, schedule, and runs', () => {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
     const slow: SourceAdapter = {
-      id: 'slow', name: 'Slow', supports: { keywords: false, region: false }, rate: { minDelayMs: 0, maxConcurrent: 1 },
+      id: 'slow',
+      name: 'Slow',
+      supports: { keywords: false, region: false },
+      rate: { minDelayMs: 0, maxConcurrent: 1 },
       async *search() {
         await gate;
       },
@@ -358,7 +374,10 @@ describe('postings', () => {
     stub.facts = (user) => ({
       ...JSON.parse(JSON.stringify({ requiredSkills: user.includes('Rust') ? ['Rust'] : ['TypeScript'], optionalSkills: [], seniority: null })),
       workArrangement: user.includes('Rust') ? 'remote' : 'onsite',
-      location: { city: null, country: null }, requiredLanguages: [], salary: null, summary: 's',
+      location: { city: null, country: null },
+      requiredLanguages: [],
+      salary: null,
+      summary: 's',
     });
     const a = add({ externalId: '1', title: 'Rust Systems Engineer', company: 'Ferrous', postedAt: '2026-05-30T00:00:00Z' });
     const b = add({ externalId: '2', title: 'Web Developer', company: '100% Web', postedAt: '2026-03-01T00:00:00Z' });
@@ -391,8 +410,14 @@ describe('postings', () => {
   it('returns only the postings that meet both the work arrangement filter and the minimum score', async () => {
     const titleOf = (user: string) => ['Remote Low', 'Onsite High', 'Remote High'].find((t) => user.includes(t))!;
     stub.facts = (user) => ({
-      requiredSkills: ['TypeScript'], optionalSkills: [], seniority: null, workArrangement: titleOf(user).startsWith('Remote') ? 'remote' : 'onsite',
-      location: { city: null, country: null }, requiredLanguages: [], salary: null, summary: 's',
+      requiredSkills: ['TypeScript'],
+      optionalSkills: [],
+      seniority: null,
+      workArrangement: titleOf(user).startsWith('Remote') ? 'remote' : 'onsite',
+      location: { city: null, country: null },
+      requiredLanguages: [],
+      salary: null,
+      summary: 's',
     });
     stub.judgment = (user) => {
       const s = titleOf(user).endsWith('High') ? 95 : 30;
@@ -429,7 +454,10 @@ describe('postings', () => {
     expect(saved.json.posting.triageStatus).toBe('saved');
 
     const bulk = await call('POST', '/api/postings/bulk', { ids: [a, b], action: 'dismiss' });
-    expect(bulk.json.previous).toEqual([{ id: a, triageStatus: 'saved' }, { id: b, triageStatus: 'new' }]);
+    expect(bulk.json.previous).toEqual([
+      { id: a, triageStatus: 'saved' },
+      { id: b, triageStatus: 'new' },
+    ]);
     expect((await call('GET', '/api/postings')).json.items).toHaveLength(0);
     expect((await call('GET', '/api/postings?status=dismissed')).json.items).toHaveLength(2);
     expect((await call('GET', '/api/postings?status=all')).json.items).toHaveLength(2);
@@ -557,7 +585,11 @@ describe('applications', () => {
     // A reload shows the stored stage.
     expect((await call('GET', '/api/applications')).json[0].stage).toBe('offer');
     const events = (await call('GET', `/api/applications/${id}/events`)).json;
-    expect(events.map((e: any) => [e.fromStage, e.toStage])).toEqual([[null, 'applied'], ['applied', 'interview'], ['interview', 'offer']]);
+    expect(events.map((e: any) => [e.fromStage, e.toStage])).toEqual([
+      [null, 'applied'],
+      ['applied', 'interview'],
+      ['interview', 'offer'],
+    ]);
     expect(events[1].createdAt < events[2].createdAt).toBe(true);
     // The same stage again adds no history entry.
     await call('PATCH', `/api/applications/${id}`, { stage: 'offer' });
@@ -629,7 +661,13 @@ describe('activity and backups', () => {
     }
     const activity = (await call('GET', '/api/activity')).json;
     expect(activity.failedTasks).toHaveLength(1);
-    expect(activity.failedTasks[0]).toMatchObject({ kind: 'liveness', subjectId: id, subjectTitle: 'Frontend Developer', attempts: 4, lastError: 'link check broke' });
+    expect(activity.failedTasks[0]).toMatchObject({
+      kind: 'liveness',
+      subjectId: id,
+      subjectTitle: 'Frontend Developer',
+      attempts: 4,
+      lastError: 'link check broke',
+    });
     const errors = (await call('GET', '/api/logs?level=error')).json;
     expect(errors[0].message).toContain('link check broke');
     expect((await call('GET', '/api/logs')).json.length).toBeGreaterThanOrEqual(1);
@@ -715,7 +753,10 @@ describe('clear postings', () => {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
     const slow: SourceAdapter = {
-      id: 'slow', name: 'Slow', supports: { keywords: false, region: false }, rate: { minDelayMs: 0, maxConcurrent: 1 },
+      id: 'slow',
+      name: 'Slow',
+      supports: { keywords: false, region: false },
+      rate: { minDelayMs: 0, maxConcurrent: 1 },
       async *search() {
         await gate;
       },
@@ -793,13 +834,19 @@ describe('expanded match analysis', () => {
     try {
       expect(first.json.queued).toBe(2);
       // Each card shows that the analysis runs, and then its verdict.
-      expect(await cards()).toEqual([{ state: 'pending', verdict: null }, { state: 'pending', verdict: null }]);
+      expect(await cards()).toEqual([
+        { state: 'pending', verdict: null },
+        { state: 'pending', verdict: null },
+      ]);
     } finally {
       release();
     }
     await whenIdle();
     expect(stub.calls.analysis).toBe(2);
-    expect(await cards()).toEqual([{ state: 'ready', verdict: 'consider' }, { state: 'ready', verdict: 'consider' }]);
+    expect(await cards()).toEqual([
+      { state: 'ready', verdict: 'consider' },
+      { state: 'ready', verdict: 'consider' },
+    ]);
     const tooMany = await call('POST', '/api/postings/bulk', { ids: Array.from({ length: 21 }, (_, i) => `x${i}`), action: 'analyze' });
     expect(tooMany.status).toBe(400);
     expect(tooMany.json.error).toBe('Select at most 20 postings for one analysis request.');
@@ -843,8 +890,13 @@ describe('expanded match analysis', () => {
     expect(applied.json).toMatchObject({ scoreApplied: true, proposedTotal: analysis.proposedTotal });
     const after = (await call('GET', `/api/postings/${id}`)).json;
     expect(after.match).toMatchObject({
-      state: 'scored', totalScore: analysis.proposedTotal, skillsScore: 95, experienceScore: 90, preferenceScore: 70,
-      provider: 'expanded analysis', stale: false,
+      state: 'scored',
+      totalScore: analysis.proposedTotal,
+      skillsScore: 95,
+      experienceScore: 90,
+      preferenceScore: 70,
+      provider: 'expanded analysis',
+      stale: false,
     });
     expect(after.match.assessment).toBe('You meet the main requirements. One gap decides the outcome.');
   });
@@ -880,12 +932,18 @@ describe('expanded match analysis', () => {
     try {
       expect(started.json).toMatchObject({ state: 'pending', content: { verdict: 'consider' } });
       const during = (await call('GET', `/api/postings/${id}`)).json.matchAnalysis;
-      expect(during).toMatchObject({ state: 'pending', content: { verdict: 'consider', summary: 'You meet the main requirements. One gap decides the outcome.' } });
+      expect(during).toMatchObject({
+        state: 'pending',
+        content: { verdict: 'consider', summary: 'You meet the main requirements. One gap decides the outcome.' },
+      });
     } finally {
       release();
     }
     await whenIdle();
-    expect((await call('GET', `/api/postings/${id}`)).json.matchAnalysis).toMatchObject({ state: 'ready', content: { verdict: 'apply', summary: 'You should apply.' } });
+    expect((await call('GET', `/api/postings/${id}`)).json.matchAnalysis).toMatchObject({
+      state: 'ready',
+      content: { verdict: 'apply', summary: 'You should apply.' },
+    });
   });
 
   it('stores one analysis for each posting with the model and the date', async () => {
@@ -895,7 +953,9 @@ describe('expanded match analysis', () => {
     await call('POST', `/api/postings/${id}/analysis`);
     await whenIdle();
     expect((await call('GET', `/api/postings/${id}`)).json.matchAnalysis).toMatchObject({
-      state: 'ready', model: 'stub-model', generatedAt: '2026-11-12T08:00:00.000Z',
+      state: 'ready',
+      model: 'stub-model',
+      generatedAt: '2026-11-12T08:00:00.000Z',
     });
     clock.advance(24 * 3600_000);
     (stub.client as { model: string }).model = 'claude-fable-5-2';
@@ -904,7 +964,10 @@ describe('expanded match analysis', () => {
     await call('POST', `/api/postings/${id}/analysis`);
     await whenIdle();
     expect((await call('GET', `/api/postings/${id}`)).json.matchAnalysis).toMatchObject({
-      state: 'ready', model: 'claude-fable-5-2', generatedAt: '2026-11-13T08:00:00.000Z', content: { verdict: 'skip' },
+      state: 'ready',
+      model: 'claude-fable-5-2',
+      generatedAt: '2026-11-13T08:00:00.000Z',
+      content: { verdict: 'skip' },
     });
     expect(sqlite.prepare('SELECT COUNT(*) AS n FROM match_analyses WHERE posting_id = ?').get(id)).toEqual({ n: 1 });
   });
@@ -1039,7 +1102,9 @@ describe('cover letters', () => {
     expect((await call('GET', `/api/postings/${id}/cover-letter.pdf`)).status).toBe(404);
     await call('POST', `/api/postings/${id}/cover-letter`, {});
     await whenIdle();
-    await call('PUT', `/api/postings/${id}/cover-letter`, { text: `Kære Ærø & Søn,\n\n${'Jeg bygger webløsninger på tværs af brancher. '.repeat(120)}\n\nVenlig hilsen\nJane → Doe 日本` });
+    await call('PUT', `/api/postings/${id}/cover-letter`, {
+      text: `Kære Ærø & Søn,\n\n${'Jeg bygger webløsninger på tværs af brancher. '.repeat(120)}\n\nVenlig hilsen\nJane → Doe 日本`,
+    });
     const res = await app.request(`/api/postings/${id}/cover-letter.pdf`);
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('application/pdf');

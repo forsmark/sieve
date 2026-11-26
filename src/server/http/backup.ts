@@ -23,15 +23,17 @@ export function backupDir(): string {
 
 export function listBackups(): BackupDto[] {
   const dir = backupDir();
-  return readdirSync(dir)
-    .filter((name) => NAME_PATTERN.test(name))
-    .map((name) => {
-      const s = statSync(join(dir, name));
-      return { name, size: s.size, createdAt: s.mtime.toISOString(), mtimeMs: s.mtimeMs };
-    })
-    // Newest first. The write time decides, because two backups of one second differ only by a suffix.
-    .sort((a, b) => b.mtimeMs - a.mtimeMs || b.name.localeCompare(a.name))
-    .map(({ mtimeMs: _mtimeMs, ...rest }) => rest);
+  return (
+    readdirSync(dir)
+      .filter((name) => NAME_PATTERN.test(name))
+      .map((name) => {
+        const s = statSync(join(dir, name));
+        return { name, size: s.size, createdAt: s.mtime.toISOString(), mtimeMs: s.mtimeMs };
+      })
+      // Newest first. The write time decides, because two backups of one second differ only by a suffix.
+      .sort((a, b) => b.mtimeMs - a.mtimeMs || b.name.localeCompare(a.name))
+      .map(({ mtimeMs: _mtimeMs, ...rest }) => rest)
+  );
 }
 
 /** Returns the full path of a stored backup, or null when the name is not a backup name. */

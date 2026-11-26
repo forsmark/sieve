@@ -106,7 +106,14 @@ function SearchForm({ initial }: { initial: SearchSettings }) {
           <label htmlFor="new-term" className="sr-only">
             New search term
           </label>
-          <TextInput id="new-term" className="max-w-xs" placeholder="For example frontend developer" value={next} onChange={(e) => setNext(e.target.value)} maxLength={100} />
+          <TextInput
+            id="new-term"
+            className="max-w-xs"
+            placeholder="For example frontend developer"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            maxLength={100}
+          />
           <Button type="submit" disabled={!next.trim() || terms.length >= 20}>
             Add
           </Button>
@@ -164,7 +171,13 @@ function SourcesSection() {
                   <>
                     <p>
                       <Badge tone={s.lastResult.state === 'failed' ? 'danger' : s.lastResult.state === 'completed' ? 'ok' : 'neutral'}>
-                        {s.lastResult.state === 'failed' ? 'Failed' : s.lastResult.state === 'completed' ? 'Completed' : s.lastResult.state === 'running' ? 'Running' : 'Skipped'}
+                        {s.lastResult.state === 'failed'
+                          ? 'Failed'
+                          : s.lastResult.state === 'completed'
+                            ? 'Completed'
+                            : s.lastResult.state === 'running'
+                              ? 'Running'
+                              : 'Skipped'}
                       </Badge>{' '}
                       {relativeTime(s.lastRunAt)}
                     </p>
@@ -217,14 +230,20 @@ function ScheduleForm({ initial }: { initial: ScheduleDto }) {
       <Switch label="Pause scheduled fetching" checked={initial.paused} onChange={(v) => save.mutate({ paused: v })} description="Manual fetch still works." />
       <div className="flex flex-wrap items-end gap-2">
         <Field label="Fetch every" hint="Hours, from 1 to 168." className="w-32">
-          {(id) => <TextInput id={id} type="number" min={1} max={168} value={hours} onChange={(e) => setHours(e.target.value)} aria-invalid={!valid || undefined} />}
+          {(id) => (
+            <TextInput id={id} type="number" min={1} max={168} value={hours} onChange={(e) => setHours(e.target.value)} aria-invalid={!valid || undefined} />
+          )}
         </Field>
         <Button className="mb-5" disabled={!valid || n === initial.intervalHours} busy={save.isPending} onClick={() => save.mutate({ intervalHours: n })}>
           Save interval
         </Button>
       </div>
       <p className="text-[13px] text-muted">
-        {initial.paused ? 'Scheduled fetching is paused.' : initial.nextRunAt ? `Next fetch ${relativeTime(initial.nextRunAt)} (${dateTime(initial.nextRunAt)}).` : 'No fetch is scheduled.'}
+        {initial.paused
+          ? 'Scheduled fetching is paused.'
+          : initial.nextRunAt
+            ? `Next fetch ${relativeTime(initial.nextRunAt)} (${dateTime(initial.nextRunAt)}).`
+            : 'No fetch is scheduled.'}
       </p>
     </div>
   );
@@ -237,7 +256,11 @@ function LlmSection() {
   // The result of the last test lives here. A save stores new settings, which mounts a new form, and the result stays in view.
   const [health, setHealth] = useState<HealthDto | null>(null);
   return (
-    <Section id="model" title="Language model" description="The model that reads postings and scores each one. The CV digest and cover letters use a fixed model.">
+    <Section
+      id="model"
+      title="Language model"
+      description="The model that reads postings and scores each one. The CV digest and cover letters use a fixed model."
+    >
       {q.isPending && <LoadingState />}
       {q.isError && <ErrorState error={q.error} onRetry={() => void q.refetch()} />}
       {q.data && <LlmForm key={JSON.stringify(q.data.settings)} initial={q.data.settings} available={q.data.available} health={health} setHealth={setHealth} />}
@@ -249,8 +272,8 @@ function HealthResult({ health }: { health: HealthDto }) {
   return (
     <div role="status" className={`border p-3 text-[13px] ${health.reachable && health.modelAvailable ? 'border-fg' : 'border-danger bg-danger-soft'}`}>
       <p>
-        <strong>Provider:</strong> {health.reachable ? 'responds' : 'does not respond'}.{' '}
-        <strong>Model:</strong> {health.modelAvailable ? 'available' : 'not available'}.
+        <strong>Provider:</strong> {health.reachable ? 'responds' : 'does not respond'}. <strong>Model:</strong>{' '}
+        {health.modelAvailable ? 'available' : 'not available'}.
       </p>
       {health.detail && <p className="mt-1 text-muted">{health.detail}</p>}
     </div>
@@ -278,7 +301,9 @@ function LlmForm({
   });
   const [notSaved, setNotSaved] = useState(false);
   const set = <K extends keyof LlmSaveInput>(k: K, v: LlmSaveInput[K]) => setDraft((d) => ({ ...d, [k]: v }));
-  const dirty = JSON.stringify(draft) !== JSON.stringify({ provider: initial.provider, baseUrl: initial.baseUrl, model: initial.model, apiKey: initial.apiKey, claudeEffort: initial.claudeEffort });
+  const dirty =
+    JSON.stringify(draft) !==
+    JSON.stringify({ provider: initial.provider, baseUrl: initial.baseUrl, model: initial.model, apiKey: initial.apiKey, claudeEffort: initial.claudeEffort });
 
   const save = useMutation({
     mutationFn: () => api.saveLlm(draft),
@@ -306,15 +331,16 @@ function LlmForm({
   return (
     <div className="flex flex-col gap-4">
       <div role="note" className="border border-line p-3 text-[13px]">
-        <p className="font-medium">CV digest and cover letters always use {initial.writingModel} at {initial.writingEffort} effort.</p>
+        <p className="font-medium">
+          CV digest and cover letters always use {initial.writingModel} at {initial.writingEffort} effort.
+        </p>
         <p className="mt-1">
-          They run through the <code className="font-mono">claude</code> command, whatever provider you select below. Your CV text is sent to
-          Anthropic for these two tasks. Without the command and its login, fill the profile by hand. Cover letters are then not available.
+          They run through the <code className="font-mono">claude</code> command, whatever provider you select below. Your CV text is sent to Anthropic for
+          these two tasks. Without the command and its login, fill the profile by hand. Cover letters are then not available.
         </p>
       </div>
       <p className="text-[13px]">
-        Current state:{' '}
-        <strong>{available === null ? 'not checked yet' : available ? 'available' : 'not available'}</strong>
+        Current state: <strong>{available === null ? 'not checked yet' : available ? 'available' : 'not available'}</strong>
       </p>
       <Segmented
         label="Provider"
@@ -343,8 +369,8 @@ function LlmForm({
           <div role="note" className="border border-dashed border-fg p-3 text-[13px]">
             <p className="font-medium">Your data leaves this machine.</p>
             <p className="mt-1">
-              With Claude Code, posting text and your profile data are sent to Anthropic's hosted service. Each call counts against your Claude
-              usage. The <code className="font-mono">claude</code> command and its login must exist on the machine that runs the server.
+              With Claude Code, posting text and your profile data are sent to Anthropic's hosted service. Each call counts against your Claude usage. The{' '}
+              <code className="font-mono">claude</code> command and its login must exist on the machine that runs the server.
             </p>
           </div>
           <Segmented
@@ -373,7 +399,12 @@ function LlmForm({
         <Button variant="primary" busy={save.isPending} disabled={!dirty} onClick={() => save.mutate()}>
           Save and test
         </Button>
-        <Button busy={test.isPending} onClick={() => test.mutate()} disabled={dirty} title={dirty ? 'Save first; the test checks the saved settings.' : undefined}>
+        <Button
+          busy={test.isPending}
+          onClick={() => test.mutate()}
+          disabled={dirty}
+          title={dirty ? 'Save first; the test checks the saved settings.' : undefined}
+        >
           Test saved settings
         </Button>
       </div>
@@ -444,7 +475,12 @@ function NotificationsForm({ initial }: { initial: NotificationSettingsDto }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Switch label="Send notifications" checked={initial.enabled} onChange={(v) => save.mutate({ enabled: v })} description="Enabling creates a private topic name." />
+      <Switch
+        label="Send notifications"
+        checked={initial.enabled}
+        onChange={(v) => save.mutate({ enabled: v })}
+        description="Enabling creates a private topic name."
+      />
 
       {initial.subscribeUrl && (
         <div className="flex flex-col gap-1">
@@ -617,8 +653,7 @@ function PostingsSection() {
           {p.delete > 0 && p.saved > 0 && <p className="text-[13px]">This includes {p.saved === 1 ? '1 saved posting' : `${p.saved} saved postings`}.</p>}
           {fetching && p.delete > 0 && <p className="text-[13px]">A fetch is running. Delete the postings when it ends.</p>}
           <p className="text-xs text-muted">
-            A backup of all data is made first. At the next fetch, the postings that the job sites still list come back as new and are scored
-            again.
+            A backup of all data is made first. At the next fetch, the postings that the job sites still list come back as new and are scored again.
           </p>
         </div>
       )}

@@ -1,6 +1,14 @@
 import { spawn } from 'node:child_process';
 import { z } from 'zod';
-import { InvalidOutputError, ProviderUnavailableError, providerJsonSchema, type GenerateOptions, type HealthResult, type LlmClient, type Message } from './types';
+import {
+  InvalidOutputError,
+  ProviderUnavailableError,
+  providerJsonSchema,
+  type GenerateOptions,
+  type HealthResult,
+  type LlmClient,
+  type Message,
+} from './types';
 
 /** The Claude Code provider uses this model for posting extraction and judging. Only the effort level is a setting. */
 export const CLAUDE_CODE_MODEL = 'claude-haiku-5-5';
@@ -67,13 +75,19 @@ export function createClaudeCodeClient(cfg: ClaudeCodeConfig): LlmClient {
   function args(systemPrompt: string, jsonSchema: unknown): string[] {
     return [
       '-p',
-      '--model', model,
-      '--effort', cfg.effort,
-      '--output-format', 'json',
-      '--json-schema', JSON.stringify(jsonSchema),
-      '--tools', '',
+      '--model',
+      model,
+      '--effort',
+      cfg.effort,
+      '--output-format',
+      'json',
+      '--json-schema',
+      JSON.stringify(jsonSchema),
+      '--tools',
+      '',
       '--no-session-persistence',
-      '--system-prompt', systemPrompt,
+      '--system-prompt',
+      systemPrompt,
     ];
   }
 
@@ -108,8 +122,15 @@ export function createClaudeCodeClient(cfg: ClaudeCodeConfig): LlmClient {
 
     async generateObject<T>(schema: z.ZodType<T>, messages: Message[], opts: GenerateOptions = {}): Promise<T> {
       const jsonSchema = providerJsonSchema(schema);
-      const system = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n') || 'Answer only with the structured output.';
-      const user = messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n\n');
+      const system =
+        messages
+          .filter((m) => m.role === 'system')
+          .map((m) => m.content)
+          .join('\n\n') || 'Answer only with the structured output.';
+      const user = messages
+        .filter((m) => m.role === 'user')
+        .map((m) => m.content)
+        .join('\n\n');
       const maxAttempts = opts.maxAttempts ?? 3;
       let prompt = user;
       let lastError = '';

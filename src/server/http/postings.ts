@@ -6,7 +6,16 @@ import { getCoverLetter } from '../letters/service';
 import { getMatchAnalysis } from '../analysis/service';
 import { currentVersions, type Versions } from '../profile/service';
 import type {
-  AnalysisVerdict, MatchDetail, PostingCounts, PostingDetail, PostingListItem, PostingListResponse, PostingQuery, SoftViolationView, TriageAction, TriageResult,
+  AnalysisVerdict,
+  MatchDetail,
+  PostingCounts,
+  PostingDetail,
+  PostingListItem,
+  PostingListResponse,
+  PostingQuery,
+  SoftViolationView,
+  TriageAction,
+  TriageResult,
 } from '../../shared/api';
 import type { LinkStatus, MatchState, PostingFacts, TriageStatus } from '../../shared/schemas';
 
@@ -88,19 +97,18 @@ function toItem(r: JoinedRow, versions: Versions | null): PostingListItem {
     duplicateOf: r.duplicate_of,
     workArrangement: facts?.workArrangement ?? null,
     tags: facts?.requiredSkills.slice(0, 6) ?? [],
-    match: r.m_state
-      ? { state: r.m_state as MatchState, totalScore: r.total_score, stale: isStale(r, versions), excludedReason: r.excluded_reason }
-      : null,
-    analysis: r.an_state
-      ? { state: r.an_state as 'pending' | 'ready' | 'failed', verdict: (r.an_verdict as AnalysisVerdict | null) ?? null }
-      : null,
+    match: r.m_state ? { state: r.m_state as MatchState, totalScore: r.total_score, stale: isStale(r, versions), excludedReason: r.excluded_reason } : null,
+    analysis: r.an_state ? { state: r.an_state as 'pending' | 'ready' | 'failed', verdict: (r.an_verdict as AnalysisVerdict | null) ?? null } : null,
   };
 }
 
 function buildWhere(q: PostingQuery): { where: string; params: unknown[] } {
   const clauses: string[] = [];
   const params: unknown[] = [];
-  const statuses = (q.status ?? 'new,saved').split(',').map((s) => s.trim()).filter(Boolean);
+  const statuses = (q.status ?? 'new,saved')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (!statuses.includes('all')) {
     clauses.push(`p.triage_status IN (${statuses.map(() => '?').join(',')})`);
     params.push(...statuses);
@@ -120,9 +128,7 @@ function buildWhere(q: PostingQuery): { where: string; params: unknown[] } {
     params.push(q.minScore);
   }
   if (q.tag) {
-    clauses.push(
-      `EXISTS (SELECT 1 FROM json_each(f.facts_json, '$.requiredSkills') t WHERE lower(t.value) = lower(?))`,
-    );
+    clauses.push(`EXISTS (SELECT 1 FROM json_each(f.facts_json, '$.requiredSkills') t WHERE lower(t.value) = lower(?))`);
     params.push(q.tag);
   }
   if (q.maxAgeDays !== undefined && q.maxAgeDays > 0) {
@@ -170,7 +176,9 @@ export function getPostingDetail(id: string): PostingDetail | null {
   const versions = currentVersions();
   const item = toItem(r, versions);
   const duplicates = sqlite.prepare('SELECT id, source, url FROM postings WHERE duplicate_of = ? ORDER BY first_seen_at').all(id) as Array<{
-    id: string; source: string; url: string;
+    id: string;
+    source: string;
+    url: string;
   }>;
   const match: MatchDetail | null = item.match
     ? {
@@ -218,7 +226,9 @@ export function getCounts(): PostingCounts {
       .get() as { n: number }
   ).n;
   counts.excluded = (
-    sqlite.prepare(`SELECT COUNT(*) AS n FROM matches m JOIN postings p ON p.id = m.posting_id WHERE m.state = 'excluded' AND p.duplicate_of IS NULL`).get() as { n: number }
+    sqlite
+      .prepare(`SELECT COUNT(*) AS n FROM matches m JOIN postings p ON p.id = m.posting_id WHERE m.state = 'excluded' AND p.duplicate_of IS NULL`)
+      .get() as { n: number }
   ).n;
   return counts;
 }

@@ -84,7 +84,9 @@ export function requestDerive(): void {
 }
 
 export function storeDerived(derived: StructuredProfile): void {
-  sqlite.prepare(`UPDATE profile SET derived_json = ?, derive_state = 'idle', derive_error = NULL, updated_at = ? WHERE id = 1`).run(JSON.stringify(derived), nowIso());
+  sqlite
+    .prepare(`UPDATE profile SET derived_json = ?, derive_state = 'idle', derive_error = NULL, updated_at = ? WHERE id = 1`)
+    .run(JSON.stringify(derived), nowIso());
   publish({ type: 'profile.updated' });
 }
 

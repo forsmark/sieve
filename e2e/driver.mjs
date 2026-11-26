@@ -94,9 +94,19 @@ export async function launchBrowser({ port, userDataDir, width = 1440, height = 
   const chrome = spawn(
     process.env.E2E_CHROME ?? 'google-chrome',
     [
-      '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-extensions',
-      '--disable-background-networking', '--disable-component-update', '--disable-sync', '--metrics-recording-only',
-      `--user-data-dir=${userDataDir}`, `--remote-debugging-port=${port}`, `--window-size=${width},${height}`, 'about:blank',
+      '--headless=new',
+      '--disable-gpu',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-extensions',
+      '--disable-background-networking',
+      '--disable-component-update',
+      '--disable-sync',
+      '--metrics-recording-only',
+      `--user-data-dir=${userDataDir}`,
+      `--remote-debugging-port=${port}`,
+      `--window-size=${width},${height}`,
+      'about:blank',
     ],
     { stdio: 'ignore' },
   );

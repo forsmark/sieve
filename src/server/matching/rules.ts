@@ -23,7 +23,13 @@ const COMMUTABLE_SCORE = 80;
 const UNKNOWN_LOCATION_SCORE = 70;
 
 function norm(s: string): string {
-  return s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  return s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function placeMatches(entries: string[], place: { city: string | null; country: string | null }): boolean {
@@ -67,12 +73,7 @@ export function locationScore(facts: PostingFacts, prefs: Preferences): number {
  * Evaluates the constraints for one posting.
  * An unknown fact never excludes a posting and never causes a penalty.
  */
-export function evaluateConstraints(
-  posting: { company: string },
-  facts: PostingFacts,
-  profile: StructuredProfile,
-  prefs: Preferences,
-): ConstraintResult {
+export function evaluateConstraints(posting: { company: string }, facts: PostingFacts, profile: StructuredProfile, prefs: Preferences): ConstraintResult {
   const softViolations: SoftViolation[] = [];
 
   const company = normalizeCompany(posting.company);
@@ -113,10 +114,7 @@ export function totalScore(scores: DimensionScores, weights: Weights, softViolat
   const sum = weights.skills + weights.experience + weights.preferences + weights.location;
   if (sum <= 0) return 0;
   const mean =
-    (scores.skills * weights.skills +
-      scores.experience * weights.experience +
-      scores.preferences * weights.preferences +
-      scores.location * weights.location) /
+    (scores.skills * weights.skills + scores.experience * weights.experience + scores.preferences * weights.preferences + scores.location * weights.location) /
     sum;
   const penalty = softViolations.reduce((p, v) => p + SOFT_PENALTY[v.kind], 0);
   return Math.max(0, Math.min(100, Math.round(mean - penalty)));

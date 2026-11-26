@@ -11,7 +11,15 @@ import { DEFAULT_PREFERENCES, type Preferences } from '../../shared/schemas';
 import { CvImportError, cleanCvText, extractCvText } from './cv-import';
 import { registerDeriveHandler } from './derive';
 import {
-  computeVersions, currentVersions, discardEdits, getPreferences, getProfile, importCv, requestDerive, saveProfileEdits, savePreferences,
+  computeVersions,
+  currentVersions,
+  discardEdits,
+  getPreferences,
+  getProfile,
+  importCv,
+  requestDerive,
+  saveProfileEdits,
+  savePreferences,
 } from './service';
 
 /** Collects one posting and returns its id. */

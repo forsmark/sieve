@@ -52,8 +52,7 @@ export function parseLinkedInSearchPage(html: string): { postings: RawPosting[];
     const company = card.querySelector('.base-search-card__subtitle')?.text.trim();
     const location = card.querySelector('.job-search-card__location')?.text.trim() || null;
     // Some cards are themselves the link; most hold an <a class="base-card__full-link">.
-    const href =
-      card.tagName === 'A' ? card.getAttribute('href') : card.querySelector('a.base-card__full-link')?.getAttribute('href');
+    const href = card.tagName === 'A' ? card.getAttribute('href') : card.querySelector('a.base-card__full-link')?.getAttribute('href');
     const url = href ? cleanUrl(href) : null;
     if (!title || !company || !url) continue;
     postings.push({

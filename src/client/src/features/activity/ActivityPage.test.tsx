@@ -7,7 +7,11 @@ import { resetToastsForTests } from '../../lib/toast';
 
 const RUNS: RunDto[] = [
   {
-    id: 2, trigger: 'manual', state: 'completed', startedAt: '2026-11-10T08:00:00Z', endedAt: '2026-11-10T08:01:30Z',
+    id: 2,
+    trigger: 'manual',
+    state: 'completed',
+    startedAt: '2026-11-10T08:00:00Z',
+    endedAt: '2026-11-10T08:01:30Z',
     sources: [
       { source: 'jobindex', state: 'completed', found: 41, added: 7, invalid: 2, error: null },
       { source: 'linkedin', state: 'failed', found: 0, added: 0, invalid: 0, error: 'The site answered 429.' },
@@ -15,7 +19,11 @@ const RUNS: RunDto[] = [
     ],
   },
   {
-    id: 3, trigger: 'schedule', state: 'running', startedAt: '2026-11-10T14:00:00Z', endedAt: null,
+    id: 3,
+    trigger: 'schedule',
+    state: 'running',
+    startedAt: '2026-11-10T14:00:00Z',
+    endedAt: null,
     sources: [{ source: 'remoteok', state: 'running', found: 13, added: 4, invalid: 0, error: null }],
   },
 ];
@@ -59,7 +67,9 @@ const region = async (name: string) => within(await screen.findByRole('region', 
 /** The cells of the table row that starts with this source name. */
 function cellsOf(table: HTMLElement, source: string): string[] {
   const row = within(table).getByRole('cell', { name: source }).closest('tr') as HTMLElement;
-  return within(row).getAllByRole('cell').map((c) => c.textContent ?? '');
+  return within(row)
+    .getAllByRole('cell')
+    .map((c) => c.textContent ?? '');
 }
 
 describe('activity page', () => {
@@ -74,7 +84,11 @@ describe('activity page', () => {
     const runs = await region('Fetch runs');
     const tables = await runs.findAllByRole('table');
     expect(tables).toHaveLength(2);
-    expect(within(tables[0]!).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Source', 'State', 'Found', 'New', 'Invalid']);
+    expect(
+      within(tables[0]!)
+        .getAllByRole('columnheader')
+        .map((h) => h.textContent),
+    ).toEqual(['Source', 'State', 'Found', 'New', 'Invalid']);
 
     // The first run: one source completed, one failed with its error, one skipped.
     const first = tables[0]!.closest('li') as HTMLElement;

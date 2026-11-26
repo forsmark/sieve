@@ -167,7 +167,11 @@ export const JobRow = memo(function JobRow({
                     <span className={cx('block h-full', open ? 'bg-ink' : 'bg-field-yellow')} style={{ width: `${score}%` }} />
                   </span>
                   <span className="flex gap-1">
-                    {m?.stale && <Badge tone="warn" title="This score comes from an older profile or preferences">Stale</Badge>}
+                    {m?.stale && (
+                      <Badge tone="warn" title="This score comes from an older profile or preferences">
+                        Stale
+                      </Badge>
+                    )}
                     {state === 'in_progress' && <Badge tone="accent">Rescoring</Badge>}
                     {state === 'excluded' && <Badge tone="danger">Excluded</Badge>}
                   </span>

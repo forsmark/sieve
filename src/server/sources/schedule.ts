@@ -12,8 +12,7 @@ const HOUR = 3_600_000;
 
 export function getSchedule(): ScheduleState {
   let row = sqlite.prepare('SELECT interval_hours, paused, next_run_at FROM schedule WHERE id = 1').get() as
-    | { interval_hours: number; paused: number; next_run_at: string | null }
-    | undefined;
+    { interval_hours: number; paused: number; next_run_at: string | null } | undefined;
   if (!row) {
     sqlite.prepare('INSERT INTO schedule (id, interval_hours, paused, next_run_at) VALUES (1, 4, 0, NULL)').run();
     row = { interval_hours: 4, paused: 0, next_run_at: null };

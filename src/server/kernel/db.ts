@@ -18,8 +18,23 @@ sqlite.pragma('foreign_keys = ON');
 migrate(drizzle(sqlite), { migrationsFolder });
 
 const TABLES = [
-  'postings', 'posting_facts', 'matches', 'profile', 'preferences', 'applications', 'application_events',
-  'fetch_runs', 'fetch_run_sources', 'tasks', 'schedule', 'sessions', 'settings', 'logs', 'notifications', 'cover_letters', 'match_analyses',
+  'postings',
+  'posting_facts',
+  'matches',
+  'profile',
+  'preferences',
+  'applications',
+  'application_events',
+  'fetch_runs',
+  'fetch_run_sources',
+  'tasks',
+  'schedule',
+  'sessions',
+  'settings',
+  'logs',
+  'notifications',
+  'cover_letters',
+  'match_analyses',
 ];
 
 /** Test helper. Removes all rows. Refuses to run on a file database. */

@@ -12,8 +12,15 @@ import { rescorePostings } from '../matching/rescore';
 import { importCv, saveProfileEdits } from '../profile/service';
 import { JUDGMENT, PROFILE, fakeClock, matchOf, raw, resetAll, stubLlm, tasksOf, type StubLlm } from '../testing/helpers';
 import {
-  buildMessage, generateTopic, getNotificationSettings, regenerateTopic, registerNotifyHandler, saveNotificationSettings, sendTestNotification,
-  setNotificationFetchForTests, subscribeUrl,
+  buildMessage,
+  generateTopic,
+  getNotificationSettings,
+  regenerateTopic,
+  registerNotifyHandler,
+  saveNotificationSettings,
+  sendTestNotification,
+  setNotificationFetchForTests,
+  subscribeUrl,
 } from './service';
 
 // ---- A stub ntfy server
@@ -165,7 +172,14 @@ describe('notification for high scores', () => {
   it('holds only title, company, score, and link, and no CV, profile, or assessment text', async () => {
     enable();
     importCv('SECRET-CV-TEXT Jane Doe, frontend developer with six years of experience.', 'keep');
-    stub.judgment = () => ({ ...JUDGMENT, skillsFit: 95, experienceFit: 95, preferenceFit: 95, assessment: 'SECRET-ASSESSMENT you fit well.', matchedSkills: ['SECRET-SKILL'] });
+    stub.judgment = () => ({
+      ...JUDGMENT,
+      skillsFit: 95,
+      experienceFit: 95,
+      preferenceFit: 95,
+      assessment: 'SECRET-ASSESSMENT you fit well.',
+      matchedSkills: ['SECRET-SKILL'],
+    });
     add('Data Engineer', 'Beta Corp');
     await passWindow();
     expect(received).toHaveLength(1);
@@ -336,8 +350,6 @@ describe('delivery', () => {
     // The activity view lists the notification as failed, with the error.
     setPasswordForTests(undefined);
     const activity = (await (await createApp().request('/api/activity')).json()) as { notifications: unknown[] };
-    expect(activity.notifications).toEqual([
-      expect.objectContaining({ count: 1, state: 'failed', error: 'ntfy server returned HTTP 503' }),
-    ]);
+    expect(activity.notifications).toEqual([expect.objectContaining({ count: 1, state: 'failed', error: 'ntfy server returned HTTP 503' })]);
   });
 });

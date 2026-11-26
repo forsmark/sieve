@@ -63,7 +63,9 @@ export async function runKeyboardTriage({ page, api, t, base }) {
     await cardCount(12);
     assertEqual(await page.evaluate(CARD_IDS), ids, 'order of the cards');
     await page.waitFor(`${CURSOR_INDEX} === 0`, { message: 'the cursor on the first card' });
-    columns = await page.evaluate('new Set([...document.querySelectorAll(\'[role=list] [role=listitem]\')].map((c) => Math.round(c.getBoundingClientRect().left))).size');
+    columns = await page.evaluate(
+      "new Set([...document.querySelectorAll('[role=list] [role=listitem]')].map((c) => Math.round(c.getBoundingClientRect().left))).size",
+    );
     assert(columns >= 2 && columns < ids.length - 1, `the grid needs 2 or more columns and 2 or more rows for the arrow keys, it has ${columns} columns`);
   });
 
@@ -114,11 +116,17 @@ export async function runKeyboardTriage({ page, api, t, base }) {
 
   await t.check('Enter on a focused card, then j and k: the open detail follows the cursor', async () => {
     await page.press('Enter');
-    await page.waitFor(`${URL_ID} === ${JSON.stringify(ids[1])} && ${DETAIL_TITLE} === ${JSON.stringify(titles[ids[1]])}`, { message: `the detail panel of "${titles[ids[1]]}"` });
+    await page.waitFor(`${URL_ID} === ${JSON.stringify(ids[1])} && ${DETAIL_TITLE} === ${JSON.stringify(titles[ids[1]])}`, {
+      message: `the detail panel of "${titles[ids[1]]}"`,
+    });
     await page.press('j');
-    await page.waitFor(`${URL_ID} === ${JSON.stringify(ids[2])} && ${DETAIL_TITLE} === ${JSON.stringify(titles[ids[2]])}`, { message: `the detail panel of "${titles[ids[2]]}" after j` });
+    await page.waitFor(`${URL_ID} === ${JSON.stringify(ids[2])} && ${DETAIL_TITLE} === ${JSON.stringify(titles[ids[2]])}`, {
+      message: `the detail panel of "${titles[ids[2]]}" after j`,
+    });
     await page.press('k');
-    await page.waitFor(`${URL_ID} === ${JSON.stringify(ids[1])} && ${DETAIL_TITLE} === ${JSON.stringify(titles[ids[1]])}`, { message: `the detail panel of "${titles[ids[1]]}" after k` });
+    await page.waitFor(`${URL_ID} === ${JSON.stringify(ids[1])} && ${DETAIL_TITLE} === ${JSON.stringify(titles[ids[1]])}`, {
+      message: `the detail panel of "${titles[ids[1]]}" after k`,
+    });
     await page.press('Escape');
     await page.waitFor(`!${DETAIL} && ${URL_ID} === null`, { message: 'the detail panel to close' });
     await cursorAt(1);
@@ -145,7 +153,11 @@ export async function runKeyboardTriage({ page, api, t, base }) {
     await cardCount(11);
     await page.waitFor(toastWith(`Dismissed “${titles[ids[1]]}”.`), { message: 'the message with the Undo button' });
     await apiStatus(ids[1], 'dismissed');
-    assertEqual(await listIds(), ids.filter((id) => id !== ids[1]), 'GET /api/postings after the dismissal');
+    assertEqual(
+      await listIds(),
+      ids.filter((id) => id !== ids[1]),
+      'GET /api/postings after the dismissal',
+    );
     // The cursor stays at its place, so it is now on the next posting.
     await page.waitFor(`${CURSOR_INDEX} === 1 && (${CARD_IDS})[1] === ${JSON.stringify(ids[2])}`, { message: 'the cursor on the next posting' });
   });
@@ -215,8 +227,14 @@ export async function runKeyboardTriage({ page, api, t, base }) {
     await page.waitFor(toastWith(`Marked as applied “${titles[ids[2]]}”.`), { message: 'the message "Marked as applied"' });
     await apiStatus(ids[2], 'applied');
     const applications = await api.get('/api/applications');
-    assertEqual(applications.map((a) => [a.postingId, a.stage]), [[ids[2], 'applied']], 'GET /api/applications');
-    await page.waitFor('!!document.querySelector(\'nav[aria-label="Main"] [aria-label="1 applications"]\')', { message: 'the count 1 beside "Board" in the navigation' });
+    assertEqual(
+      applications.map((a) => [a.postingId, a.stage]),
+      [[ids[2], 'applied']],
+      'GET /api/applications',
+    );
+    await page.waitFor('!!document.querySelector(\'nav[aria-label="Main"] [aria-label="1 applications"]\')', {
+      message: 'the count 1 beside "Board" in the navigation',
+    });
   });
 
   await t.check('u: undoes "applied" (application removed, card returns)', async () => {
@@ -232,9 +250,13 @@ export async function runKeyboardTriage({ page, api, t, base }) {
   await t.check('d with the detail open: dismisses the posting and the detail follows with the next one', async () => {
     await page.waitFor(`${CURSOR_INDEX} === 2`, { message: 'the cursor on card 2' });
     await page.press('Enter');
-    await page.waitFor(`${URL_ID} === ${JSON.stringify(ids[2])} && ${DETAIL_TITLE} === ${JSON.stringify(titles[ids[2]])}`, { message: `the detail panel of "${titles[ids[2]]}"` });
+    await page.waitFor(`${URL_ID} === ${JSON.stringify(ids[2])} && ${DETAIL_TITLE} === ${JSON.stringify(titles[ids[2]])}`, {
+      message: `the detail panel of "${titles[ids[2]]}"`,
+    });
     await page.press('d');
-    await page.waitFor(`${URL_ID} === ${JSON.stringify(ids[3])} && ${DETAIL_TITLE} === ${JSON.stringify(titles[ids[3]])}`, { message: `the detail panel of the next posting "${titles[ids[3]]}"` });
+    await page.waitFor(`${URL_ID} === ${JSON.stringify(ids[3])} && ${DETAIL_TITLE} === ${JSON.stringify(titles[ids[3]])}`, {
+      message: `the detail panel of the next posting "${titles[ids[3]]}"`,
+    });
     await apiStatus(ids[2], 'dismissed');
     await page.press('u');
     await apiStatus(ids[2], 'new');

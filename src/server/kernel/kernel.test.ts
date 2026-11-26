@@ -5,7 +5,16 @@ import { publish, subscribe, type AppEvent } from './events';
 import { log } from './logger';
 import { SETTING_DEFAULTS, getSetting, setSetting } from './settings';
 import {
-  LaneUnavailableError, MAX_ATTEMPTS, enqueue, isLaneBlocked, queueCounts, recoverRunningTasks, registerHandler, retryTask, setLaneBlocked, whenIdle,
+  LaneUnavailableError,
+  MAX_ATTEMPTS,
+  enqueue,
+  isLaneBlocked,
+  queueCounts,
+  recoverRunningTasks,
+  registerHandler,
+  retryTask,
+  setLaneBlocked,
+  whenIdle,
 } from './tasks';
 import { fakeClock, resetAll, tasksOf } from '../testing/helpers';
 
@@ -23,8 +32,22 @@ describe('database', () => {
   it('creates all tables in an empty database at startup', () => {
     const names = (sqlite.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`).all() as Array<{ name: string }>).map((r) => r.name);
     for (const table of [
-      'postings', 'posting_facts', 'matches', 'profile', 'preferences', 'applications', 'application_events',
-      'fetch_runs', 'fetch_run_sources', 'tasks', 'schedule', 'sessions', 'settings', 'logs', 'notifications', 'cover_letters',
+      'postings',
+      'posting_facts',
+      'matches',
+      'profile',
+      'preferences',
+      'applications',
+      'application_events',
+      'fetch_runs',
+      'fetch_run_sources',
+      'tasks',
+      'schedule',
+      'sessions',
+      'settings',
+      'logs',
+      'notifications',
+      'cover_letters',
     ]) {
       expect(names).toContain(table);
     }
@@ -141,7 +164,10 @@ describe('task queue', () => {
     enqueue('judge', 'p2');
     await whenIdle();
     expect(isLaneBlocked('llm')).toBe(true);
-    expect(tasksOf('judge').map((t) => [t.state, t.attempts])).toEqual([['pending', 0], ['pending', 0]]);
+    expect(tasksOf('judge').map((t) => [t.state, t.attempts])).toEqual([
+      ['pending', 0],
+      ['pending', 0],
+    ]);
     fail = false;
     setLaneBlocked('llm', false);
     await whenIdle();

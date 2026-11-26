@@ -204,10 +204,7 @@ function fromTitle(text: string, title: string | undefined): string {
  * A search result holds only a teaser. The "Se jobbet" button of the job page leads to the full text:
  * an advertisement on Jobindex, or a page of the employer.
  */
-async function fetchDescription(
-  posting: { externalId: string; url: string; title?: string; company?: string },
-  ctx: FetchContext,
-): Promise<string | null> {
+async function fetchDescription(posting: { externalId: string; url: string; title?: string; company?: string }, ctx: FetchContext): Promise<string | null> {
   const page = await ctx.http.get(posting.url, { headers: PAGE_HEADERS });
   if (!page.ok) return null;
   const target = parseJobindexTarget(await page.text(), posting.url);

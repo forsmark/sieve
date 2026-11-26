@@ -70,7 +70,11 @@ export function fromLocalInput(value: string): string | null {
 
 export function sourceName(id: string): string {
   const names: Record<string, string> = {
-    linkedin: 'LinkedIn', jobindex: 'Jobindex', remoteok: 'Remote OK', remotive: 'Remotive', arbeitnow: 'Arbeitnow',
+    linkedin: 'LinkedIn',
+    jobindex: 'Jobindex',
+    remoteok: 'Remote OK',
+    remotive: 'Remotive',
+    arbeitnow: 'Arbeitnow',
   };
   return names[id] ?? id;
 }

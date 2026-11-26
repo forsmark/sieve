@@ -78,11 +78,21 @@ function RunsSection({ runs }: { runs: RunDto[] }) {
                 <table className="w-full min-w-[28rem] text-left text-[13px]">
                   <thead className="text-xs text-muted">
                     <tr>
-                      <th scope="col" className="py-1 pr-3 font-medium">Source</th>
-                      <th scope="col" className="py-1 pr-3 font-medium">State</th>
-                      <th scope="col" className="py-1 pr-3 text-right font-medium">Found</th>
-                      <th scope="col" className="py-1 pr-3 text-right font-medium">New</th>
-                      <th scope="col" className="py-1 pr-3 text-right font-medium">Invalid</th>
+                      <th scope="col" className="py-1 pr-3 font-medium">
+                        Source
+                      </th>
+                      <th scope="col" className="py-1 pr-3 font-medium">
+                        State
+                      </th>
+                      <th scope="col" className="py-1 pr-3 text-right font-medium">
+                        Found
+                      </th>
+                      <th scope="col" className="py-1 pr-3 text-right font-medium">
+                        New
+                      </th>
+                      <th scope="col" className="py-1 pr-3 text-right font-medium">
+                        Invalid
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="tabular">
@@ -109,7 +119,19 @@ function RunsSection({ runs }: { runs: RunDto[] }) {
   );
 }
 
-function FailedSection({ tasks }: { tasks: Array<{ id: number; kind: string; subjectId: string; subjectTitle: string | null; attempts: number; lastError: string | null; finishedAt: string | null }> }) {
+function FailedSection({
+  tasks,
+}: {
+  tasks: Array<{
+    id: number;
+    kind: string;
+    subjectId: string;
+    subjectTitle: string | null;
+    attempts: number;
+    lastError: string | null;
+    finishedAt: string | null;
+  }>;
+}) {
   const qc = useQueryClient();
   const retry = useMutation({
     mutationFn: api.retryTask,
@@ -133,7 +155,11 @@ function FailedSection({ tasks }: { tasks: Array<{ id: number; kind: string; sub
                   <span className="font-medium">{KIND_LABEL[t.kind] ?? t.kind}</span>
                   {' · '}
                   {t.subjectTitle ? (
-                    <Link to="/jobs" search={{ id: t.subjectId, status: 'all' }} className="font-medium underline decoration-accent decoration-2 hover:decoration-fg">
+                    <Link
+                      to="/jobs"
+                      search={{ id: t.subjectId, status: 'all' }}
+                      className="font-medium underline decoration-accent decoration-2 hover:decoration-fg"
+                    >
                       {t.subjectTitle}
                     </Link>
                   ) : (

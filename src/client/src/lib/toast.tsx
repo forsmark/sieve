@@ -23,7 +23,10 @@ export function dismissToast(id: number): void {
 export function showToast(t: Omit<Toast, 'id'>, durationMs = t.action ? 8000 : 4000): number {
   const id = nextId++;
   toastStore.set((list) => [...list.slice(-3), { ...t, id }]);
-  timers.set(id, setTimeout(() => dismissToast(id), durationMs));
+  timers.set(
+    id,
+    setTimeout(() => dismissToast(id), durationMs),
+  );
   return id;
 }
 
@@ -95,20 +98,11 @@ export function Toaster() {
             {t.tone === 'error' && <span className="font-medium text-danger">Error:</span>}
             <span className="min-w-0 flex-1">{t.message}</span>
             {t.action && (
-              <button
-                type="button"
-                className="px-2 py-1 font-bold underline decoration-2 hover:bg-surface-2"
-                onClick={() => void t.action!.run()}
-              >
+              <button type="button" className="px-2 py-1 font-bold underline decoration-2 hover:bg-surface-2" onClick={() => void t.action!.run()}>
                 {t.action.label}
               </button>
             )}
-            <button
-              type="button"
-              className="flex px-1.5 py-1.5 hover:bg-surface-2"
-              aria-label="Close message"
-              onClick={() => dismissToast(t.id)}
-            >
+            <button type="button" className="flex px-1.5 py-1.5 hover:bg-surface-2" aria-label="Close message" onClick={() => dismissToast(t.id)}>
               <Icon name="close" />
             </button>
           </motion.div>

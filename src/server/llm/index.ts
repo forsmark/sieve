@@ -45,7 +45,11 @@ function setAvailable(value: boolean): void {
  * The one entry point for model calls from task handlers.
  * When the provider is down, the task returns to the queue and the language model lane pauses.
  */
-export async function generateObject<T>(schema: z.ZodType<T>, messages: Message[], opts?: GenerateOptions): Promise<{ data: T; provider: string; model: string }> {
+export async function generateObject<T>(
+  schema: z.ZodType<T>,
+  messages: Message[],
+  opts?: GenerateOptions,
+): Promise<{ data: T; provider: string; model: string }> {
   const client = getClient();
   try {
     const data = await client.generateObject(schema, messages, opts);
@@ -61,7 +65,9 @@ export async function generateObject<T>(schema: z.ZodType<T>, messages: Message[
 }
 
 export async function probe(): Promise<HealthResult> {
-  const result = await getClient().health().catch((err) => ({ reachable: false, modelAvailable: false, detail: String(err) }));
+  const result = await getClient()
+    .health()
+    .catch((err) => ({ reachable: false, modelAvailable: false, detail: String(err) }));
   setAvailable(result.reachable);
   return result;
 }

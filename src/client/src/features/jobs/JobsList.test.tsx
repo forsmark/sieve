@@ -153,7 +153,16 @@ describe('jobs list with 2000 postings', () => {
     const title = before[Math.floor(before.length / 2)]!;
     const id = title.slice(4);
     const item = items.find((i) => i.id === id)!;
-    routes[`GET /api/postings/${id}`] = () => ({ ...item, description: 'Build things.', facts: null, sourceLinks: [], application: null, match: null, coverLetter: null, matchAnalysis: null });
+    routes[`GET /api/postings/${id}`] = () => ({
+      ...item,
+      description: 'Build things.',
+      facts: null,
+      sourceLinks: [],
+      application: null,
+      match: null,
+      coverLetter: null,
+      matchAnalysis: null,
+    });
     routes[`PATCH /api/postings/${id}`] = () => ({ previous: [] });
     fireEvent.click(within(cardOf(title)).getByRole('button', { name: new RegExp(`${title}(?!\\d)`) }));
     expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument();
@@ -217,10 +226,7 @@ describe('jobs list with 2000 postings', () => {
   });
 
   it('marks a stale score on the card and keeps the score', async () => {
-    setup([
-      makeItem('1', null, { match: match('scored', 81, { stale: true }) }),
-      makeItem('2', 64),
-    ]);
+    setup([makeItem('1', null, { match: match('scored', 81, { stale: true }) }), makeItem('2', 64)]);
     renderApp('/jobs');
     await screen.findByText('Job 1');
 

@@ -89,13 +89,21 @@ export function ProfileEditor({ profile }: { profile: ProfileDto }) {
                 <TextInput
                   aria-label={`Skill ${i + 1} name`}
                   value={s.name}
-                  onChange={(e) => set('skills', draft.skills.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+                  onChange={(e) =>
+                    set(
+                      'skills',
+                      draft.skills.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)),
+                    )
+                  }
                 />
                 <Select
                   aria-label={`Skill ${i + 1} level`}
                   value={s.level}
                   onChange={(e) =>
-                    set('skills', draft.skills.map((x, j) => (j === i ? { ...x, level: e.target.value as (typeof LEVELS)[number] } : x)))
+                    set(
+                      'skills',
+                      draft.skills.map((x, j) => (j === i ? { ...x, level: e.target.value as (typeof LEVELS)[number] } : x)),
+                    )
                   }
                 >
                   {LEVELS.map((l) => (
@@ -110,9 +118,24 @@ export function ProfileEditor({ profile }: { profile: ProfileDto }) {
                   min={0}
                   placeholder="Years"
                   value={s.years ?? ''}
-                  onChange={(e) => set('skills', draft.skills.map((x, j) => (j === i ? { ...x, years: numOrNull(e.target.value) } : x)))}
+                  onChange={(e) =>
+                    set(
+                      'skills',
+                      draft.skills.map((x, j) => (j === i ? { ...x, years: numOrNull(e.target.value) } : x)),
+                    )
+                  }
                 />
-                <Button size="sm" variant="ghost" aria-label={`Remove skill ${s.name || i + 1}`} onClick={() => set('skills', draft.skills.filter((_, j) => j !== i))}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Remove skill ${s.name || i + 1}`}
+                  onClick={() =>
+                    set(
+                      'skills',
+                      draft.skills.filter((_, j) => j !== i),
+                    )
+                  }
+                >
                   Remove
                 </Button>
               </div>
@@ -127,7 +150,11 @@ export function ProfileEditor({ profile }: { profile: ProfileDto }) {
           <legend className="mb-2 text-[13px] font-semibold">Roles ({draft.roles.length})</legend>
           <div className="flex flex-col gap-3">
             {draft.roles.map((r, i) => {
-              const upd = (patch: Partial<typeof r>) => set('roles', draft.roles.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+              const upd = (patch: Partial<typeof r>) =>
+                set(
+                  'roles',
+                  draft.roles.map((x, j) => (j === i ? { ...x, ...patch } : x)),
+                );
               return (
                 <div key={i} className="grid gap-2 border border-line p-3 sm:grid-cols-2">
                   <Field label="Title">{(id) => <TextInput id={id} value={r.title} onChange={(e) => upd({ title: e.target.value })} />}</Field>
@@ -142,7 +169,16 @@ export function ProfileEditor({ profile }: { profile: ProfileDto }) {
                     {(id) => <TextArea id={id} rows={2} value={r.summary} onChange={(e) => upd({ summary: e.target.value })} />}
                   </Field>
                   <div className="sm:col-span-2">
-                    <Button size="sm" variant="ghost" onClick={() => set('roles', draft.roles.filter((_, j) => j !== i))}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        set(
+                          'roles',
+                          draft.roles.filter((_, j) => j !== i),
+                        )
+                      }
+                    >
                       Remove role
                     </Button>
                   </div>
@@ -159,13 +195,41 @@ export function ProfileEditor({ profile }: { profile: ProfileDto }) {
           <legend className="mb-2 text-[13px] font-semibold">Education ({draft.education.length})</legend>
           <div className="flex flex-col gap-1.5">
             {draft.education.map((ed, i) => {
-              const upd = (patch: Partial<typeof ed>) => set('education', draft.education.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+              const upd = (patch: Partial<typeof ed>) =>
+                set(
+                  'education',
+                  draft.education.map((x, j) => (j === i ? { ...x, ...patch } : x)),
+                );
               return (
                 <div key={i} className="grid grid-cols-[1fr_1fr_5rem_auto] items-center gap-2">
-                  <TextInput aria-label={`Education ${i + 1} degree`} placeholder="Degree" value={ed.degree} onChange={(e) => upd({ degree: e.target.value })} />
-                  <TextInput aria-label={`Education ${i + 1} institution`} placeholder="Institution" value={ed.institution} onChange={(e) => upd({ institution: e.target.value })} />
-                  <TextInput aria-label={`Education ${i + 1} year`} placeholder="Year" value={ed.year ?? ''} onChange={(e) => upd({ year: e.target.value || null })} />
-                  <Button size="sm" variant="ghost" onClick={() => set('education', draft.education.filter((_, j) => j !== i))}>
+                  <TextInput
+                    aria-label={`Education ${i + 1} degree`}
+                    placeholder="Degree"
+                    value={ed.degree}
+                    onChange={(e) => upd({ degree: e.target.value })}
+                  />
+                  <TextInput
+                    aria-label={`Education ${i + 1} institution`}
+                    placeholder="Institution"
+                    value={ed.institution}
+                    onChange={(e) => upd({ institution: e.target.value })}
+                  />
+                  <TextInput
+                    aria-label={`Education ${i + 1} year`}
+                    placeholder="Year"
+                    value={ed.year ?? ''}
+                    onChange={(e) => upd({ year: e.target.value || null })}
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      set(
+                        'education',
+                        draft.education.filter((_, j) => j !== i),
+                      )
+                    }
+                  >
                     Remove
                   </Button>
                 </div>
@@ -192,7 +256,12 @@ export function ProfileEditor({ profile }: { profile: ProfileDto }) {
             </Button>
           )}
           {profile.hasEdits && (
-            <ConfirmButton label="Discard my edits" confirmLabel="Yes, use the profile from the CV" onConfirm={() => discard.mutate()} busy={discard.isPending} />
+            <ConfirmButton
+              label="Discard my edits"
+              confirmLabel="Yes, use the profile from the CV"
+              onConfirm={() => discard.mutate()}
+              busy={discard.isPending}
+            />
           )}
         </div>
       </div>

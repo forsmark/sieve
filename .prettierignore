@@ -1,0 +1,19 @@
+# Prettier also skips what .gitignore lists.
+
+# Prose. OpenSpec, spec-checks and the skills read the markdown as it is written.
+*.md
+*.mdx
+openspec/
+
+# Copies of outside tools. Their own installers update them.
+.agents/
+.claude/
+.impeccable/
+tools/spec-checks/
+
+# Written by drizzle-kit and pnpm.
+drizzle/
+pnpm-lock.yaml
+
+# Pages and API answers captured as test input.
+src/server/sources/adapters/__fixtures__/

@@ -10,7 +10,11 @@ import { checkSchedule, getSchedule, startScheduleTimer, stopScheduleTimer, upda
 
 beforeEach(resetAll);
 
-function adapter(id: string, items: RawPosting[] | ((query: SearchQuery, ctx: FetchContext) => AsyncIterable<RawPosting>), keywords = true): SourceAdapter & { queries: SearchQuery[] } {
+function adapter(
+  id: string,
+  items: RawPosting[] | ((query: SearchQuery, ctx: FetchContext) => AsyncIterable<RawPosting>),
+  keywords = true,
+): SourceAdapter & { queries: SearchQuery[] } {
   const queries: SearchQuery[] = [];
   return {
     id,
@@ -182,7 +186,10 @@ describe('fetch runner', () => {
     await startFetchRun('manual', { adapters: [a, b] })!.done;
     setSetting('search', { terms: ['vue', 'svelte'], region: 'Aarhus' });
     await startFetchRun('manual', { adapters: [a, b] })!.done;
-    expect(a.queries).toEqual([{ terms: ['react'], region: '' }, { terms: ['vue', 'svelte'], region: 'Aarhus' }]);
+    expect(a.queries).toEqual([
+      { terms: ['react'], region: '' },
+      { terms: ['vue', 'svelte'], region: 'Aarhus' },
+    ]);
     expect(b.queries).toEqual(a.queries);
   });
 
@@ -260,7 +267,10 @@ describe('schedule', () => {
   it('keeps fetching paused after a restart and starts no run at startup', async () => {
     const clock = fakeClock();
     // Every real source is disabled, so a wrong start would make no network request.
-    setSetting('sources.disabled', listAdapters().map((a) => a.id));
+    setSetting(
+      'sources.disabled',
+      listAdapters().map((a) => a.id),
+    );
     await startFetchRun('manual', opts())!.done;
     updateSchedule({ paused: true });
     clock.advance(48 * HOUR);

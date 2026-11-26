@@ -56,9 +56,7 @@ describe('parseJobindexHtml', () => {
 describe('buildJobindexUrl', () => {
   it('puts a known region in the path and searches all of Denmark otherwise', () => {
     expect(buildJobindexUrl('developer', 'Copenhagen')).toBe('https://www.jobindex.dk/jobsoegning/storkoebenhavn?q=developer');
-    expect(buildJobindexUrl('developer', 'Aarhus', 2)).toBe(
-      'https://www.jobindex.dk/jobsoegning/region-midtjylland?q=developer&page=2',
-    );
+    expect(buildJobindexUrl('developer', 'Aarhus', 2)).toBe('https://www.jobindex.dk/jobsoegning/region-midtjylland?q=developer&page=2');
     expect(buildJobindexUrl('data engineer', '')).toBe('https://www.jobindex.dk/jobsoegning?q=data+engineer');
   });
 });
@@ -110,7 +108,9 @@ describe('jobindexAdapter.fetchDescription', () => {
   }
 
   it('reads the address behind the "Se jobbet" button, and only that of the main job', () => {
-    expect(parseJobindexTarget(JOB_PAGE('https://www.jobindex.dk/jobannonce/r1/dev'), 'https://www.jobindex.dk/vis-job/r1')).toBe('https://www.jobindex.dk/jobannonce/r1/dev');
+    expect(parseJobindexTarget(JOB_PAGE('https://www.jobindex.dk/jobannonce/r1/dev'), 'https://www.jobindex.dk/vis-job/r1')).toBe(
+      'https://www.jobindex.dk/jobannonce/r1/dev',
+    );
     expect(parseJobindexTarget(JOB_PAGE('https://x.test/ad?a=1&amp;b=2'), 'https://www.jobindex.dk/vis-job/h1')).toBe('https://x.test/ad?a=1&b=2');
     expect(parseJobindexTarget(JOB_PAGE('javascript:alert(1)'), 'https://www.jobindex.dk/vis-job/h1')).toBeNull();
     expect(parseJobindexTarget('<main>No button</main>', 'https://www.jobindex.dk/vis-job/h1')).toBeNull();
@@ -141,7 +141,10 @@ describe('jobindexAdapter.fetchDescription', () => {
       'https://www.jobindex.dk/vis-job/h1': { body: JOB_PAGE('https://careers.acme.test/jobs/1') },
       'https://careers.acme.test/jobs/1': { body: employer },
     });
-    const text = await jobindexAdapter.fetchDescription!({ externalId: 'h1', url: 'https://www.jobindex.dk/vis-job/h1', title: 'Frontend Developer', company: 'Acme' }, ctx);
+    const text = await jobindexAdapter.fetchDescription!(
+      { externalId: 'h1', url: 'https://www.jobindex.dk/vis-job/h1', title: 'Frontend Developer', company: 'Acme' },
+      ctx,
+    );
     expect(text).toContain('You build our web shop with React.');
   });
 

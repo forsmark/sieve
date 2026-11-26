@@ -31,7 +31,11 @@ export async function extractCvText(file: { name: string; type?: string; bytes: 
 }
 
 export function cleanCvText(text: string): string {
-  const clean = text.replace(/\r\n/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  const clean = text
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
   if (clean.replace(/\s/g, '').length < MIN_TEXT_LENGTH) {
     throw new CvImportError('The document has no readable text. The system needs a text-based document.');
   }

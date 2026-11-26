@@ -96,7 +96,9 @@ describe('OpenAI-compatible client', () => {
 
   it('falls back to JSON mode when the server rejects schema output', async () => {
     respond = (req) =>
-      req.body.response_format.type === 'json_schema' ? { status: 400, json: { error: 'unsupported' } } : { status: 200, content: '{"city":"Odense","score":1}' };
+      req.body.response_format.type === 'json_schema'
+        ? { status: 400, json: { error: 'unsupported' } }
+        : { status: 200, content: '{"city":"Odense","score":1}' };
     const client = createOpenAiClient({ baseUrl, model: 'm' });
     expect(await client.generateObject(Answer, MESSAGES)).toEqual({ city: 'Odense', score: 1 });
     expect(requests.map((r) => r.body.response_format.type)).toEqual(['json_schema', 'json_object']);
@@ -151,7 +153,10 @@ chmodSync(fake, 0o755);
 
 function calls(): Array<{ args: string[]; input: string }> {
   if (!existsSync(logFile)) return [];
-  return readFileSync(logFile, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  return readFileSync(logFile, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => JSON.parse(l));
 }
 
 describe('Claude Code client', () => {
@@ -325,7 +330,10 @@ describe('availability', () => {
     expect(isLaneBlocked('llm')).toBe(true);
     expect(done).toBe(0);
     // The work waits. No attempt is counted against the retry limit.
-    expect(tasksOf('extract').map((t) => [t.state, t.attempts])).toEqual([['pending', 0], ['pending', 0]]);
+    expect(tasksOf('extract').map((t) => [t.state, t.attempts])).toEqual([
+      ['pending', 0],
+      ['pending', 0],
+    ]);
     expect(events.at(-1)).toEqual({ type: 'llm.status', available: false });
 
     // The endpoint responds again. The health probe resumes the queue without user action.

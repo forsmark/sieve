@@ -61,8 +61,7 @@ function toView(r: ApplicationRow & { link_status?: string | null; total_score?:
  */
 export function createApplication(postingId: string): ApplicationView | null {
   const posting = sqlite.prepare('SELECT id, title, company, location, url, description FROM postings WHERE id = ?').get(postingId) as
-    | { id: string; title: string; company: string; location: string | null; url: string; description: string | null }
-    | undefined;
+    { id: string; title: string; company: string; location: string | null; url: string; description: string | null } | undefined;
   if (!posting) return null;
   const facts = sqlite.prepare('SELECT facts_json FROM posting_facts WHERE posting_id = ?').get(postingId) as { facts_json: string } | undefined;
   const snapshot: ApplicationSnapshot = {
@@ -131,9 +130,13 @@ export function updateApplication(postingId: string, patch: ApplicationPatch): A
   }
   const notes = patch.notes !== undefined ? patch.notes : current.notes;
   sqlite.transaction(() => {
-    sqlite.prepare('UPDATE applications SET stage = ?, notes = ?, interview_at = ?, updated_at = ? WHERE posting_id = ?').run(stage, notes, interviewAt, now, postingId);
+    sqlite
+      .prepare('UPDATE applications SET stage = ?, notes = ?, interview_at = ?, updated_at = ? WHERE posting_id = ?')
+      .run(stage, notes, interviewAt, now, postingId);
     if (stage !== current.stage) {
-      sqlite.prepare('INSERT INTO application_events (posting_id, from_stage, to_stage, created_at) VALUES (?, ?, ?, ?)').run(postingId, current.stage, stage, now);
+      sqlite
+        .prepare('INSERT INTO application_events (posting_id, from_stage, to_stage, created_at) VALUES (?, ?, ?, ?)')
+        .run(postingId, current.stage, stage, now);
     }
   })();
   publish({ type: 'application.updated', postingId });

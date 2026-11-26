@@ -35,8 +35,7 @@ function toDto(r: AnalysisRow): MatchAnalysisDto {
   let scoreApplied = false;
   if (scores) {
     const m = sqlite.prepare('SELECT skills_score, experience_score, preference_score FROM matches WHERE posting_id = ?').get(r.posting_id) as
-      | { skills_score: number | null; experience_score: number | null; preference_score: number | null }
-      | undefined;
+      { skills_score: number | null; experience_score: number | null; preference_score: number | null } | undefined;
     scoreApplied = !!m && m.skills_score === scores.skills && m.experience_score === scores.experience && m.preference_score === scores.preferences;
   }
   return {

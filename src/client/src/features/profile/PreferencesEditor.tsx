@@ -19,10 +19,7 @@ const WEIGHT_LABEL: Record<keyof Weights, string> = { skills: 'Skills', experien
 export function PreferencesEditor() {
   const prefs = useQuery({ queryKey: qk.preferences, queryFn: api.preferences });
   return (
-    <Section
-      title="Preferences"
-      description="What you want from a job. A change rescores the postings it affects. You see the cost before you save."
-    >
+    <Section title="Preferences" description="What you want from a job. A change rescores the postings it affects. You see the cost before you save.">
       {prefs.isPending && <LoadingState label="Loading preferences" />}
       {prefs.isError && <ErrorState error={prefs.error} onRetry={() => void prefs.refetch()} />}
       {prefs.data && <PreferencesForm key={JSON.stringify(prefs.data)} initial={prefs.data} />}
@@ -100,9 +97,7 @@ function PreferencesForm({ initial }: { initial: Preferences }) {
                 type="checkbox"
                 className="size-4"
                 checked={draft.workArrangements.includes(a)}
-                onChange={(e) =>
-                  set('workArrangements', e.target.checked ? [...draft.workArrangements, a] : draft.workArrangements.filter((x) => x !== a))
-                }
+                onChange={(e) => set('workArrangements', e.target.checked ? [...draft.workArrangements, a] : draft.workArrangements.filter((x) => x !== a))}
               />
               {a === 'onsite' ? 'On site' : a[0]!.toUpperCase() + a.slice(1)}
             </label>
@@ -111,12 +106,7 @@ function PreferencesForm({ initial }: { initial: Preferences }) {
         <p className="mt-1 text-xs text-muted">None checked means any arrangement.</p>
       </fieldset>
       <Segmented label="Work arrangement rule" value={draft.workArrangementMode} onChange={(v) => set('workArrangementMode', v)} options={MODE_OPTIONS} />
-      <Segmented
-        label="Language rule"
-        value={draft.languageMode}
-        onChange={(v) => set('languageMode', v)}
-        options={MODE_OPTIONS}
-      />
+      <Segmented label="Language rule" value={draft.languageMode} onChange={(v) => set('languageMode', v)} options={MODE_OPTIONS} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label="Seniority">
@@ -176,24 +166,26 @@ function PreferencesForm({ initial }: { initial: Preferences }) {
               <label htmlFor={`w-${k}`} className="text-[13px]">
                 {WEIGHT_LABEL[k]}
               </label>
-              <input
-                id={`w-${k}`}
-                type="range"
+              <input id={`w-${k}`} type="range" min={0} max={100} step={5} value={w[k]} onChange={(e) => setWeight(k, Number(e.target.value))} />
+              <TextInput
+                aria-label={`${WEIGHT_LABEL[k]} weight`}
+                type="number"
                 min={0}
                 max={100}
-                step={5}
                 value={w[k]}
                 onChange={(e) => setWeight(k, Number(e.target.value))}
-               
               />
-              <TextInput aria-label={`${WEIGHT_LABEL[k]} weight`} type="number" min={0} max={100} value={w[k]} onChange={(e) => setWeight(k, Number(e.target.value))} />
               <span className="tabular text-right text-xs text-muted">{weightSum > 0 ? `${Math.round((w[k] / weightSum) * 100)}%` : '–'}</span>
             </div>
           ))}
         </div>
         <p className="tabular mt-2 text-[13px]" aria-live="polite">
           Sum: <strong>{weightSum}</strong>
-          {weightSum === 0 ? <span className="text-danger"> At least one weight must be above 0.</span> : weightSum !== 100 ? <span className="text-muted"> (not 100, which is fine)</span> : null}
+          {weightSum === 0 ? (
+            <span className="text-danger"> At least one weight must be above 0.</span>
+          ) : weightSum !== 100 ? (
+            <span className="text-muted"> (not 100, which is fine)</span>
+          ) : null}
         </p>
       </fieldset>
 

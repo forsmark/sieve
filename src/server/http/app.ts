@@ -20,23 +20,26 @@ import { letterFileName, renderLetterPdf } from '../letters/pdf';
 import { MatchAnalysisError, applyAnalysisScore, deleteMatchAnalysis, requestMatchAnalyses, requestMatchAnalysis } from '../analysis/service';
 import { CoverLetterError, deleteCoverLetter, getCoverLetter, requestCoverLetter, saveCoverLetterText } from '../letters/service';
 import { planRescore, rescorePostings } from '../matching/rescore';
-import {
-  getNotificationSettings, regenerateTopic, saveNotificationSettings, sendTestNotification, subscribeUrl,
-} from '../notifications/service';
+import { getNotificationSettings, regenerateTopic, saveNotificationSettings, sendTestNotification, subscribeUrl } from '../notifications/service';
 import { CvImportError, cleanCvText, extractCvText } from '../profile/cv-import';
-import {
-  discardEdits, getPreferences, getProfile, importCv, parsePreferences, requestDerive, saveProfileEdits, savePreferences,
-} from '../profile/service';
+import { discardEdits, getPreferences, getProfile, importCv, parsePreferences, requestDerive, saveProfileEdits, savePreferences } from '../profile/service';
 import { listAdapters } from '../sources/registry';
 import { getActiveRunId, lastCompletedRunAt, listRuns, startFetchRun } from '../sources/runner';
 import { getSchedule, updateSchedule } from '../sources/schedule';
 import { ApplicationStage, StructuredProfile, TriageStatus } from '../../shared/schemas';
 import type {
-  ActivityDto, FailedTaskDto, LlmSettingsDto, LogDto, NotificationLogDto, NotificationSettingsDto, ProfileDto, RunDto, SourceDto, StatusDto,
+  ActivityDto,
+  FailedTaskDto,
+  LlmSettingsDto,
+  LogDto,
+  NotificationLogDto,
+  NotificationSettingsDto,
+  ProfileDto,
+  RunDto,
+  SourceDto,
+  StatusDto,
 } from '../../shared/api';
-import {
-  SESSION_COOKIE, allowLoginAttempt, authRequired, checkPassword, clearLoginAttempts, createSession, deleteSession, isValidSession,
-} from './auth';
+import { SESSION_COOKIE, allowLoginAttempt, authRequired, checkPassword, clearLoginAttempts, createSession, deleteSession, isValidSession } from './auth';
 import { backupPath, createBackup, listBackups } from './backup';
 import { gatewayUserCheck } from './edge';
 import { applyTriage, getCounts, getPostingDetail, listPostings, markRead, setTriage } from './postings';
@@ -112,13 +115,31 @@ function activityDto(): ActivityDto {
         `SELECT t.id, t.kind, t.subject_id, t.attempts, t.last_error, t.finished_at, p.title FROM tasks t
          LEFT JOIN postings p ON p.id = t.subject_id WHERE t.state = 'failed' ORDER BY t.finished_at DESC LIMIT 100`,
       )
-      .all() as Array<{ id: number; kind: string; subject_id: string; attempts: number; last_error: string | null; finished_at: string | null; title: string | null }>
+      .all() as Array<{
+      id: number;
+      kind: string;
+      subject_id: string;
+      attempts: number;
+      last_error: string | null;
+      finished_at: string | null;
+      title: string | null;
+    }>
   ).map((t): FailedTaskDto => ({
-    id: t.id, kind: t.kind, subjectId: t.subject_id, subjectTitle: t.title, attempts: t.attempts, lastError: t.last_error, finishedAt: t.finished_at,
+    id: t.id,
+    kind: t.kind,
+    subjectId: t.subject_id,
+    subjectTitle: t.title,
+    attempts: t.attempts,
+    lastError: t.last_error,
+    finishedAt: t.finished_at,
   }));
   const notifications = (
     sqlite.prepare('SELECT id, posting_ids, state, error, created_at FROM notifications ORDER BY id DESC LIMIT 30').all() as Array<{
-      id: number; posting_ids: string; state: 'sent' | 'failed'; error: string | null; created_at: string;
+      id: number;
+      posting_ids: string;
+      state: 'sent' | 'failed';
+      error: string | null;
+      created_at: string;
     }>
   ).map((n): NotificationLogDto => {
     let count = 0;
@@ -143,9 +164,16 @@ const llmSchema = z.object({
 });
 
 const MIME: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json', '.woff2': 'font/woff2',
-  '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.json': 'application/json',
+  '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 function clientKey(c: Context): string {
@@ -207,7 +235,11 @@ export function createApp(opts: AppOptions = {}): Hono {
     clearLoginAttempts(key);
     const session = createSession();
     setCookie(c, SESSION_COOKIE, session.token, {
-      httpOnly: true, sameSite: 'Lax', path: '/', maxAge: session.maxAgeSeconds, secure: new URL(c.req.url).protocol === 'https:',
+      httpOnly: true,
+      sameSite: 'Lax',
+      path: '/',
+      maxAge: session.maxAgeSeconds,
+      secure: new URL(c.req.url).protocol === 'https:',
     });
     return c.json({ ok: true });
   });
@@ -301,9 +333,7 @@ export function createApp(opts: AppOptions = {}): Hono {
 
   app.patch('/api/postings/:id', async (c) => {
     const id = c.req.param('id');
-    const body = z
-      .object({ action: z.enum(['save', 'dismiss', 'restore', 'apply']).optional(), read: z.boolean().optional() })
-      .parse(await c.req.json());
+    const body = z.object({ action: z.enum(['save', 'dismiss', 'restore', 'apply']).optional(), read: z.boolean().optional() }).parse(await c.req.json());
     if (!getPostingDetail(id)) return c.json({ error: 'Posting not found.' }, 404);
     if (body.read !== undefined) markRead([id], body.read);
     const result = body.action ? applyTriage([id], body.action) : { previous: [] };
@@ -540,9 +570,7 @@ export function createApp(opts: AppOptions = {}): Hono {
     }
   });
 
-  app.delete('/api/applications/:id', (c) =>
-    removeApplication(c.req.param('id')) ? c.json({ ok: true }) : c.json({ error: 'Application not found.' }, 404),
-  );
+  app.delete('/api/applications/:id', (c) => (removeApplication(c.req.param('id')) ? c.json({ ok: true }) : c.json({ error: 'Application not found.' }, 404)));
 
   // ---- Activity, logs, backups
 

@@ -7,9 +7,15 @@ import { resetToastsForTests } from '../../lib/toast';
 
 function app(id: string, stage: ApplicationDto['stage']): ApplicationDto {
   return {
-    postingId: id, stage, notes: null, interviewAt: null, appliedAt: '2026-11-01T10:00:00Z', updatedAt: '2026-11-01T10:00:00Z',
+    postingId: id,
+    stage,
+    notes: null,
+    interviewAt: null,
+    appliedAt: '2026-11-01T10:00:00Z',
+    updatedAt: '2026-11-01T10:00:00Z',
     snapshot: { title: `Role ${id}`, company: 'Acme', location: null, url: 'https://x', description: 'Stored text.', facts: null },
-    linkStatus: 'active', totalScore: 80,
+    linkStatus: 'active',
+    totalScore: 80,
   };
 }
 

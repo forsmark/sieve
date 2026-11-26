@@ -37,10 +37,7 @@ export function JobsPage() {
   const navigate = useNavigate({ from: '/jobs' });
   const qc = useQueryClient();
 
-  const update = useCallback(
-    (patch: Partial<JobSearch>, replace = false) => void navigate({ search: (prev) => ({ ...prev, ...patch }), replace }),
-    [navigate],
-  );
+  const update = useCallback((patch: Partial<JobSearch>, replace = false) => void navigate({ search: (prev) => ({ ...prev, ...patch }), replace }), [navigate]);
 
   const query = toPostingQuery(search);
   const list = useInfiniteQuery({
@@ -50,7 +47,12 @@ export function JobsPage() {
     // `nextOffset` says whether more exist. Rows that triage removed locally also left the server's result,
     // so the next offset is the number of loaded rows; this avoids skipping postings.
     getNextPageParam: (last, pages) =>
-      last.nextOffset === null ? undefined : Math.min(last.nextOffset, pages.reduce((n, p) => n + p.items.length, 0)),
+      last.nextOffset === null
+        ? undefined
+        : Math.min(
+            last.nextOffset,
+            pages.reduce((n, p) => n + p.items.length, 0),
+          ),
   });
 
   const items = useMemo(() => {
@@ -230,7 +232,12 @@ export function JobsPage() {
       if (leaves && mounted.current && search.id && ids.includes(search.id)) {
         // Follow with the next posting, so triage in the detail view keeps going.
         const idx = items.findIndex((i) => i.id === search.id);
-        const after = items.slice(idx + 1).find((i) => !ids.includes(i.id)) ?? items.slice(0, Math.max(0, idx)).reverse().find((i) => !ids.includes(i.id));
+        const after =
+          items.slice(idx + 1).find((i) => !ids.includes(i.id)) ??
+          items
+            .slice(0, Math.max(0, idx))
+            .reverse()
+            .find((i) => !ids.includes(i.id));
         openPosting(after?.id, true);
       }
       if (listHasFocus()) focusRowSoon.current = true;
@@ -257,10 +264,7 @@ export function JobsPage() {
     else triageRef.current([item.id], action, item.title, { keepSelection: true });
   }, []);
   const statusKey = statuses.join(',');
-  const swipeLeaves = useCallback(
-    (action: SwipeAction) => action !== 'remove-application' && !statusKey.split(',').includes(STATUS_OF[action]),
-    [statusKey],
-  );
+  const swipeLeaves = useCallback((action: SwipeAction) => action !== 'remove-application' && !statusKey.split(',').includes(STATUS_OF[action]), [statusKey]);
 
   const bulkOther = useMutation({
     mutationFn: ({ ids, action }: { ids: string[]; action: Exclude<BulkAction, TriageAction> }) => api.bulk(ids, action),
@@ -440,9 +444,7 @@ export function JobsPage() {
               onChange={() => setSelection(allLoadedSelected ? new Set() : new Set(items.map((i) => i.id)))}
               disabled={items.length === 0}
             />
-            <span className={selection.size ? 'font-medium' : 'text-muted'}>
-              {selection.size ? `${selection.size} selected` : 'Select all loaded'}
-            </span>
+            <span className={selection.size ? 'font-medium' : 'text-muted'}>{selection.size ? `${selection.size} selected` : 'Select all loaded'}</span>
           </label>
           {selection.size > 0 ? (
             <div role="toolbar" aria-label="Bulk actions" className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
@@ -498,8 +500,10 @@ export function JobsPage() {
           {list.isPending && <LoadingState label="Loading postings" />}
           {list.isError && <ErrorState error={list.error} onRetry={() => void list.refetch()} title="The postings could not be loaded." />}
           {/* The status decides between the two empty states, so they wait for it. */}
-          {list.isSuccess && items.length === 0 && !status.isPending && (
-            hasActiveFilters(search) ? (
+          {list.isSuccess &&
+            items.length === 0 &&
+            !status.isPending &&
+            (hasActiveFilters(search) ? (
               <EmptyState
                 title="No postings match these filters."
                 action={
@@ -519,14 +523,14 @@ export function JobsPage() {
                   </Button>
                 }
               >
-                {hidden} {canFetch ? 'New ones appear here after the next fetch.' : 'Add a CV and search terms, then fetch jobs with the button in the status bar.'}
+                {hidden}{' '}
+                {canFetch ? 'New ones appear here after the next fetch.' : 'Add a CV and search terms, then fetch jobs with the button in the status bar.'}
               </EmptyState>
             ) : (
               <EmptyState title="No postings yet.">
                 Add a CV and search terms, then fetch jobs with the button in the status bar. New postings appear here as they arrive.
               </EmptyState>
-            )
-          )}
+            ))}
           {items.length > 0 && (
             <div ref={gridRef} className="card-grid" style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
               {virtualItems.map((v) => {
@@ -559,7 +563,9 @@ export function JobsPage() {
                       />
                     ) : (
                       <div role="listitem" className="flex h-full items-center justify-center text-[13px] text-muted">
-                        {list.isFetchingNextPage ? <Spinner small label="Loading more" /> : list.isFetchNextPageError ? (
+                        {list.isFetchingNextPage ? (
+                          <Spinner small label="Loading more" />
+                        ) : list.isFetchNextPageError ? (
                           <Button size="sm" onClick={() => void list.fetchNextPage()}>
                             Loading failed. Try again
                           </Button>

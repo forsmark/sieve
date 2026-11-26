@@ -58,9 +58,15 @@ async function seed() {
     sqlite.prepare(`INSERT INTO cover_letters (posting_id, state, text, updated_at) VALUES (?, 'ready', 'Dear team', ?)`).run(id, now);
     sqlite.prepare(`INSERT INTO match_analyses (posting_id, state, content_json, updated_at) VALUES (?, 'ready', '{}', ?)`).run(id, now);
   }
-  sqlite.prepare(`INSERT INTO tasks (kind, subject_id, state, run_after, created_at) VALUES ('liveness', ?, 'pending', ?, ?)`).run(fresh, '2999-01-01T00:00:00.000Z', now);
-  sqlite.prepare(`INSERT INTO tasks (kind, subject_id, state, last_error, run_after, created_at) VALUES ('judge', ?, 'failed', 'boom', ?, ?)`).run(dismissed, now, now);
-  sqlite.prepare(`INSERT INTO tasks (kind, subject_id, state, run_after, created_at) VALUES ('liveness', ?, 'pending', ?, ?)`).run(applied, '2999-01-01T00:00:00.000Z', now);
+  sqlite
+    .prepare(`INSERT INTO tasks (kind, subject_id, state, run_after, created_at) VALUES ('liveness', ?, 'pending', ?, ?)`)
+    .run(fresh, '2999-01-01T00:00:00.000Z', now);
+  sqlite
+    .prepare(`INSERT INTO tasks (kind, subject_id, state, last_error, run_after, created_at) VALUES ('judge', ?, 'failed', 'boom', ?, ?)`)
+    .run(dismissed, now, now);
+  sqlite
+    .prepare(`INSERT INTO tasks (kind, subject_id, state, run_after, created_at) VALUES ('liveness', ?, 'pending', ?, ?)`)
+    .run(applied, '2999-01-01T00:00:00.000Z', now);
   return { fresh, saved, dismissed, applied };
 }
 
@@ -74,7 +80,10 @@ function slowSource() {
   let release!: () => void;
   const gate = new Promise<void>((r) => (release = r));
   const adapter: SourceAdapter = {
-    id: 'slow', name: 'Slow', supports: { keywords: false, region: false }, rate: { minDelayMs: 0, maxConcurrent: 1 },
+    id: 'slow',
+    name: 'Slow',
+    supports: { keywords: false, region: false },
+    rate: { minDelayMs: 0, maxConcurrent: 1 },
     async *search() {
       await gate;
     },
@@ -165,7 +174,10 @@ describe('clear postings', () => {
     const error = await clearNow().catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(ClearError);
-    expect(error).toMatchObject({ status: 500, message: 'The backup could not be made, so no posting was deleted. The cause is in the Log on the Activity page.' });
+    expect(error).toMatchObject({
+      status: 500,
+      message: 'The backup could not be made, so no posting was deleted. The cause is in the Log on the Activity page.',
+    });
     expect(postingIds()).toEqual(before);
   });
 
@@ -298,7 +310,10 @@ describe('clear postings', () => {
     await clearNow();
     const extractsBefore = stub.calls.extract;
 
-    const again = ingestPosting('remotive', raw({ externalId: 'dismissed-1', title: 'Developer dismissed-1', company: 'Company dismissed-1', url: 'https://jobs.test/dismissed-1' }));
+    const again = ingestPosting(
+      'remotive',
+      raw({ externalId: 'dismissed-1', title: 'Developer dismissed-1', company: 'Company dismissed-1', url: 'https://jobs.test/dismissed-1' }),
+    );
     await whenIdle();
 
     expect(again.status).toBe('new');

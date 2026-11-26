@@ -116,9 +116,7 @@ export function detailToListItem(d: PostingDetail): PostingListItem {
     duplicateOf: d.duplicateOf,
     workArrangement: d.workArrangement,
     tags: d.tags,
-    match: d.match
-      ? { state: d.match.state, totalScore: d.match.totalScore, stale: d.match.stale, excludedReason: d.match.excludedReason }
-      : null,
+    match: d.match ? { state: d.match.state, totalScore: d.match.totalScore, stale: d.match.stale, excludedReason: d.match.excludedReason } : null,
     analysis: d.matchAnalysis ? { state: d.matchAnalysis.state, verdict: d.matchAnalysis.content?.verdict ?? null } : null,
   };
 }
@@ -188,9 +186,7 @@ export function moveToRank(qc: QueryClient, id: string): void {
 }
 
 export function isInCachedLists(qc: QueryClient, id: string): boolean {
-  return qc
-    .getQueriesData<ListData>({ queryKey: qk.postingsAll })
-    .some(([, data]) => data?.pages.some((p) => p.items.some((i) => i.id === id)) ?? false);
+  return qc.getQueriesData<ListData>({ queryKey: qk.postingsAll }).some(([, data]) => data?.pages.some((p) => p.items.some((i) => i.id === id)) ?? false);
 }
 
 /** Collects posting ids for a short window, then refreshes each cached row from the detail route. */

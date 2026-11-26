@@ -4,17 +4,7 @@ import { publish } from './events';
 import { errorMessage, log } from './logger';
 import { getSetting } from './settings';
 
-export type TaskKind =
-  | 'enrich'
-  | 'extract'
-  | 'constraints'
-  | 'judge'
-  | 'score'
-  | 'liveness'
-  | 'derive_profile'
-  | 'cover_letter'
-  | 'match_analysis'
-  | 'notify';
+export type TaskKind = 'enrich' | 'extract' | 'constraints' | 'judge' | 'score' | 'liveness' | 'derive_profile' | 'cover_letter' | 'match_analysis' | 'notify';
 
 export type Lane = 'network' | 'llm' | 'code' | 'writing';
 
@@ -162,7 +152,9 @@ async function execute(row: TaskRow, lane: Lane): Promise<void> {
       sqlite.prepare(`UPDATE tasks SET state = 'pending', locked_at = NULL, last_error = ? WHERE id = ?`).run(err.message, row.id);
       setLaneBlocked(lane, true);
     } else if (attempt >= MAX_ATTEMPTS) {
-      sqlite.prepare(`UPDATE tasks SET state = 'failed', attempts = ?, finished_at = ?, last_error = ? WHERE id = ?`).run(attempt, nowIso(), errorMessage(err), row.id);
+      sqlite
+        .prepare(`UPDATE tasks SET state = 'failed', attempts = ?, finished_at = ?, last_error = ? WHERE id = ?`)
+        .run(attempt, nowIso(), errorMessage(err), row.id);
       log('error', `task ${row.kind} ${row.subject_id} failed after ${attempt} attempts: ${errorMessage(err)}`);
     } else {
       const delay = BACKOFF_BASE_MS * 2 ** (attempt - 1);
@@ -241,9 +233,10 @@ export function retryTask(id: number): boolean {
 }
 
 export function queueCounts(): Record<string, number> {
-  const rows = sqlite
-    .prepare(`SELECT kind, COUNT(*) AS n FROM tasks WHERE state IN ('pending', 'running') GROUP BY kind`)
-    .all() as Array<{ kind: string; n: number }>;
+  const rows = sqlite.prepare(`SELECT kind, COUNT(*) AS n FROM tasks WHERE state IN ('pending', 'running') GROUP BY kind`).all() as Array<{
+    kind: string;
+    n: number;
+  }>;
   const out: Record<string, number> = {};
   for (const r of rows) out[r.kind] = r.n;
   return out;

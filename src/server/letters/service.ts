@@ -122,7 +122,9 @@ export function registerCoverLetterHandler(): void {
     const row = sqlite.prepare('SELECT * FROM cover_letters WHERE posting_id = ?').get(postingId) as LetterRow | undefined;
     if (!row || row.state !== 'pending') return;
     const fail = (message: string) => {
-      sqlite.prepare(`UPDATE cover_letters SET state = ?, error = ?, updated_at = ? WHERE posting_id = ?`).run(row.text ? 'ready' : 'failed', message, nowIso(), postingId);
+      sqlite
+        .prepare(`UPDATE cover_letters SET state = ?, error = ?, updated_at = ? WHERE posting_id = ?`)
+        .run(row.text ? 'ready' : 'failed', message, nowIso(), postingId);
       publish({ type: 'posting.updated', postingId });
     };
     const src = sqlite

@@ -5,8 +5,14 @@ import { createServer } from 'node:http';
 
 const answers = {
   posting_facts: {
-    requiredSkills: ['TypeScript'], optionalSkills: [], seniority: null, workArrangement: 'remote',
-    location: { city: null, country: null }, requiredLanguages: [], salary: null, summary: 'Stub facts.',
+    requiredSkills: ['TypeScript'],
+    optionalSkills: [],
+    seniority: null,
+    workArrangement: 'remote',
+    location: { city: null, country: null },
+    requiredLanguages: [],
+    salary: null,
+    summary: 'Stub facts.',
   },
   judgment: { skillsFit: 70, experienceFit: 60, preferenceFit: 50, matchedSkills: ['TypeScript'], missingSkills: [], assessment: 'Stub assessment for you.' },
 };
