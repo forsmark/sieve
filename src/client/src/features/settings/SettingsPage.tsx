@@ -241,7 +241,7 @@ function ScheduleForm({ initial }: { initial: ScheduleDto }) {
   return (
     <div className="flex flex-col gap-4">
       {/* The switch is on while the schedule runs. The stored setting stays `paused`, its opposite. */}
-      <Switch label="Fetch on a schedule" checked={!initial.paused} onChange={(on) => save.mutate({ paused: !on })} description="Manual fetch still works." />
+      <Switch label="Fetch on a schedule" checked={!initial.paused} onChange={(on) => save.mutate({ paused: !on })} description="Fetch now still works." />
       <div className="flex flex-wrap items-end gap-2">
         <Field label="Fetch every" hint="Hours, from 1 to 168." className="w-32">
           {(id) => (
@@ -684,7 +684,7 @@ function PostingsSection() {
 function AccountSection() {
   const logout = useLogout();
   return (
-    <Section id="account" title="Account" description="Log out ends the session on this device.">
+    <Section id="account" title="Account" description="Other devices stay signed in.">
       <Button onClick={() => logout.mutate()} busy={logout.isPending}>
         Log out
       </Button>

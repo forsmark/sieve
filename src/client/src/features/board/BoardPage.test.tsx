@@ -337,6 +337,7 @@ describe('application board', () => {
     await user.tab();
     const error = await screen.findByRole('alert');
     expect(error).toHaveTextContent('The notes were not saved.');
+    expect(error).toHaveTextContent('Your text is kept, and leaving the field tries again.');
     expect(error).toHaveTextContent('Disk full.');
     expect(within(panel).queryByText('Saved')).not.toBeInTheDocument();
 

@@ -206,7 +206,7 @@ describe('cover letter', () => {
   it('keeps the earlier text when a later generation failed', async () => {
     setup(letter({ error: 'The model is not available.' }));
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('The last generation failed. The earlier letter is kept.');
+    expect(alert).toHaveTextContent('The new letter could not be written. The earlier letter is kept.');
     expect(alert).toHaveTextContent('The model is not available.');
     expect(screen.getByLabelText('Cover letter text')).toHaveValue(TEXT);
   });

@@ -31,6 +31,12 @@ const FAILED: Record<StoredField, string> = {
   interviewAt: 'The interview date was not saved.',
 };
 
+/** What the user can do after a failed store. Leaving the notes field stores the kept text again. */
+const NEXT: Record<StoredField, string> = {
+  notes: 'Your text is kept, and leaving the field tries again.',
+  interviewAt: 'Set the date again.',
+};
+
 /**
  * Stores one field of an application without a save step. The variable is the new value, null to clear it.
  *
@@ -56,7 +62,7 @@ export function useStoreApplicationField(postingId: string, field: StoredField) 
       if (field === 'notes' && drafts.get(postingId) === (value ?? '')) drafts.delete(postingId);
     },
     onError: (err) => {
-      toastError(`${FAILED[field]} ${errorText(err)}`);
+      toastError(`${FAILED[field]} ${errorText(err)} ${NEXT[field]}`);
     },
   });
 }

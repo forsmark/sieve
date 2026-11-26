@@ -11,7 +11,7 @@ export const SHORTCUTS: Array<[string, string]> = [
   ['r', 'Restore to new'],
   ['a', 'Mark as applied'],
   ['o', 'Open the source link in a new tab'],
-  ['u', 'Undo the last action'],
+  ['u', 'Undo the last triage action'],
   ['x', 'Select or unselect the posting'],
   ['/', 'Search'],
   ['?', 'Show or hide this help'],

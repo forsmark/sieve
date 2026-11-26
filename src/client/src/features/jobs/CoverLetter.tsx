@@ -103,7 +103,7 @@ export function CoverLetter({ postingId, letter }: { postingId: string; letter: 
       {!pending && letter?.error && (
         <div role="alert" className="border border-danger bg-danger-soft px-3 py-2 text-[13px]">
           <p className="font-medium text-danger">
-            {hasText ? 'The last generation failed. The earlier letter is kept.' : 'The letter could not be written. Try again.'}
+            {hasText ? 'The new letter could not be written. The earlier letter is kept.' : 'The letter could not be written. Try again.'}
           </p>
           <p className="mt-1 text-xs break-words text-muted">{letter.error}</p>
         </div>

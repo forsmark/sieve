@@ -509,7 +509,7 @@ describe('jobs view', () => {
     expect(keyOf('Dismiss')).toBe('d');
     expect(keyOf('Mark as applied')).toBe('a');
     expect(keyOf('Restore to new')).toBe('r');
-    expect(keyOf('Undo the last action')).toBe('u');
+    expect(keyOf('Undo the last triage action')).toBe('u');
   });
 
   it('shows an arriving score in the row, moves the row to its rank, and keeps the cursor on its posting', async () => {
