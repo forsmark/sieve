@@ -81,13 +81,18 @@ export function useTriage() {
     },
     onSuccess: (result, { ids, action, label }) => {
       const what = ids.length === 1 && label ? `“${label}”` : plural(ids.length, 'posting');
-      showUndoToast(`${PAST[action]} ${what}.`, async () => {
-        try {
-          await api.restore(result.previous);
-          showUndoDone(qc);
-        } catch (err) {
-          toastError(`Undo failed. ${errorText(err)}`);
-        }
+      showUndoToast({
+        kind: 'triage',
+        message: `${PAST[action]} ${what}.`,
+        undo: async () => {
+          try {
+            await api.restore(result.previous);
+            showUndoDone(qc);
+          } catch (err) {
+            toastError(`Undo failed. ${errorText(err)}`);
+            throw err;
+          }
+        },
       });
     },
     onSettled: (_r, _e, { action, ids }) => {
