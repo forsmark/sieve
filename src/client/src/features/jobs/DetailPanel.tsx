@@ -388,7 +388,7 @@ function Detail({
                   href={s.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-semibold underline decoration-accent decoration-2 hover:decoration-fg"
+                  className="font-semibold underline decoration-accent decoration-2 hover:decoration-fg touch:inline-block touch:min-w-11 touch:py-3"
                 >
                   {sourceName(s.source)}
                   <span className="sr-only"> (opens in a new tab)</span>

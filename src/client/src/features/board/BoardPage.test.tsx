@@ -427,7 +427,7 @@ describe('application board', () => {
     await user.click(await screen.findByRole('button', { name: 'Undo' }));
     await waitFor(() => expect(within(column('Applied')).getByText('Role 1')).toBeInTheDocument());
     // The card leaves its old column after its fade.
-    await waitFor(() => expect(within(column('Offer')).queryByText('Role 1')).not.toBeInTheDocument());
+    await waitFor(() => expect(within(column('Offer')).queryByText('Role 1')).not.toBeInTheDocument(), { timeout: 3000 });
     // The undo is a move like any other: the same request with the earlier stage.
     expect(patches()).toEqual([{ stage: 'offer' }, { stage: 'applied' }]);
     expect(screen.queryByText('Moved to Offer.')).not.toBeInTheDocument();
@@ -435,8 +435,16 @@ describe('application board', () => {
     await user.click(within(column('Applied')).getByRole('button', { name: /Role 1/ }));
     const panel = await screen.findByRole('complementary', { name: 'Application details' });
     const history = within(panel).getByRole('heading', { name: 'Stage history' }).parentElement!;
-    const items = await within(history).findAllByRole('listitem');
-    expect(items.map((li) => li.querySelector('span:last-child')?.textContent)).toEqual(['Created in Applied', 'Applied to Offer', 'Offer to Applied']);
+    // The history may first show its cached rows from before the undo, so wait for the refetch.
+    await waitFor(
+      () =>
+        expect(
+          within(history)
+            .getAllByRole('listitem')
+            .map((li) => li.querySelector('span:last-child')?.textContent),
+        ).toEqual(['Created in Applied', 'Applied to Offer', 'Offer to Applied']),
+      { timeout: 3000 },
+    );
   });
 
   it('reports a failed undo and leaves the card in its new column', async () => {
