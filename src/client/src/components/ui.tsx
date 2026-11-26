@@ -18,6 +18,10 @@ export function cx(...parts: Array<string | false | null | undefined>): string {
   return twMerge(parts.filter(Boolean).join(' '));
 }
 
+// ---- Touch sizes
+// On a touch screen (`touch:`, a coarse pointer) every control has a hit area of at least 44 by 44px,
+// and form controls use 16px text, so Safari on iOS does not zoom on focus. With a mouse the sizes stay.
+
 // ---- Buttons
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -40,6 +44,7 @@ export function Button({
       className={cx(
         'inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45',
         size === 'sm' ? 'h-7 px-2.5 text-[13px]' : 'h-9 px-4 text-sm',
+        'touch:h-11 touch:min-w-11',
         variant === 'primary' && 'border-accent bg-accent text-on-accent hover:bg-accent-strong',
         variant === 'secondary' && 'border-line-strong bg-transparent text-fg hover:border-fg hover:bg-surface-2',
         variant === 'ghost' && 'border-transparent bg-transparent text-fg hover:bg-surface-2',
@@ -104,10 +109,10 @@ export function ConfirmButton({
 // ---- Form controls
 
 const inputClass =
-  'w-full border border-line-strong bg-transparent px-2.5 py-1.5 text-sm text-fg placeholder:text-faint hover:border-fg focus-visible:border-accent disabled:opacity-60';
+  'w-full border border-line-strong bg-transparent px-2.5 py-1.5 text-sm text-fg placeholder:text-faint hover:border-fg focus-visible:border-accent disabled:opacity-60 touch:text-base';
 
 export function TextInput(props: InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement> }) {
-  return <input {...props} className={cx(inputClass, 'h-9', props.className)} />;
+  return <input {...props} className={cx(inputClass, 'h-9 touch:h-11', props.className)} />;
 }
 
 export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -115,7 +120,7 @@ export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
 }
 
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={cx(inputClass, 'h-9 bg-surface pr-7', props.className)} />;
+  return <select {...props} className={cx(inputClass, 'h-9 bg-surface pr-7 touch:h-11', props.className)} />;
 }
 
 /** Label above a control. The child receives the generated id. */
@@ -157,6 +162,8 @@ export function Switch({
         onClick={() => onChange(!checked)}
         className={cx(
           'relative mt-0.5 inline-flex h-5 w-9 shrink-0 items-center border transition-colors disabled:opacity-50',
+          // The track keeps its size. On a touch screen an invisible area of 44 by 44px around it takes the tap.
+          'touch:after:absolute touch:after:-inset-x-1 touch:after:-inset-y-3',
           checked ? 'border-accent bg-accent' : 'border-line-strong bg-transparent',
         )}
       >
@@ -173,6 +180,21 @@ export function Switch({
         {description && <p className="text-xs text-muted">{description}</p>}
       </div>
     </div>
+  );
+}
+
+/** A filter chip: a label with a checkbox. On, it is a yellow fill with ink text. 28px high, 44px on a touch screen. */
+export function Chip({ checked, onChange, children }: { checked: boolean; onChange: (checked: boolean) => void; children: ReactNode }) {
+  return (
+    <label
+      className={cx(
+        'flex h-7 cursor-pointer items-center gap-1.5 border px-2 text-[13px] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent touch:h-11 touch:px-3',
+        checked ? 'border-accent bg-accent font-semibold text-on-accent' : 'border-line-strong text-muted hover:border-fg hover:text-fg',
+      )}
+    >
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      {children}
+    </label>
   );
 }
 
@@ -197,7 +219,7 @@ export function Segmented<T extends string>({
           <label
             key={o.value}
             className={cx(
-              'relative cursor-pointer border-r border-line-strong px-3 py-1.5 text-[13px] last:border-r-0 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent',
+              'relative cursor-pointer border-r border-line-strong px-3 py-1.5 text-[13px] last:border-r-0 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent touch:inline-flex touch:min-h-11 touch:items-center',
               value === o.value ? 'bg-accent font-semibold text-on-accent' : 'text-muted hover:bg-surface-2 hover:text-fg',
             )}
           >

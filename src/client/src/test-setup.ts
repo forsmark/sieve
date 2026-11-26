@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
-import { afterEach, vi } from 'vitest';
+import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { resetMedia } from './test/media';
 
 afterEach(() => {
   cleanup();
@@ -18,20 +19,25 @@ if (!('ResizeObserver' in globalThis)) {
     unobserve() {}
     disconnect() {}
   }
-  vi.stubGlobal('ResizeObserver', ResizeObserverStub);
+  // Set directly, not with vi.stubGlobal, so a test's vi.unstubAllGlobals() keeps it.
+  globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
 }
 
+// jsdom has no matchMedia. This default answers false to every query. It is set directly, not with
+// vi.stubGlobal, so a test's vi.unstubAllGlobals() keeps it. Use mockMedia from test/media.ts to answer as a device.
 if (!window.matchMedia) {
-  vi.stubGlobal('matchMedia', (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => false,
-  }));
+  window.matchMedia = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList;
 }
+afterEach(() => resetMedia());
 
 if (!Element.prototype.scrollTo) Element.prototype.scrollTo = () => {};
