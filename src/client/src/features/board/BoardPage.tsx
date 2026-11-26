@@ -8,6 +8,7 @@ import { api } from '../../api/endpoints';
 import { qk } from '../../api/keys';
 import { Badge, EmptyState, ErrorState, LoadingState, Select, cx } from '../../components/ui';
 import { dateOnly, dateTime } from '../../lib/format';
+import { useDocumentTitle } from '../../lib/useDocumentTitle';
 import { ApplicationPanel } from './ApplicationPanel';
 import { STAGE_LABEL, useMoveApplication } from './stages';
 
@@ -16,6 +17,7 @@ export function BoardPage() {
   const navigate = useNavigate({ from: '/board' });
   const apps = useQuery({ queryKey: qk.applications, queryFn: api.applications });
   const move = useMoveApplication();
+  useDocumentTitle('Board');
   const [dragOver, setDragOver] = useState<ApplicationStage | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
 
@@ -43,8 +45,9 @@ export function BoardPage() {
     <div className="flex h-full">
       <div className="flex min-w-0 flex-1 flex-col overflow-y-auto p-3 sm:p-6">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
-          <h1 className="text-4xl font-bold tracking-tight">Applications</h1>
-          <p className="max-w-[60ch] text-xs text-muted">
+          <h1 className="text-4xl font-bold tracking-tight">Board</h1>
+          {/* Drag and the arrow keys need a mouse and a keyboard. On a touch screen the stage menu of each card does the job. */}
+          <p className="max-w-[60ch] text-xs text-muted touch:hidden">
             Drag a card to another column, use the stage menu on a card, or press Shift with the left or right arrow on a focused card.
           </p>
         </div>
@@ -140,7 +143,11 @@ export function BoardPage() {
           ) : (
             <div className="p-4">
               <p>This application does not exist.</p>
-              <button type="button" className="mt-2 font-semibold underline decoration-accent decoration-2" onClick={() => open(undefined)}>
+              <button
+                type="button"
+                className="mt-2 font-semibold underline decoration-accent decoration-2 touch:min-h-11 touch:min-w-11"
+                onClick={() => open(undefined)}
+              >
                 Close
               </button>
             </div>
@@ -184,7 +191,13 @@ function Card({
         'cursor-grab active:cursor-grabbing',
       )}
     >
-      <button type="button" onClick={onOpen} onKeyDown={onKeyDown} aria-keyshortcuts="Shift+ArrowLeft Shift+ArrowRight" className="block w-full text-left">
+      <button
+        type="button"
+        onClick={onOpen}
+        onKeyDown={onKeyDown}
+        aria-keyshortcuts="Shift+ArrowLeft Shift+ArrowRight"
+        className="block w-full text-left touch:min-h-11"
+      >
         <span className="line-clamp-2 text-[15px] leading-snug font-bold">{app.snapshot.title}</span>
         <span className="mt-0.5 block truncate text-[13px] text-muted">{app.snapshot.company}</span>
       </button>
@@ -204,6 +217,7 @@ function Card({
         </p>
       )}
       <label className="mt-2 block text-xs">
+        {/* 28px with a mouse. The Select's own touch:h-11 and 16px text stay, because cx merges by variant. */}
         <Select
           className="h-7 w-full py-0 text-xs"
           value={app.stage}
