@@ -116,8 +116,12 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
           <p className="text-muted">{[s.company, s.location].filter(Boolean).join(' · ')}</p>
           <p className="mt-1 text-xs text-muted">
             Applied {dateOnly(app.appliedAt)} · updated {dateTime(app.updatedAt)} ·{' '}
-            {/* On a touch screen the padding gives the link a 44px area without moving the line. */}
-            <Link to="/jobs" search={{ id: app.postingId, status: 'all' }} className="font-semibold underline decoration-accent decoration-2 touch:py-3">
+            {/* On a touch screen an invisible area of at least 44px around the link takes the tap, without moving the line. */}
+            <Link
+              to="/jobs"
+              search={{ id: app.postingId, status: 'all' }}
+              className="relative font-semibold underline decoration-accent decoration-2 touch:after:absolute touch:after:-inset-x-2 touch:after:-inset-y-4"
+            >
               Show in job list
             </Link>
           </p>

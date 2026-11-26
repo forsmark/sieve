@@ -137,7 +137,8 @@ export const JobRow = memo(function JobRow({
             style={{ animation: 'tile-in 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards' }}
           />
         )}
-        <label className="absolute top-0 right-0 z-10 flex size-10 cursor-pointer items-center justify-center">
+        {/* The corner area takes the tap: 40px with a mouse, 44px on a touch screen. */}
+        <label className="absolute top-0 right-0 z-10 flex size-10 cursor-pointer items-center justify-center touch:size-11">
           <input
             type="checkbox"
             className="size-4"

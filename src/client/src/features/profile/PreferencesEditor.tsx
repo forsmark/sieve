@@ -92,7 +92,7 @@ function PreferencesForm({ initial }: { initial: Preferences }) {
         <legend className="mb-1 text-[13px] font-medium">Work arrangements</legend>
         <div className="flex flex-wrap gap-4">
           {(['remote', 'hybrid', 'onsite'] as const).map((a) => (
-            <label key={a} className="flex items-center gap-1.5 text-[13px]">
+            <label key={a} className="flex items-center gap-1.5 text-[13px] touch:min-h-11">
               <input
                 type="checkbox"
                 className="size-4"

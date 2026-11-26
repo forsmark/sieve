@@ -474,7 +474,8 @@ describe('application board', () => {
     expect(close).toHaveClass('touch:h-11');
     expect(close.parentElement).toHaveClass('touch:h-12');
     expect(within(panel).getByRole('link', { name: /Open posting/ })).toHaveClass('touch:min-h-11');
-    expect(within(panel).getByRole('link', { name: 'Show in job list' })).toHaveClass('touch:py-3');
+    // Padding on the inline link gave 40px. The invisible area reaches 16px above and below the 12px text.
+    expect(within(panel).getByRole('link', { name: 'Show in job list' })).toHaveClass('relative', 'touch:after:absolute', 'touch:after:-inset-y-4');
     expect(within(panel).getByLabelText('Notes')).toHaveClass('touch:text-base');
     expect(within(panel).getByLabelText('Interview date and time')).toHaveClass('touch:h-11', 'touch:text-base');
   });

@@ -98,7 +98,7 @@ function CvSection({ profile }: { profile: ProfileDto }) {
               type="file"
               accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="text-[13px] file:mr-3 file:border file:border-line-strong file:bg-surface file:px-3 file:py-1 file:text-sm file:text-fg hover:file:bg-surface-2"
+              className="text-[13px] file:mr-3 file:border file:border-line-strong file:bg-surface file:px-3 file:py-1 file:text-sm file:text-fg hover:file:bg-surface-2 touch:file:min-h-11"
             />
             <p className="text-xs text-muted">At most 5 MB.</p>
           </div>

@@ -67,7 +67,7 @@ function Shell({ authRequired }: { authRequired: boolean }) {
             <Link
               key={n.to}
               to={n.to}
-              className="relative flex items-center border-b-2 border-transparent pt-0.5 text-[13px] font-medium whitespace-nowrap text-muted hover:text-fg sm:text-sm"
+              className="relative flex items-center justify-center border-b-2 border-transparent pt-0.5 text-[13px] font-medium whitespace-nowrap text-muted hover:text-fg sm:text-sm touch:min-w-11"
               activeProps={{ className: 'text-fg border-b-accent!', 'aria-current': 'page' }}
             >
               {n.label}

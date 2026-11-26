@@ -123,7 +123,7 @@ export function CoverLetter({ postingId, letter }: { postingId: string; letter: 
               </Button>
             ) : (
               <a
-                className="inline-flex h-7 items-center border border-line-strong px-2.5 text-[13px] font-semibold hover:border-fg hover:bg-surface-2"
+                className="inline-flex h-7 items-center border border-line-strong px-2.5 text-[13px] font-semibold hover:border-fg hover:bg-surface-2 touch:h-11"
                 href={api.coverLetterPdfUrl(postingId)}
                 download
               >

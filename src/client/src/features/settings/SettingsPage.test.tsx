@@ -85,6 +85,30 @@ describe('settings', () => {
     expect(section.queryByRole('list', { name: 'Search terms' })).not.toBeInTheDocument();
   });
 
+  it('gives the section links, the term remove buttons and the backup link a 44px area on a touch screen', async () => {
+    mockApi({
+      'GET /api/auth/me': () => ({ authRequired: false, authenticated: true }),
+      'GET /api/status': () => STATUS,
+      'GET /api/sources': () => [],
+      'GET /api/llm': () => ({ settings: LLM, available: true }),
+      'GET /api/search': () => ({ terms: ['platform engineer'], region: '' }),
+      'GET /api/backups': () => ({
+        backups: [{ name: 'sieve-20261126-121331.db', size: 192_512, createdAt: '2026-11-26T12:13:31Z' }],
+        settings: { intervalHours: 6, keep: 10, lastAt: '2026-11-26T12:13:31Z' },
+      }),
+    });
+    renderApp('/settings');
+    // The section links were 19px rows 4px apart. On a touch screen each is a 44px row, and the rows touch.
+    const sections = await screen.findByRole('navigation', { name: 'Settings sections' });
+    expect(sections).toHaveClass('touch:gap-y-0');
+    for (const link of within(sections).getAllByRole('link')) expect(link).toHaveClass('touch:min-h-11', 'touch:min-w-11', 'touch:inline-flex');
+    // The remove button of a search term was 26 by 19px.
+    expect(await screen.findByRole('button', { name: 'Remove platform engineer' })).toHaveClass('touch:size-11');
+    // The backup link keeps its text size; an invisible area reaches 16px above and below it.
+    const download = await screen.findByRole('link', { name: /^Download/ });
+    expect(download).toHaveClass('relative', 'touch:after:absolute', 'touch:after:-inset-y-4');
+  });
+
   it('shows that a source without keyword search ignores the search terms', async () => {
     setup(LLM, [source('remoteok', 'Remote OK', false), source('jobindex', 'Jobindex', true)]);
     const section = within(await screen.findByRole('region', { name: 'Sources' }));

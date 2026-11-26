@@ -75,6 +75,13 @@ describe('top bar', () => {
     expect(banner.parentElement).toHaveClass('pr-[env(safe-area-inset-right)]', 'pl-[env(safe-area-inset-left)]');
   });
 
+  it('gives each top-bar link a width of at least 44px on a touch screen', async () => {
+    setup('/jobs');
+    const n = await nav();
+    // "Profile" in 13px text is 40px wide. The bar is 56px high, so only the width needs a floor.
+    for (const link of n.getAllByRole('link')) expect(link).toHaveClass('touch:min-w-11', 'justify-center');
+  });
+
   it('counts the open applications beside "Board", not the applied postings', async () => {
     setup('/jobs', { status: { ...STATUS, counts: { ...STATUS.counts, applied: 5, openApplications: 2 } } });
     const board = (await nav()).getByRole('link', { name: /^Board/ });

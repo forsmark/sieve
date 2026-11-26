@@ -1098,6 +1098,8 @@ describe('bulk actions', () => {
     for (const b of within(bar).getAllByRole('button')) expect(b).toHaveClass('h-11');
     const more = within(bar).getByRole('combobox', { name: 'More bulk actions' });
     expect(more).toHaveDisplayValue('More');
+    // The card's selection box takes a 44px corner on a touch screen.
+    expect(screen.getByRole('checkbox', { name: 'Select Job 1' }).closest('label')).toHaveClass('size-10', 'touch:size-11');
     expect(
       within(more)
         .getAllByRole('option')

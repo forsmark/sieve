@@ -55,6 +55,9 @@ describe('filter sheet below 640px', () => {
     expect(sheet.getByRole('button', { name: 'Show 3 postings' })).toHaveClass('h-11', 'w-full');
     // The status filters are chips of the shared control.
     expect(sheet.getByRole('checkbox', { name: 'Dismissed' }).closest('label')).toHaveClass('touch:h-11');
+    // The plain checkboxes below the fields are 44px rows on a touch screen too.
+    for (const name of ['Unread only', 'Show excluded', 'Show duplicates'])
+      expect(sheet.getByRole('checkbox', { name }).closest('label')).toHaveClass('touch:min-h-11');
 
     // A filter writes to the address at once, and the count follows.
     await user.selectOptions(sheet.getByLabelText('Work arrangement'), 'onsite');

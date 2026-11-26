@@ -227,4 +227,12 @@ describe('Skill rows by width', () => {
     expect(level.closest('label')).toHaveTextContent(/^Level/);
     expect(section.getByLabelText('Skill 1 name').closest('label')).toHaveTextContent(/^Skill/);
   });
+
+  it('gives the work arrangement checkboxes and the file button a 44px row on a touch screen', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    await setup(TWO_SKILLS);
+    // The labels were 19px rows, and the file button 30px.
+    for (const name of ['Remote', 'Hybrid', 'On site']) expect((await screen.findByRole('checkbox', { name })).closest('label')).toHaveClass('touch:min-h-11');
+    expect(screen.getByLabelText('CV file')).toHaveClass('touch:file:min-h-11');
+  });
 });

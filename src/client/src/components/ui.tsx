@@ -163,7 +163,8 @@ export function Switch({
         className={cx(
           'relative mt-0.5 inline-flex h-5 w-9 shrink-0 items-center border transition-colors disabled:opacity-50',
           // The track keeps its size. On a touch screen an invisible area of 44 by 44px around it takes the tap.
-          'touch:after:absolute touch:after:-inset-x-1 touch:after:-inset-y-3',
+          // The area starts from the padding box, 34 by 18px inside the 1px border: 5px beside it and 13px above and below.
+          'touch:after:absolute touch:after:-inset-x-[5px] touch:after:-inset-y-[13px]',
           checked ? 'border-accent bg-accent' : 'border-line-strong bg-transparent',
         )}
       >

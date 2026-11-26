@@ -19,7 +19,8 @@ export function SettingsPage() {
     <div className="h-full overflow-y-auto">
       <div className="flex max-w-4xl flex-col gap-4 p-3 sm:p-6">
         <PageHeader title="Settings" />
-        <nav aria-label="Settings sections" className="flex flex-wrap gap-x-3 gap-y-1 text-[13px]">
+        {/* On a touch screen each link is a 44px row; the rows touch, so a larger hit area cannot overlap the next row. */}
+        <nav aria-label="Settings sections" className="flex flex-wrap gap-x-3 gap-y-1 text-[13px] touch:gap-y-0">
           {[
             ['search', 'Search'],
             ['sources', 'Sources'],
@@ -30,7 +31,11 @@ export function SettingsPage() {
             ['postings', 'Postings'],
             ...(account ? [['account', 'Account']] : []),
           ].map(([id, label]) => (
-            <a key={id} href={`#${id}`} className="font-medium text-muted underline decoration-line-strong hover:text-fg hover:decoration-fg">
+            <a
+              key={id}
+              href={`#${id}`}
+              className="font-medium text-muted underline decoration-line-strong hover:text-fg hover:decoration-fg touch:inline-flex touch:min-h-11 touch:min-w-11 touch:items-center"
+            >
               {label}
             </a>
           ))}
@@ -94,7 +99,7 @@ function SearchForm({ initial }: { initial: SearchSettings }) {
                 {t}
                 <button
                   type="button"
-                  className="px-1.5 text-muted hover:bg-surface hover:text-fg"
+                  className="px-1.5 text-muted hover:bg-surface hover:text-fg touch:flex touch:size-11 touch:items-center touch:justify-center"
                   aria-label={`Remove ${t}`}
                   onClick={() => setTerms(terms.filter((x) => x !== t))}
                 >
@@ -592,7 +597,11 @@ function BackupsSection() {
                   {bytes(b.size)} · {dateTime(b.createdAt)}
                 </span>
               </span>
-              <a href={api.backupUrl(b.name)} download={b.name} className="font-medium underline decoration-accent decoration-2 hover:decoration-fg">
+              <a
+                href={api.backupUrl(b.name)}
+                download={b.name}
+                className="relative font-medium underline decoration-accent decoration-2 hover:decoration-fg touch:after:absolute touch:after:-inset-x-2 touch:after:-inset-y-4"
+              >
                 Download<span className="sr-only"> {b.name}</span>
               </a>
             </li>

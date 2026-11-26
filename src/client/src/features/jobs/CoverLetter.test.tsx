@@ -144,7 +144,8 @@ describe('cover letter', () => {
     expect(screen.getByLabelText('Cover letter text')).toHaveValue('A shorter letter.');
     expect(screen.queryByText(/You have changes that are not saved\./)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
-    expect(screen.getByRole('link', { name: 'Download PDF' })).toBeInTheDocument();
+    // The link stands beside the buttons, so it takes their 44px height on a touch screen.
+    expect(screen.getByRole('link', { name: 'Download PDF' })).toHaveClass('h-7', 'touch:h-11');
   });
 
   it('keeps the edit and reports the error when the save fails', async () => {

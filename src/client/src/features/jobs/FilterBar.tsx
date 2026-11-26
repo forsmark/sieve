@@ -282,7 +282,7 @@ function FilterSelect({ label, value, onChange, children }: { label: string; val
 
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex cursor-pointer items-center gap-1.5 text-[13px]">
+    <label className="flex cursor-pointer items-center gap-1.5 text-[13px] touch:min-h-11">
       <input type="checkbox" className="size-4" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {label}
     </label>

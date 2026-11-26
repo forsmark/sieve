@@ -125,8 +125,9 @@ describe('touch sizes', () => {
   it('gives the switch a 44 by 44px hit area on a touch screen and keeps its 36 by 20px track', () => {
     render(<Switch checked={false} onChange={() => {}} label="Fetch on a schedule" />);
     const sw = screen.getByRole('switch', { name: /Fetch on a schedule/ });
-    // The area reaches 12px above and below the 20px track, and 4px beside the 36px track.
-    expect(sw).toHaveClass('h-5', 'w-9', 'touch:after:absolute', 'touch:after:-inset-y-3', 'touch:after:-inset-x-1');
+    // An absolute box starts from the padding box, 34 by 18px inside the 1px border of the 36 by 20px track.
+    // So the area reaches 13px above and below it and 5px beside it: 18 + 2 * 13 = 44 and 34 + 2 * 5 = 44.
+    expect(sw).toHaveClass('h-5', 'w-9', 'touch:after:absolute', 'touch:after:-inset-y-[13px]', 'touch:after:-inset-x-[5px]');
   });
 });
 
