@@ -274,4 +274,39 @@ describe('cover letter field', () => {
     await user.type(field, ' More.');
     expect(field.style.height).toBe(`${100 + TEXT.length + 6}px`);
   });
+
+  it('measures its height again when its width changes, so a narrower field shows the end of the letter', async () => {
+    const observers: Array<{ cb: () => void; targets: Element[] }> = [];
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      private readonly entry: { cb: () => void; targets: Element[] };
+      constructor(cb: () => void) {
+        this.entry = { cb, targets: [] };
+        observers.push(this.entry);
+      }
+      observe(el: Element) {
+        this.entry.targets.push(el);
+      }
+      unobserve() {}
+      disconnect() {
+        this.entry.targets = [];
+      }
+    } as unknown as typeof ResizeObserver;
+    try {
+      // jsdom has no layout. The scroll height here grows as the field gets narrower, as wrapped text does.
+      let width = 800;
+      vi.spyOn(HTMLTextAreaElement.prototype, 'scrollHeight', 'get').mockImplementation(() => 80_000 / width);
+      setup(letter());
+      const field = await screen.findByLabelText('Cover letter text');
+      Object.defineProperty(field, 'clientWidth', { configurable: true, get: () => width });
+      expect(field.style.height).toBe('100px');
+
+      // A rotation to a narrower width.
+      width = 400;
+      act(() => observers.filter((o) => o.targets.includes(field)).forEach((o) => o.cb()));
+      expect(field.style.height).toBe('200px');
+    } finally {
+      globalThis.ResizeObserver = original;
+    }
+  });
 });

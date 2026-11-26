@@ -7,6 +7,13 @@ import { errorText } from '../../api/client';
 import { Button, ConfirmButton, Field, Spinner, TextArea } from '../../components/ui';
 import { showToast, toastError } from '../../lib/toast';
 
+/** Sets the height of a textarea to the height of its text. */
+function fitHeight(el: HTMLTextAreaElement): void {
+  el.style.height = 'auto';
+  // The height includes the border; the scroll height does not.
+  el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
+}
+
 /** The cover letter of one posting: generate, edit, copy, and download. */
 export function CoverLetter({ postingId, letter }: { postingId: string; letter: CoverLetterDto | null }) {
   const qc = useQueryClient();
@@ -42,11 +49,22 @@ export function CoverLetter({ postingId, letter }: { postingId: string; letter: 
   const letterId = `letter-${postingId}`;
   useLayoutEffect(() => {
     const el = document.getElementById(letterId);
-    if (!(el instanceof HTMLTextAreaElement)) return;
-    el.style.height = 'auto';
-    // The height includes the border; the scroll height does not.
-    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
+    if (el instanceof HTMLTextAreaElement) fitHeight(el);
   }, [draft, hasText, letterId]);
+  // A narrower field wraps the text into more lines, after a resize or a rotation. The field hides its overflow,
+  // so it measures again, or the end of the letter is cut off. Only a change of width counts: the height is its own.
+  useEffect(() => {
+    const el = document.getElementById(letterId);
+    if (!hasText || !(el instanceof HTMLTextAreaElement)) return;
+    let width = el.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (el.clientWidth === width) return;
+      width = el.clientWidth;
+      fitHeight(el);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasText, letterId]);
   const dirty = hasText && draft !== letter?.text;
 
   const copy = async () => {
