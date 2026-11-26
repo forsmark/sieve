@@ -1,44 +1,100 @@
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { ApplicationDto } from '../../../../shared/api';
 import { APPLICATION_STAGES, type ApplicationStage } from '../../../../shared/schemas';
 import { api } from '../../api/endpoints';
 import { qk } from '../../api/keys';
-import { errorText } from '../../api/client';
 import { Badge, Button, ConfirmButton, ErrorState, Field, Select, Spinner, TextArea, TextInput, Icon } from '../../components/ui';
 import { dateOnly, dateTime, fromLocalInput, toLocalInput } from '../../lib/format';
-import { showToast, toastError } from '../../lib/toast';
 import { STAGE_LABEL, useMoveApplication, useRemoveApplication } from './stages';
+import { clearNotesDraft, notesDraft, useStoreApplicationField } from './notes';
 import { CoverLetterForPosting } from '../jobs/CoverLetter';
 
 export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClose: () => void }) {
   const qc = useQueryClient();
   const move = useMoveApplication();
   const events = useQuery({ queryKey: qk.applicationEvents(app.postingId), queryFn: () => api.applicationEvents(app.postingId) });
-  const [notes, setNotes] = useState(app.notes ?? '');
+  const id = app.postingId;
+  // Notes that could not be stored come back from the draft map in place of the stored ones.
+  const [notes, setNotes] = useState(() => notesDraft(id) ?? app.notes ?? '');
   const [interview, setInterview] = useState(toLocalInput(app.interviewAt));
   const expired = app.linkStatus === 'expired' || app.linkStatus === null;
 
-  const save = useMutation({
-    mutationFn: (patch: { notes?: string | null; interviewAt?: string | null }) => api.updateApplication(app.postingId, patch),
-    onSuccess: (updated) => {
-      qc.setQueryData<ApplicationDto[]>(qk.applications, (list) => list?.map((a) => (a.postingId === updated.postingId ? updated : a)));
-      showToast({ message: 'Saved.', tone: 'info' }, 2000);
+  const notesStore = useStoreApplicationField(id, 'notes');
+  const dateStore = useStoreApplicationField(id, 'interviewAt');
+  const { mutate: storeNotesValue } = notesStore;
+  const { mutate: storeDateValue } = dateStore;
+  /** The values in the fields now, for the handlers that run on blur, close, unmount and page hide. */
+  const current = useRef({ notes, interview });
+  /** The values the server holds or that are on their way to it. Null after a failed store, so the next chance stores again. */
+  const sent = useRef<{ notes: string | null; interview: string | null }>({ notes: app.notes ?? '', interview: toLocalInput(app.interviewAt) });
+
+  /** False once the application is gone from the board, for example after its removal. Then nothing is stored. */
+  const exists = useCallback(() => qc.getQueryData<ApplicationDto[]>(qk.applications)?.some((a) => a.postingId === id) ?? false, [qc, id]);
+
+  const storeNotes = useCallback(() => {
+    const value = current.current.notes;
+    if (value === sent.current.notes || !exists()) return;
+    sent.current.notes = value;
+    storeNotesValue(value || null, {
+      onError: () => {
+        if (sent.current.notes === value) sent.current.notes = null;
+      },
+    });
+  }, [exists, storeNotesValue]);
+
+  const storeDate = useCallback(() => {
+    const value = current.current.interview;
+    if (value === sent.current.interview || !exists()) return;
+    sent.current.interview = value;
+    storeDateValue(fromLocalInput(value), {
+      onError: () => {
+        if (sent.current.interview === value) sent.current.interview = null;
+      },
+    });
+  }, [exists, storeDateValue]);
+
+  // The notes are stored when the page is hidden or left, and when the panel unmounts: by Close, by the
+  // browser's back gesture, or because another application opens.
+  useEffect(() => {
+    const flush = () => {
+      storeNotes();
+      storeDate();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, [storeNotes, storeDate]);
+
+  const close = () => {
+    storeNotes();
+    storeDate();
+    onClose();
+  };
+
+  const remove = useRemoveApplication({
+    onRemoved: () => {
+      clearNotesDraft(id);
+      onClose();
     },
-    onError: (e) => toastError(`Not saved. ${errorText(e)}`),
   });
 
-  const remove = useRemoveApplication({ onRemoved: onClose });
-
-  const notesDirty = notes !== (app.notes ?? '');
-  const interviewDirty = interview !== toLocalInput(app.interviewAt);
+  const notesCaption = notesStore.isPending ? 'Saving…' : notesStore.isSuccess && (notesStore.variables ?? '') === notes ? 'Saved' : '';
+  const dateCaption = dateStore.isPending ? 'Saving…' : dateStore.isSuccess && dateStore.variables === fromLocalInput(interview) ? 'Saved' : '';
   const s = app.snapshot;
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-10 shrink-0 items-center justify-between border-b border-line px-3">
-        <Button size="sm" variant="ghost" onClick={onClose}>
+        <Button size="sm" variant="ghost" onClick={close}>
           <Icon name="arrow-left" /> Close
         </Button>
         {!expired && (
@@ -62,8 +118,8 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
         </header>
 
         <Field label="Stage">
-          {(id) => (
-            <Select id={id} value={app.stage} onChange={(e) => move.mutate({ id: app.postingId, stage: e.target.value as ApplicationStage })}>
+          {(fieldId) => (
+            <Select id={fieldId} value={app.stage} onChange={(e) => move.mutate({ id: app.postingId, stage: e.target.value as ApplicationStage })}>
               {APPLICATION_STAGES.map((st) => (
                 <option key={st} value={st}>
                   {STAGE_LABEL[st]}
@@ -75,47 +131,57 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
 
         <div className="flex flex-col gap-2">
           <Field label="Interview date and time">
-            {(id) => <TextInput id={id} type="datetime-local" value={interview} onChange={(e) => setInterview(e.target.value)} />}
+            {(fieldId) => (
+              <TextInput
+                id={fieldId}
+                type="datetime-local"
+                value={interview}
+                onChange={(e) => {
+                  setInterview(e.target.value);
+                  current.current.interview = e.target.value;
+                  // An empty value can be a date the user is still typing, so only a full date stores at once.
+                  if (e.target.value) storeDate();
+                }}
+                onBlur={storeDate}
+              />
+            )}
           </Field>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="primary"
-              disabled={!interviewDirty}
-              busy={save.isPending && save.variables?.interviewAt !== undefined}
-              onClick={() => save.mutate({ interviewAt: fromLocalInput(interview) })}
-            >
-              Save date
-            </Button>
+          <div className="flex min-h-4 flex-wrap items-center gap-2">
             {app.interviewAt && (
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => {
                   setInterview('');
-                  save.mutate({ interviewAt: null });
+                  current.current.interview = '';
+                  storeDate();
                 }}
               >
                 Clear date
               </Button>
             )}
+            <SaveCaption text={dateCaption} />
           </div>
         </div>
 
         <div className="flex flex-col gap-2">
           <Field label="Notes">
-            {(id) => <TextArea id={id} rows={6} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Contacts, salary talks, next steps" />}
+            {(fieldId) => (
+              <TextArea
+                id={fieldId}
+                rows={6}
+                value={notes}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  current.current.notes = e.target.value;
+                }}
+                onBlur={storeNotes}
+                placeholder="Contacts, salary talks, next steps"
+              />
+            )}
           </Field>
-          <div>
-            <Button
-              size="sm"
-              variant="primary"
-              disabled={!notesDirty}
-              busy={save.isPending && save.variables?.notes !== undefined}
-              onClick={() => save.mutate({ notes: notes || null })}
-            >
-              Save notes
-            </Button>
+          <div className="min-h-4">
+            <SaveCaption text={notesCaption} />
           </div>
         </div>
 
@@ -176,5 +242,14 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
         </section>
       </div>
     </div>
+  );
+}
+
+/** "Saving…" while a store runs, then "Saved". Screen readers hear the change. */
+function SaveCaption({ text }: { text: string }) {
+  return (
+    <span role="status" className="text-xs text-muted">
+      {text}
+    </span>
   );
 }

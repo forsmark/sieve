@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { ApplicationDto } from '../../../../shared/api';
 import type { ApplicationStage } from '../../../../shared/schemas';
 import { api } from '../../api/endpoints';
@@ -30,12 +30,17 @@ export function useMoveApplication() {
       toastError(`The card could not be moved. ${errorText(err)}`);
     },
     onSuccess: (updated) => {
-      qc.setQueryData<ApplicationDto[]>(qk.applications, (list) => list?.map((a) => (a.postingId === updated.postingId ? updated : a)));
+      writeApplication(qc, updated);
     },
     onSettled: (_d, _e, { id }) => {
       void qc.invalidateQueries({ queryKey: qk.applicationEvents(id) });
     },
   });
+}
+
+/** Puts the application the server returned into the board's list. */
+export function writeApplication(qc: QueryClient, updated: ApplicationDto): void {
+  qc.setQueryData<ApplicationDto[]>(qk.applications, (list) => list?.map((a) => (a.postingId === updated.postingId ? updated : a)));
 }
 
 /**

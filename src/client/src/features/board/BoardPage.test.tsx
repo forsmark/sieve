@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ApplicationDto } from '../../../../shared/api';
 import { STATUS, mockApi, renderApp } from '../../test-utils';
 import { resetToastsForTests } from '../../lib/toast';
+import { resetNotesDraftsForTests } from './notes';
 
 function app(id: string, stage: ApplicationDto['stage']): ApplicationDto {
   return {
@@ -29,9 +30,13 @@ const base = {
 };
 
 describe('application board', () => {
-  afterEach(() => {
+  afterEach(async () => {
+    // The panel stores open notes as it unmounts, so it unmounts while the mocked server still answers.
+    cleanup();
+    await new Promise((r) => setTimeout(r, 0));
     vi.unstubAllGlobals();
     resetToastsForTests();
+    resetNotesDraftsForTests();
   });
 
   it('moves a card with the stage menu and with a drop', async () => {
@@ -102,16 +107,17 @@ describe('application board', () => {
         return stored;
       },
     });
-    const user = userEvent.setup();
     renderApp('/board?app=1');
     const panel = await screen.findByRole('complementary', { name: 'Application details' });
     const when = new Date(Date.now() + 14 * 86_400_000);
     when.setHours(10, 30, 0, 0);
     const pad = (n: number) => String(n).padStart(2, '0');
     const local = `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}T10:30`;
+    // The date stores as it changes, without a save button.
+    expect(within(panel).queryByRole('button', { name: 'Save date' })).not.toBeInTheDocument();
     fireEvent.change(await within(panel).findByLabelText('Interview date and time'), { target: { value: local } });
-    await user.click(within(panel).getByRole('button', { name: 'Save date' }));
     await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toEqual({ interviewAt: when.toISOString() }));
+    expect(await within(panel).findByText('Saved')).toBeInTheDocument();
     const card = within(column('Interview')).getByRole('listitem');
     const date = when.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }).replace(/\s+/g, ' ');
     await waitFor(() => expect(within(card).getByText(`Interview ${date}`)).toBeInTheDocument());
@@ -140,7 +146,7 @@ describe('application board', () => {
     expect(await screen.findByText('Application removed. The posting is saved in the job list.')).toBeInTheDocument();
   });
 
-  it('saves the notes and shows them when the application is opened again', async () => {
+  it('stores the notes when the user leaves the field, and shows them when the application is opened again', async () => {
     let stored = app('1', 'applied');
     const api = mockApi({
       ...base,
@@ -156,16 +162,172 @@ describe('application board', () => {
     const panel = await screen.findByRole('complementary', { name: 'Application details' });
     const notes = await within(panel).findByLabelText('Notes');
     expect(notes).toHaveValue('');
+    expect(within(panel).queryByRole('button', { name: 'Save notes' })).not.toBeInTheDocument();
     await user.type(notes, 'Call with Mia on Friday.');
-    await user.click(within(panel).getByRole('button', { name: 'Save notes' }));
+    expect(api.calls.some((c) => c.method === 'PATCH')).toBe(false);
+    await user.tab();
     await waitFor(() => expect(api.calls.find((c) => c.method === 'PATCH')?.body).toEqual({ notes: 'Call with Mia on Friday.' }));
-    expect(await screen.findByText('Saved.')).toBeInTheDocument();
+    expect(await within(panel).findByText('Saved')).toBeInTheDocument();
 
     // The page starts again and the panel reads the notes from the server.
     unmount();
     renderApp('/board?app=1');
     const again = await screen.findByRole('complementary', { name: 'Application details' });
     expect(await within(again).findByLabelText('Notes')).toHaveValue('Call with Mia on Friday.');
+  });
+
+  it('says "Saving…" while the notes are stored and "Saved" after', async () => {
+    let answer: (r: Response) => void = () => {};
+    mockApi({
+      ...base,
+      'GET /api/applications': () => [app('1', 'applied')],
+      'GET /api/applications/1/events': () => [],
+      'PATCH /api/applications/1': () => new Promise<Response>((resolve) => (answer = resolve)),
+    });
+    const user = userEvent.setup();
+    renderApp('/board?app=1');
+    const panel = await screen.findByRole('complementary', { name: 'Application details' });
+    await user.type(await within(panel).findByLabelText('Notes'), 'Ask about the team.');
+    await user.tab();
+    expect(await within(panel).findByText('Saving…')).toBeInTheDocument();
+    answer(Response.json({ ...app('1', 'applied'), notes: 'Ask about the team.' }));
+    expect(await within(panel).findByText('Saved')).toBeInTheDocument();
+    expect(within(panel).queryByText('Saving…')).not.toBeInTheDocument();
+    // A new change is not saved yet, so the caption goes.
+    await user.type(within(panel).getByLabelText('Notes'), ' And the salary.');
+    expect(within(panel).queryByText('Saved')).not.toBeInTheDocument();
+  });
+
+  it('stores the notes when the application closes while the user is still typing', async () => {
+    let stored = app('1', 'applied');
+    const api = mockApi({
+      ...base,
+      'GET /api/applications': () => [stored],
+      'GET /api/applications/1/events': () => [],
+      'PATCH /api/applications/1': (c) => {
+        stored = { ...stored, ...(c.body as Partial<ApplicationDto>) };
+        return stored;
+      },
+    });
+    const patches = () => api.calls.filter((c) => c.method === 'PATCH');
+    const user = userEvent.setup();
+    const { history } = renderApp('/board?app=1');
+    let panel = await screen.findByRole('complementary', { name: 'Application details' });
+    const notes = await within(panel).findByLabelText('Notes');
+    await user.type(notes, 'Second round next week.');
+    expect(notes).toHaveFocus();
+    // A tap on Close that does not move the focus out of the field first.
+    fireEvent.click(within(panel).getByRole('button', { name: /Close/ }));
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Application details' })).not.toBeInTheDocument());
+    await waitFor(() => expect(patches()).toHaveLength(1));
+    expect(patches()[0]!.body).toEqual({ notes: 'Second round next week.' });
+
+    // The back gesture leaves the panel without Close: the unmount stores the notes.
+    act(() => history.push('/board?app=1'));
+    panel = await screen.findByRole('complementary', { name: 'Application details' });
+    expect(within(panel).getByLabelText('Notes')).toHaveValue('Second round next week.');
+    await user.type(within(panel).getByLabelText('Notes'), ' Bring the portfolio.');
+    act(() => history.push('/board'));
+    await waitFor(() => expect(patches()).toHaveLength(2));
+    expect(patches()[1]!.body).toEqual({ notes: 'Second round next week. Bring the portfolio.' });
+  });
+
+  it('stores the notes when the page is hidden or left', async () => {
+    let stored = app('1', 'applied');
+    const api = mockApi({
+      ...base,
+      'GET /api/applications': () => [stored],
+      'GET /api/applications/1/events': () => [],
+      'PATCH /api/applications/1': (c) => {
+        stored = { ...stored, ...(c.body as Partial<ApplicationDto>) };
+        return stored;
+      },
+    });
+    const patches = () => api.calls.filter((c) => c.method === 'PATCH');
+    const user = userEvent.setup();
+    renderApp('/board?app=1');
+    const panel = await screen.findByRole('complementary', { name: 'Application details' });
+    const notes = await within(panel).findByLabelText('Notes');
+    await user.type(notes, 'Draft one.');
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    act(() => void document.dispatchEvent(new Event('visibilitychange')));
+    visibility.mockRestore();
+    await waitFor(() => expect(patches()).toHaveLength(1));
+    expect(patches()[0]!.body).toEqual({ notes: 'Draft one.' });
+
+    await user.type(notes, ' Draft two.');
+    act(() => void window.dispatchEvent(new Event('pagehide')));
+    await waitFor(() => expect(patches()).toHaveLength(2));
+    expect(patches()[1]!.body).toEqual({ notes: 'Draft one. Draft two.' });
+  });
+
+  it('sends no request when the application closes with unchanged notes', async () => {
+    const api = mockApi({
+      ...base,
+      'GET /api/applications': () => [{ ...app('1', 'applied'), notes: 'Kept as is.' }],
+      'GET /api/applications/1/events': () => [],
+    });
+    const user = userEvent.setup();
+    const { history } = renderApp('/board?app=1');
+    const panel = await screen.findByRole('complementary', { name: 'Application details' });
+    const notes = await within(panel).findByLabelText('Notes');
+    await user.click(notes);
+    await user.tab();
+    // A text typed and taken back is unchanged too.
+    await user.type(notes, 'x');
+    await user.keyboard('{Backspace}');
+    await user.click(within(panel).getByRole('button', { name: /Close/ }));
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Application details' })).not.toBeInTheDocument());
+    act(() => void window.dispatchEvent(new Event('pagehide')));
+    act(() => history.push('/jobs'));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(api.calls.filter((c) => c.method === 'PATCH')).toEqual([]);
+  });
+
+  it('reports a failed store of the notes and shows the typed notes when the application opens again', async () => {
+    let stored = app('1', 'applied');
+    let failing = true;
+    const api = mockApi({
+      ...base,
+      'GET /api/applications': () => [stored],
+      'GET /api/applications/1/events': () => [],
+      'PATCH /api/applications/1': (c) => {
+        if (failing) return new Response(JSON.stringify({ error: 'Disk full.' }), { status: 500 });
+        stored = { ...stored, ...(c.body as Partial<ApplicationDto>) };
+        return stored;
+      },
+    });
+    const patches = () => api.calls.filter((c) => c.method === 'PATCH');
+    const user = userEvent.setup();
+    const { history, unmount } = renderApp('/board?app=1');
+    let panel = await screen.findByRole('complementary', { name: 'Application details' });
+    await user.type(await within(panel).findByLabelText('Notes'), 'Offer expected in May.');
+    await user.tab();
+    const error = await screen.findByRole('alert');
+    expect(error).toHaveTextContent('The notes were not saved.');
+    expect(error).toHaveTextContent('Disk full.');
+    expect(within(panel).queryByText('Saved')).not.toBeInTheDocument();
+
+    // Closed and opened again: the typed notes come back, not the stored empty ones.
+    await user.click(within(panel).getByRole('button', { name: /Close/ }));
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Application details' })).not.toBeInTheDocument());
+    act(() => history.push('/board?app=1'));
+    panel = await screen.findByRole('complementary', { name: 'Application details' });
+    expect(within(panel).getByLabelText('Notes')).toHaveValue('Offer expected in May.');
+
+    // The next chance stores them, and the draft goes once the store succeeds.
+    failing = false;
+    const before = patches().length;
+    await user.click(within(panel).getByLabelText('Notes'));
+    await user.tab();
+    await waitFor(() => expect(patches()).toHaveLength(before + 1));
+    expect(patches().at(-1)!.body).toEqual({ notes: 'Offer expected in May.' });
+    expect(await within(panel).findByText('Saved')).toBeInTheDocument();
+    unmount();
+    stored = { ...stored, notes: 'Changed on another device.' };
+    renderApp('/board?app=1');
+    const again = await screen.findByRole('complementary', { name: 'Application details' });
+    expect(await within(again).findByLabelText('Notes')).toHaveValue('Changed on another device.');
   });
 
   it('shows the stage history of an application in time order', async () => {
