@@ -106,7 +106,7 @@ describe('health and live events', () => {
       matchingPaused: false,
       llmProvider: 'local',
       searchTermCount: 0,
-      counts: { new: 0, saved: 0, applied: 0, dismissed: 0 },
+      counts: { new: 0, saved: 0, applied: 0, dismissed: 0, openApplications: 0 },
     });
   });
 });
@@ -596,6 +596,25 @@ describe('applications', () => {
     expect((await call('GET', `/api/applications/${id}/events`)).json).toHaveLength(3);
     expect((await call('PATCH', `/api/applications/${id}`, { stage: 'hired' })).status).toBe(400);
     expect((await call('PATCH', '/api/applications/nope', { stage: 'offer' })).status).toBe(404);
+  });
+
+  it('counts the open applications in the status, and leaves out rejected and withdrawn ones', async () => {
+    const openCount = async () => (await call('GET', '/api/status')).json.counts.openApplications;
+    expect(await openCount()).toBe(0);
+    const stages = ['applied', 'interview', 'offer', 'rejected', 'withdrawn'] as const;
+    const ids = stages.map((stage, i) => add({ externalId: `open-${i}`, title: `Developer ${stage}`, url: `https://jobs.test/open-${i}` }));
+    for (const [i, id] of ids.entries()) {
+      expect((await call('POST', '/api/applications', { postingId: id })).status).toBe(200);
+      if (stages[i] !== 'applied') expect((await call('PATCH', `/api/applications/${id}`, { stage: stages[i] })).status).toBe(200);
+    }
+    expect(await openCount()).toBe(3);
+
+    // A rejected application that moves back to an interview counts again.
+    await call('PATCH', `/api/applications/${ids[3]}`, { stage: 'interview' });
+    expect(await openCount()).toBe(4);
+    // A withdrawn one stops counting.
+    await call('PATCH', `/api/applications/${ids[0]}`, { stage: 'withdrawn' });
+    expect(await openCount()).toBe(3);
   });
 
   it('stores notes and the interview date', async () => {

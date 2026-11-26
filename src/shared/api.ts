@@ -151,6 +151,8 @@ export interface PostingCounts {
   dismissed: number;
   unread: number;
   excluded: number;
+  /** Applications still in progress: in the stage applied, interview or offer. Rejected and withdrawn ones are left out. */
+  openApplications: number;
 }
 
 export interface PostingQuery {
