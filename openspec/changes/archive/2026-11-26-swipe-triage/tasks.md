@@ -20,7 +20,7 @@
 
 ## 4. Ship
 
-- [ ] 4.1 After the owner approves the diff, merge to `main`, push, and run `portal app deploy sieve`. Verify that the deploy reports healthy and that the served bundle holds the swipe code.
+- [x] 4.1 After the owner approves the diff, merge to `main`, push, and run `portal app deploy sieve`. Verify that the deploy reports healthy and that the served bundle holds the swipe code. Note: 0c6352c deployed healthy on 2026-11-26, and `dist/client/assets/index-C1ysIbJB.js` in the container holds "Remove the application?" and "Back to new".
 
 ## Workflow follow-up
 
