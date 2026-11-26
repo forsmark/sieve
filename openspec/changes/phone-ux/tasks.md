@@ -12,7 +12,7 @@
 
 - [x] 2.1 Move `lastUndo` into an observable store with the kind, the message, the toast state and the posting the detail view moved on from, as design.md says. Verify with tests in `lib/toast.test.tsx` that the `u` key path and a store reader see the same entry, and that a new undoable action replaces it.
 - [ ] 2.2 Show the undo control in the job list's top row while the latest entry is a triage and its toast is closed. After an undo, open the recorded posting again while the job page is mounted. Verify with tests in `JobsPage.test.tsx` for *Undo after the message* › "Message has closed" and "Undo control in the job list", and *Undo returns to the posting* › "User undoes a triage action from the detail view".
-- [ ] 2.3 Show "Moved to <Stage>." with Undo after each stage move by menu, drag or keyboard, and send the earlier stage on undo. Verify with tests in `board/BoardPage.test.tsx` for *Stage change feedback* › "User moves an application" and "User undoes a stage change" (two PATCH calls, the card back in its column).
+- [x] 2.3 Show "Moved to <Stage>." with Undo after each stage move by menu, drag or keyboard, and send the earlier stage on undo. Verify with tests in `board/BoardPage.test.tsx` for *Stage change feedback* › "User moves an application" and "User undoes a stage change" (two PATCH calls, the card back in its column).
 
 ## 3. Job list and detail
 
@@ -27,16 +27,16 @@
 
 ## 4. Shell, Activity, Profile and Settings
 
-- [ ] 4.1 Make the status bar one line below 640px that links to `/activity`, and add "Fetch now" and "Pause matching" to the Activity header. Verify with tests in `app/StatusBar.test.tsx` and `features/activity/ActivityPage.test.tsx`, or the nearest existing test files.
-- [ ] 4.2 Show the fetch runs as two-line rows below 640px (m8). Move "Log out" into the Settings page below 640px (m10). Rename the schedule switch to "Fetch on a schedule" (p11). Verify with tests for the Settings switch's state and request, and for the log-out button in Settings.
-- [ ] 4.3 Stack the profile weights and the skill rows below 640px, and add the skill header row (m7, p6). Verify with a test for the header row, and with the 375x667 screenshots of 6.2, where the page doesn't scroll sideways.
-- [ ] 4.4 Add `openApplications` to the status counts on the server and use it for the board count (p3). Name the board page "Board" (p2). Verify with a server test in `src/server/http/app.test.ts` that the count leaves out rejected and withdrawn applications, and a client test for the label.
-- [ ] 4.5 Add the home-screen icon and the web-app meta tags to `index.html`, and pad the top bar and the sides by the safe area (p8). Verify that `pnpm build` writes the icon link with the base path, by reading `dist/client/index.html` after a build with `APP_BASE=/sieve/`.
+- [x] 4.1 Make the status bar one line below 640px that links to `/activity`, and add "Fetch now" and "Pause matching" to the Activity header. Verify with tests in `app/StatusBar.test.tsx` and `features/activity/ActivityPage.test.tsx`, or the nearest existing test files.
+- [x] 4.2 Show the fetch runs as two-line rows below 640px (m8). Move "Log out" into the Settings page below 640px (m10). Rename the schedule switch to "Fetch on a schedule" (p11). Verify with tests for the Settings switch's state and request, and for the log-out button in Settings.
+- [x] 4.3 Stack the profile weights and the skill rows below 640px, and add the skill header row (m7, p6). Verify with a test for the header row, and with the 375x667 screenshots of 6.2, where the page doesn't scroll sideways.
+- [x] 4.4 Add `openApplications` to the status counts on the server and use it for the board count (p3). Name the board page "Board" (p2). Verify with a server test in `src/server/http/app.test.ts` that the count leaves out rejected and withdrawn applications, and a client test for the label.
+- [x] 4.5 Add the home-screen icon and the web-app meta tags to `index.html`, and pad the top bar and the sides by the safe area (p8). Verify that `pnpm build` writes the icon link with the base path, by reading `dist/client/index.html` after a build with `APP_BASE=/sieve/`.
 - [ ] 4.6 Write the status bar, the Activity header, the log-out place and the safe areas into DESIGN.md. Verify by reading DESIGN.md against the screenshots of 6.2.
 
 ## 5. Board
 
-- [ ] 5.1 Store the notes on blur, close, unmount and `pagehide`, store the interview date on change, keep a draft when a store fails, and remove the two save buttons (M7). Verify with tests in `board/BoardPage.test.tsx` for *Notes and dates* › "User edits the notes", "User closes the application while typing" and "Notes cannot be stored", and that "User sets an interview date" still passes.
+- [x] 5.1 Store the notes on blur, close, unmount and `pagehide`, store the interview date on change, keep a draft when a store fails, and remove the two save buttons (M7). Verify with tests in `board/BoardPage.test.tsx` for *Notes and dates* › "User edits the notes", "User closes the application while typing" and "Notes cannot be stored", and that "User sets an interview date" still passes.
 - [ ] 5.2 Raise the board's stage menu and panel controls to the touch sizes, and hide the drag hint on touch screens. Verify with the board screenshots of 6.2.
 
 ## 6. Coverage and checks
