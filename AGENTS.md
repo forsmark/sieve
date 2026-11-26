@@ -13,4 +13,4 @@ This repo follows the spec-checks practice. Load the skill `spec-checks:practice
 
 ## Verify
 
-Run `pnpm check`. It runs the typecheck, the linter and `spec-checks verify`. Run `pnpm test` for the unit tests.
+Run `pnpm check`. It runs the typecheck, the linter, the Prettier check and `spec-checks verify`. Run `pnpm format` to fix what the Prettier check reports. Run `pnpm test` for the unit tests.

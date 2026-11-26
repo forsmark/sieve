@@ -200,7 +200,8 @@ pnpm test        # all tests
 pnpm e2e         # browser end-to-end tests, needs google-chrome, no network
 pnpm typecheck   # TypeScript
 pnpm lint        # ESLint
-pnpm check       # typecheck, lint, and spec checks
+pnpm format      # Prettier: formats the code in place
+pnpm check       # typecheck, lint, format check, and spec checks
 ```
 
 Tests always use an in-memory database and never open `DATA_DIR`.
