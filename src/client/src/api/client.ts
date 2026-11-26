@@ -83,6 +83,8 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
 }
 
 export function errorText(err: unknown): string {
+  // A request that reached no server while the device has no network failed because of the device.
+  if (err instanceof ApiRequestError && err.status === 0 && typeof navigator !== 'undefined' && !navigator.onLine) return 'The device is offline.';
   if (err instanceof Error) return err.message;
   return 'Something went wrong.';
 }

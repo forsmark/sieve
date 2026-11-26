@@ -8,6 +8,7 @@ import { connectionStore } from '../api/events';
 import { Button, Spinner, cx } from '../components/ui';
 import { relativeTime, sourceName } from '../lib/format';
 import { useStore } from '../lib/store';
+import { useOnline } from '../lib/useOnline';
 import { showToast, toastError } from '../lib/toast';
 
 function Item({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -40,6 +41,7 @@ function Dot({ tone }: { tone: 'ok' | 'bad' | 'idle' | 'busy' }) {
 export function StatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
   const qc = useQueryClient();
   const connection = useStore(connectionStore);
+  const online = useOnline();
   const s = status.data;
   const runs = useQuery({ queryKey: qk.runs, queryFn: api.runs, enabled: s?.activeRunId != null });
   const activeRun = s?.activeRunId != null ? runs.data?.find((r) => r.id === s.activeRunId) : undefined;
@@ -138,8 +140,17 @@ export function StatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
           </Item>
 
           <Item className="ml-auto max-sm:py-0.5">
-            <Dot tone={connection === 'open' ? 'ok' : connection === 'connecting' ? 'busy' : 'bad'} />
-            <span>{connection === 'open' ? 'Live' : connection === 'connecting' ? 'Connecting' : 'Reconnecting'}</span>
+            {online ? (
+              <>
+                <Dot tone={connection === 'open' ? 'ok' : connection === 'connecting' ? 'busy' : 'bad'} />
+                <span>{connection === 'open' ? 'Live' : connection === 'connecting' ? 'Connecting' : 'Reconnecting'}</span>
+              </>
+            ) : (
+              <>
+                <Dot tone="bad" />
+                <span className="text-fg">Offline</span>
+              </>
+            )}
           </Item>
         </>
       )}

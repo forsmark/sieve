@@ -190,5 +190,13 @@
     "Vertical drag": {
       "unit": "src/client/src/features/jobs/JobsPage.test.tsx › changes no status on a mostly vertical drag"
     }
+  },
+  "Offline state": {
+    "Connection is lost": {
+      "unit": "src/client/src/app/offline.test.tsx › says \"Offline\" in the status bar when the device loses its network connection, and stops when it returns"
+    },
+    "Action while offline": {
+      "unit": "src/client/src/app/offline.test.tsx › fails a triage while offline at once, puts the posting back, and says the device is offline"
+    }
   }
 }
