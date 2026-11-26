@@ -367,5 +367,89 @@ describe('application board', () => {
     await user.selectOptions(screen.getByLabelText('Stage of Role 1'), 'offer');
     expect(await screen.findByText(/Disk full/)).toBeInTheDocument();
     await waitFor(() => expect(within(column('Applied')).getByText('Role 1')).toBeInTheDocument());
+    // A move that did not happen has nothing to undo.
+    expect(screen.queryByText(/^Moved to/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
+  });
+
+  /** A server that keeps the stage of application 1 and records each change, as the real one does. */
+  function stageServer(failUndo = false) {
+    let stored = app('1', 'applied');
+    const history: Array<{ id: number; fromStage: string | null; toStage: string; createdAt: string }> = [
+      { id: 1, fromStage: null, toStage: 'applied', createdAt: '2026-11-01T10:00:00Z' },
+    ];
+    const api = mockApi({
+      ...base,
+      'GET /api/applications': () => [stored],
+      'GET /api/applications/1/events': () => history,
+      'PATCH /api/applications/1': (c) => {
+        const { stage } = c.body as { stage: ApplicationDto['stage'] };
+        if (failUndo && history.length > 1) return new Response(JSON.stringify({ error: 'Disk full.' }), { status: 500 });
+        history.push({ id: history.length + 1, fromStage: stored.stage, toStage: stage, createdAt: `2026-11-0${history.length + 1}T10:00:00Z` });
+        stored = { ...stored, stage };
+        return stored;
+      },
+    });
+    return { api, patches: () => api.calls.filter((c) => c.method === 'PATCH').map((c) => c.body) };
+  }
+
+  it('names the new stage and offers undo after a move by menu, by drag and by keyboard', async () => {
+    const { patches } = stageServer();
+    const user = userEvent.setup();
+    renderApp('/board');
+    await screen.findByText('Role 1');
+
+    await user.selectOptions(screen.getByLabelText('Stage of Role 1'), 'offer');
+    const byMenu = await screen.findByText('Moved to Offer.');
+    expect(within(byMenu.closest('[role="status"]')!).getByRole('button', { name: 'Undo' })).toBeInTheDocument();
+
+    const data = { getData: () => '1', setData: () => {}, dropEffect: 'move', effectAllowed: 'move' };
+    fireEvent.drop(column('Interview'), { dataTransfer: data });
+    const byDrag = await screen.findByText('Moved to Interview.');
+    expect(within(byDrag.closest('[role="status"]')!).getByRole('button', { name: 'Undo' })).toBeInTheDocument();
+
+    within(column('Interview'))
+      .getByRole('button', { name: /Role 1/ })
+      .focus();
+    await user.keyboard('{Shift>}{ArrowLeft}{/Shift}');
+    const byKey = await screen.findByText('Moved to Applied.');
+    expect(within(byKey.closest('[role="status"]')!).getByRole('button', { name: 'Undo' })).toBeInTheDocument();
+    expect(patches()).toEqual([{ stage: 'offer' }, { stage: 'interview' }, { stage: 'applied' }]);
+  });
+
+  it('moves the application back with the undo, and the stage history holds both changes', async () => {
+    const { patches } = stageServer();
+    const user = userEvent.setup();
+    renderApp('/board');
+    await screen.findByText('Role 1');
+    await user.selectOptions(screen.getByLabelText('Stage of Role 1'), 'offer');
+    await waitFor(() => expect(within(column('Offer')).getByText('Role 1')).toBeInTheDocument());
+    await user.click(await screen.findByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(within(column('Applied')).getByText('Role 1')).toBeInTheDocument());
+    // The card leaves its old column after its fade.
+    await waitFor(() => expect(within(column('Offer')).queryByText('Role 1')).not.toBeInTheDocument());
+    // The undo is a move like any other: the same request with the earlier stage.
+    expect(patches()).toEqual([{ stage: 'offer' }, { stage: 'applied' }]);
+    expect(screen.queryByText('Moved to Offer.')).not.toBeInTheDocument();
+
+    await user.click(within(column('Applied')).getByRole('button', { name: /Role 1/ }));
+    const panel = await screen.findByRole('complementary', { name: 'Application details' });
+    const history = within(panel).getByRole('heading', { name: 'Stage history' }).parentElement!;
+    const items = await within(history).findAllByRole('listitem');
+    expect(items.map((li) => li.querySelector('span:last-child')?.textContent)).toEqual(['Created in Applied', 'Applied to Offer', 'Offer to Applied']);
+  });
+
+  it('reports a failed undo and leaves the card in its new column', async () => {
+    const { patches } = stageServer(true);
+    const user = userEvent.setup();
+    renderApp('/board');
+    await screen.findByText('Role 1');
+    await user.selectOptions(screen.getByLabelText('Stage of Role 1'), 'offer');
+    await user.click(await screen.findByRole('button', { name: 'Undo' }));
+    const error = await screen.findByRole('alert');
+    expect(error).toHaveTextContent('Undo failed.');
+    expect(error).toHaveTextContent('Disk full.');
+    expect(patches()).toEqual([{ stage: 'offer' }, { stage: 'applied' }]);
+    expect(within(column('Offer')).getByText('Role 1')).toBeInTheDocument();
   });
 });

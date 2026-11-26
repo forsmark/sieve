@@ -37,6 +37,14 @@
       "unit": "src/client/src/features/board/BoardPage.test.tsx › reports a failed store of the notes and shows the typed notes when the application opens again"
     }
   },
+  "Stage change feedback": {
+    "User moves an application": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › names the new stage and offers undo after a move by menu, by drag and by keyboard"
+    },
+    "User undoes a stage change": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › moves the application back with the undo, and the stage history holds both changes"
+    }
+  },
   "Stage history": {
     "User reviews an application": {
       "unit": "src/client/src/features/board/BoardPage.test.tsx › shows the stage history of an application in time order"
