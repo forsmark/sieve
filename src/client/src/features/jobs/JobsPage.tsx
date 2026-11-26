@@ -267,11 +267,17 @@ export function JobsPage() {
     };
   }, []);
 
+  /** The posting the detail view shows now, read in callbacks that outlive a render. */
+  const openId = useRef(search.id);
+  openId.current = search.id;
+
   const doTriage = useCallback(
     (ids: string[], action: TriageAction, label?: string, opts?: { keepSelection?: boolean }) => {
       if (ids.length === 0) return;
       const leaves = !statuses.includes(STATUS_OF[action]);
       let returnTo: string | undefined;
+      /** Set when the detail view moved on: the posting it showed, and the one it moved to (none when it closed). */
+      let moved: { from: string; to: string | undefined } | undefined;
       if (leaves && mounted.current && search.id && ids.includes(search.id)) {
         // Follow with the next posting, so triage in the detail view keeps going.
         const idx = items.findIndex((i) => i.id === search.id);
@@ -285,9 +291,21 @@ export function JobsPage() {
         if (after) returnTo = search.id;
         setAutoOpenedId(after?.id);
         openPosting(after?.id, true);
+        moved = { from: search.id, to: after?.id };
       }
       if (listHasFocus()) focusRowSoon.current = true;
-      triage.mutate({ ids, action, label, returnTo });
+      triage.mutate(
+        { ids, action, label, returnTo },
+        {
+          // A failed triage shows the posting it moved on from again, so the view is as it was before the action.
+          // Not when the user has gone on to another posting meanwhile.
+          onError: () => {
+            if (!moved || !mounted.current || openId.current !== moved.to) return;
+            setAutoOpenedId(undefined);
+            openPosting(moved.from, true);
+          },
+        },
+      );
       setSelection((s) => {
         if (!opts?.keepSelection) return s.size ? new Set() : s;
         // A swipe acts on one card. The other cards stay selected.
@@ -374,8 +392,6 @@ export function JobsPage() {
 
   // While a posting is open, a focus from Tab leaves the cursor where it is, so the triage keys still act on the open posting.
   // The cursor keys and a click still move it.
-  const openId = useRef(search.id);
-  openId.current = search.id;
   const onFocusRow = useCallback((index: number) => {
     if (!openId.current) setCursor(index);
   }, []);

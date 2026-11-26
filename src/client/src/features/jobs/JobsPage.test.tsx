@@ -960,6 +960,40 @@ describe('undo after the message', () => {
     expect(detailView().getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
   });
 
+  it('shows the posting again when a triage from the detail view fails after the view moved on', async () => {
+    const { api } = postingServer([makeItem('1', 90), makeItem('2', 70)], {
+      'POST /api/postings/bulk': () => new Response(JSON.stringify({ error: 'The device is offline.' }), { status: 503 }),
+    });
+    const user = userEvent.setup();
+    const { history } = renderApp('/jobs?id=1');
+    await screen.findByRole('heading', { name: 'Job 1' });
+
+    await user.click(detailView().getByRole('button', { name: 'Dismiss' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The change was not saved.');
+    expect(await screen.findByRole('heading', { name: 'Job 1' })).toBeInTheDocument();
+    expect(history.location.search).toBe('?id=1');
+    expect(detailView().getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
+    expect(restoreCalls(api)).toHaveLength(0);
+  });
+
+  it('stays on the posting the user went on to when a triage from the detail view fails later', async () => {
+    let fail: (r: Response) => void = () => {};
+    postingServer([makeItem('1', 90), makeItem('2', 70), makeItem('3', 60)], {
+      'POST /api/postings/bulk': () => new Promise<Response>((resolve) => (fail = resolve)),
+    });
+    const user = userEvent.setup();
+    const { history } = renderApp('/jobs?id=1');
+    await screen.findByRole('heading', { name: 'Job 1' });
+    await user.click(detailView().getByRole('button', { name: 'Dismiss' }));
+    await screen.findByRole('heading', { name: 'Job 2' });
+
+    await user.click(screen.getByRole('button', { name: /^Job 3/ }));
+    await screen.findByRole('heading', { name: 'Job 3' });
+    fail(new Response(JSON.stringify({ error: 'Disk full.' }), { status: 500 }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The change was not saved.');
+    expect(history.location.search).toBe('?id=3');
+  });
+
   it('stays on the next posting when the undo request fails', async () => {
     const { api } = postingServer([makeItem('1', 90), makeItem('2', 70)], {
       'POST /api/postings/restore': () => new Response(JSON.stringify({ error: 'Database is locked.' }), { status: 500 }),

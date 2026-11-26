@@ -361,7 +361,7 @@ function Detail({
                     key={t}
                     type="button"
                     onClick={() => onTagClick(t)}
-                    className="border border-line-strong px-1.5 py-0.5 text-xs font-medium hover:bg-ink hover:text-field-blue"
+                    className="border border-line-strong px-1.5 py-0.5 text-xs font-medium hover:bg-ink hover:text-field-blue touch:min-h-11 touch:min-w-11 touch:px-3"
                     aria-label={`Filter by tag ${t}`}
                   >
                     {t}

@@ -25,7 +25,7 @@ function match(extra: Partial<MatchDetail> = {}): MatchDetail {
   };
 }
 
-function open(m: MatchDetail) {
+function open(m: MatchDetail, extra: Partial<PostingDetail> = {}) {
   const item = makeItem('7', 82);
   const detail: PostingDetail = {
     ...item,
@@ -45,6 +45,7 @@ function open(m: MatchDetail) {
     coverLetter: null,
     matchAnalysis: null,
     match: m,
+    ...extra,
   };
   mockApi({
     'GET /api/auth/me': () => ({ authRequired: false, authenticated: true }),
@@ -85,6 +86,13 @@ describe('detail mosaic', () => {
     const assessment = await tile('Assessment');
     expect(assessment).toHaveClass('@3xl:notch-right');
     expect(assessment.className).not.toMatch(/notch-down/);
+  });
+
+  it('gives the tag buttons of the facts a 44px size on a touch screen', async () => {
+    // Real size, not an invisible hit area: the tags stand 6px apart, so wider hit areas would overlap.
+    open(match(), { tags: ['TypeScript', 'Go'] });
+    const tag = await screen.findByRole('button', { name: 'Filter by tag Go' });
+    expect(tag).toHaveClass('touch:min-h-11', 'touch:min-w-11', 'touch:px-3');
   });
 
   it('shrinks an empty "Missing skills" tile to one line', async () => {
