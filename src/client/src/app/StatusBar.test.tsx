@@ -171,13 +171,20 @@ describe('status bar on a phone', () => {
     expect(footer.getAllByRole('link')).toEqual([link]);
     expect(link).toHaveAttribute('href', '/activity');
     expect(link).toHaveClass('min-h-11', 'box-content', 'pb-[env(safe-area-inset-bottom)]');
-    expect(link).toHaveTextContent(/^Last fetch never.*Model available.*(Live|Connecting|Reconnecting), open Activity$/);
+    expect(link).toHaveTextContent(/^Last fetch never.*Model available.*Queue 0.*(Live|Connecting|Reconnecting), open Activity$/);
     expect(footer.queryByRole('button')).not.toBeInTheDocument();
-    expect(footer.queryByText(/^Queue/)).not.toBeInTheDocument();
 
     await user.click(link);
     expect(await screen.findByRole('heading', { level: 1, name: 'Activity' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Fetch now' })).toBeInTheDocument();
+  });
+
+  it('keeps the queue count in its line', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    setup({ ...STATUS, queue: { score: 5, analysis: 2 }, queueTotal: 7 });
+    const link = await line();
+    await within(link).findByText(/^Last fetch/);
+    expect(link).toHaveTextContent(/Queue 7/);
   });
 
   it('keeps the faults in its line: the model, paused matching, a fetch, and "Offline"', async () => {

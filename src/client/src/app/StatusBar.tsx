@@ -94,6 +94,13 @@ function PhoneStatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
             <span>{modelText(s)}</span>
           </Item>
         )}
+        {s && (
+          <Item className="shrink-0">
+            <span>
+              Queue <span className="tabular text-fg">{s.queueTotal}</span>
+            </span>
+          </Item>
+        )}
         <Item className="ml-auto shrink-0">
           <Connection />
         </Item>
