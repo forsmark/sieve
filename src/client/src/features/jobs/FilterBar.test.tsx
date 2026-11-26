@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { PostingListItem } from '../../../../shared/api';
 import { STATUS, makeItem, mockApi, renderApp } from '../../test-utils';
@@ -109,5 +109,17 @@ describe('filter sheet below 640px', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await user.click(filtersButton());
     expect(screen.getByLabelText('Work arrangement')).not.toBeVisible();
+  });
+
+  it('closes the open panel instead of opening the sheet when the window gets narrower than 640px', async () => {
+    const media = mockMedia({ width: 1440 });
+    setup();
+    renderApp('/jobs?work=remote');
+    await screen.findByText('Job 1');
+    expect(filtersButton()).toHaveAttribute('aria-expanded', 'true');
+
+    act(() => media.set({ width: 500 }));
+    expect(screen.queryByRole('dialog', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(filtersButton()).toHaveAttribute('aria-expanded', 'false');
   });
 });

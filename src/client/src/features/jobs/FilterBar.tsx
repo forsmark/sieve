@@ -52,6 +52,12 @@ export function FilterBar({
   const phone = useMediaQuery(PHONE);
   const touch = useMediaQuery(TOUCH);
   const [open, setOpen] = useState(() => !phone && hasActiveFilters({ ...search, q: undefined }));
+  // A panel open in the page closes when the window gets narrower than 640px, so the sheet does not open without a tap.
+  const [wasPhone, setWasPhone] = useState(phone);
+  if (wasPhone !== phone) {
+    setWasPhone(phone);
+    if (phone) setOpen(false);
+  }
   const panelId = useId();
   const sheetTitleId = useId();
   const [q, setQ] = useDebounced(search.q, (v) => update({ q: v }, true));
