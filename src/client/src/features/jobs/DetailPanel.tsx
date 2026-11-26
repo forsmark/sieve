@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { MatchDetail, PostingDetail, TriageAction } from '../../../../shared/api';
@@ -10,8 +10,14 @@ import { Badge, Button, ErrorState, LoadingState, MatchCell, cx, Icon } from '..
 import { scoreBand } from '../../../../shared/schemas';
 import { capitalize, dateOnly, sourceName } from '../../lib/format';
 import { showToast, toastError } from '../../lib/toast';
+import { useBottomBar } from '../../lib/useBottomBar';
+import { useMediaQuery } from '../../lib/useMediaQuery';
 import { CoverLetter } from './CoverLetter';
 import { MatchAnalysis } from './MatchAnalysis';
+import { DETAIL_FULL_SCREEN } from './media';
+
+/** How long a posting that the detail view opened by itself stays open before it counts as read. */
+export const AUTO_OPEN_READ_DELAY_MS = 1500;
 
 const STAGE_LABEL: Record<string, string> = { applied: 'Applied', interview: 'Interview', offer: 'Offer', rejected: 'Rejected', withdrawn: 'Withdrawn' };
 
@@ -21,13 +27,18 @@ export function DetailPanel({
   onTriage,
   onTagClick,
   headingRef,
+  autoOpened = false,
 }: {
   id: string;
   onClose: () => void;
   onTriage: (ids: string[], action: TriageAction, label?: string) => void;
   onTagClick: (tag: string) => void;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
+  /** The detail view opened this posting by itself after a triage. It counts as read after AUTO_OPEN_READ_DELAY_MS. */
+  autoOpened?: boolean;
 }) {
+  // Below 1024px the detail covers the screen and its triage buttons stand in a bar at the bottom.
+  const fullScreen = useMediaQuery(DETAIL_FULL_SCREEN);
   const qc = useQueryClient();
   const detail = useQuery({
     queryKey: qk.posting(id),
@@ -46,14 +57,30 @@ export function DetailPanel({
     onSettled: () => void qc.invalidateQueries({ queryKey: qk.status }),
   });
 
+  // A posting that opened by itself counts as opened after a dwell. The panel mounts anew for each posting,
+  // so a change of posting or a close cancels the timer.
+  const [dwelled, setDwelled] = useState(!autoOpened);
+  useEffect(() => {
+    if (dwelled) return;
+    const timer = setTimeout(() => setDwelled(true), AUTO_OPEN_READ_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [dwelled]);
+
   // Opening a posting marks it as read, once per opening.
   useEffect(() => {
     const d = detail.data;
-    if (d && d.unread && markedRead.current !== d.id) {
+    if (d && dwelled && d.unread && markedRead.current !== d.id) {
       markedRead.current = d.id;
       markRead.mutate(d.id);
     }
-  }, [detail.data, markRead]);
+  }, [detail.data, dwelled, markRead]);
+
+  // On a full screen, focus moves into the detail when the posting arrives, not before, so it lands on the heading.
+  const loadedId = detail.data?.id;
+  useEffect(() => {
+    if (fullScreen && loadedId) headingRef.current?.focus();
+    // Only the arrival of the posting moves focus, not a later change of the width.
+  }, [loadedId]);
 
   const separate = useMutation({
     mutationFn: () => api.separate(id),
@@ -76,7 +103,7 @@ export function DetailPanel({
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-line px-3">
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-line px-3 touch:h-12">
         <Button size="sm" variant="ghost" onClick={onClose} aria-label="Close details" aria-keyshortcuts="Escape">
           <Icon name="arrow-left" /> <span className="lg:hidden">Back to list</span>
           <span className="hidden lg:inline">Close</span>
@@ -86,22 +113,23 @@ export function DetailPanel({
             href={detail.data.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[13px] font-semibold underline decoration-accent decoration-2 hover:decoration-fg"
+            // On a touch screen an invisible area of 44px around the text takes the tap.
+            className="relative text-[13px] font-semibold underline decoration-accent decoration-2 hover:decoration-fg touch:after:absolute touch:after:-inset-x-2 touch:after:-inset-y-3.5"
           >
             Open posting <Icon name="arrow-up-right" />
             <span className="sr-only"> (opens in a new tab)</span>
           </a>
         )}
       </div>
-      {/* Full screen below 1024px: the last lines stay above the home indicator of a phone. */}
-      <div className="min-h-0 flex-1 overflow-y-auto max-lg:pb-[env(safe-area-inset-bottom)]">
+      {/* Full screen below 1024px: the last lines stay above the home indicator of a phone, or the action bar does. */}
+      <div className={cx('min-h-0 flex-1 overflow-y-auto', !(fullScreen && detail.data) && 'max-lg:pb-[env(safe-area-inset-bottom)]')}>
         {detail.isPending && <LoadingState label="Loading posting" />}
         {detail.isError && <ErrorState error={detail.error} onRetry={() => void detail.refetch()} title="This posting could not be loaded." />}
         {detail.data && (
           <Detail
             d={detail.data}
             headingRef={headingRef}
-            onTriage={onTriage}
+            onTriage={fullScreen ? undefined : onTriage}
             onTagClick={onTagClick}
             onSeparate={() => separate.mutate()}
             separating={separate.isPending}
@@ -110,6 +138,67 @@ export function DetailPanel({
           />
         )}
       </div>
+      {fullScreen && detail.data && <DetailActionBar d={detail.data} onTriage={onTriage} />}
+    </div>
+  );
+}
+
+/**
+ * The triage buttons of the posting's status: Save, Dismiss or Restore, and "Mark as applied" or "Open on board".
+ * They stand in the detail header, or in the action bar below 1024px.
+ */
+function TriageButtons({ d, onTriage, inBar }: { d: PostingDetail; onTriage: (ids: string[], action: TriageAction, label?: string) => void; inBar?: boolean }) {
+  // In the bar the buttons share the width and take a finger at every pointer.
+  const size = inBar ? 'md' : 'sm';
+  const barClass = inBar ? 'h-11 min-w-0 flex-1 px-2' : undefined;
+  return (
+    <>
+      {d.triageStatus !== 'saved' && d.triageStatus !== 'applied' && (
+        <Button size={size} className={barClass} onClick={() => onTriage([d.id], 'save', d.title)} aria-keyshortcuts="s">
+          Save
+        </Button>
+      )}
+      {d.triageStatus !== 'dismissed' ? (
+        <Button size={size} className={barClass} onClick={() => onTriage([d.id], 'dismiss', d.title)} aria-keyshortcuts="d">
+          Dismiss
+        </Button>
+      ) : (
+        <Button size={size} className={barClass} onClick={() => onTriage([d.id], 'restore', d.title)} aria-keyshortcuts="r">
+          Restore
+        </Button>
+      )}
+      {d.triageStatus !== 'applied' ? (
+        <Button size={size} className={barClass} variant="primary" onClick={() => onTriage([d.id], 'apply', d.title)} aria-keyshortcuts="a">
+          Mark as applied
+        </Button>
+      ) : (
+        <Link
+          to="/board"
+          search={{ app: d.id }}
+          className={cx(
+            'inline-flex items-center justify-center border border-line-strong font-semibold hover:border-fg hover:bg-surface-2',
+            inBar ? 'h-11 min-w-0 flex-1 px-2 text-sm' : 'h-7 px-2.5 text-[13px] touch:h-11',
+          )}
+        >
+          Open on board
+        </Link>
+      )}
+    </>
+  );
+}
+
+/** Below 1024px: the triage buttons in a bar under the scroller, so they stay in reach. The toasts stand above it. */
+function DetailActionBar({ d, onTriage }: { d: PostingDetail; onTriage: (ids: string[], action: TriageAction, label?: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useBottomBar(ref);
+  return (
+    <div
+      ref={ref}
+      role="group"
+      aria-label="Triage actions"
+      className="flex shrink-0 gap-2 border-t border-fg bg-bg px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+    >
+      <TriageButtons d={d} onTriage={onTriage} inBar />
     </div>
   );
 }
@@ -126,7 +215,8 @@ function Detail({
 }: {
   d: PostingDetail;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
-  onTriage: (ids: string[], action: TriageAction, label?: string) => void;
+  /** Without it the triage buttons stand in the action bar, not in the header. */
+  onTriage?: (ids: string[], action: TriageAction, label?: string) => void;
   onTagClick: (tag: string) => void;
   onSeparate: () => void;
   separating: boolean;
@@ -138,7 +228,7 @@ function Detail({
   return (
     <article className="flex flex-col gap-6 p-4 sm:p-6">
       <header className="flex flex-col gap-2">
-        <h2 ref={headingRef} tabIndex={-1} className="text-3xl leading-[1.1] font-bold tracking-tight">
+        <h2 ref={headingRef} id="posting-heading" tabIndex={-1} className="text-3xl leading-[1.1] font-bold tracking-tight">
           {d.title}
         </h2>
         <p className="text-muted">
@@ -154,33 +244,7 @@ function Detail({
           {d.workArrangement && <Badge>{d.workArrangement === 'onsite' ? 'On site' : capitalize(d.workArrangement)}</Badge>}
         </div>
         <div className="flex flex-wrap gap-2 pt-1">
-          {d.triageStatus !== 'saved' && d.triageStatus !== 'applied' && (
-            <Button size="sm" onClick={() => onTriage([d.id], 'save', d.title)} aria-keyshortcuts="s">
-              Save
-            </Button>
-          )}
-          {d.triageStatus !== 'dismissed' ? (
-            <Button size="sm" onClick={() => onTriage([d.id], 'dismiss', d.title)} aria-keyshortcuts="d">
-              Dismiss
-            </Button>
-          ) : (
-            <Button size="sm" onClick={() => onTriage([d.id], 'restore', d.title)} aria-keyshortcuts="r">
-              Restore
-            </Button>
-          )}
-          {d.triageStatus !== 'applied' ? (
-            <Button size="sm" variant="primary" onClick={() => onTriage([d.id], 'apply', d.title)} aria-keyshortcuts="a">
-              Mark as applied
-            </Button>
-          ) : (
-            <Link
-              to="/board"
-              search={{ app: d.id }}
-              className="inline-flex h-7 items-center border border-line-strong px-2.5 text-[13px] font-semibold hover:border-fg hover:bg-surface-2"
-            >
-              Open on board
-            </Link>
-          )}
+          {onTriage && <TriageButtons d={d} onTriage={onTriage} />}
           <Button size="sm" variant="ghost" onClick={onRescore} busy={rescoring}>
             Rescore
           </Button>
@@ -214,7 +278,7 @@ function Detail({
       <div className="mosaic @container grid-cols-6">
         <ScoreTiles m={m} onRescore={onRescore} rescoring={rescoring} />
 
-        {m && (m.matchedSkills.length > 0 || m.missingSkills.length > 0) && (
+        {m && m.missingSkills.length > 0 && (
           <>
             <Tile color="blue" className="col-span-6 @md:col-span-3 @md:notch-down" order={2} title={`Matched skills (${m.matchedSkills.length})`}>
               <SkillList label="Matched skills" skills={m.matchedSkills} />
@@ -229,9 +293,20 @@ function Detail({
             </Tile>
           </>
         )}
+        {/* With no missing skill, the two tiles stack and "Missing skills" shrinks to one line above the assessment. */}
+        {m && m.missingSkills.length === 0 && m.matchedSkills.length > 0 && (
+          <>
+            <Tile color="blue" className="col-span-6" order={2} title={`Matched skills (${m.matchedSkills.length})`}>
+              <SkillList label="Matched skills" skills={m.matchedSkills} />
+            </Tile>
+            <Tile color="ground" className={cx('col-span-6 border border-field-blue py-3 sm:py-3', m.assessment && 'notch-down')} order={3}>
+              <h3 className="text-base font-bold">Missing skills: none</h3>
+            </Tile>
+          </>
+        )}
 
         {m?.assessment && (
-          <Tile color="ground" className="col-span-6 @3xl:col-span-3 @3xl:notch-right @max-3xl:notch-down" order={4} title="Assessment">
+          <Tile color="ground" className="col-span-6 @3xl:col-span-3 @3xl:notch-right" order={4} title="Assessment">
             <p className="max-w-[70ch] text-[15px] leading-relaxed whitespace-pre-wrap">{m.assessment}</p>
             {m.softViolations.length > 0 && (
               <>
@@ -248,11 +323,12 @@ function Detail({
           </Tile>
         )}
 
-        <Tile color="pink" className={cx('col-span-6', m?.assessment && '@3xl:col-span-3')} order={5} title="Cover letter">
+        {/* Below 768px of mosaic width the facts and the description come first, by CSS order, so the tab order on wide screens stays. */}
+        <Tile color="pink" className={cx('col-span-6 @max-3xl:order-1', m?.assessment && '@3xl:col-span-3')} order={5} title="Cover letter">
           <CoverLetter key={d.id} postingId={d.id} letter={d.coverLetter} />
         </Tile>
 
-        <Tile color="ground" className="col-span-6 border border-line-strong" order={6} title="Expanded analysis">
+        <Tile color="ground" className="col-span-6 border border-line-strong @max-3xl:order-1" order={6} title="Expanded analysis">
           <MatchAnalysis postingId={d.id} analysis={d.matchAnalysis} currentScore={d.match?.totalScore ?? null} />
         </Tile>
 
@@ -304,7 +380,7 @@ function Detail({
           )}
         </Tile>
 
-        <Tile color="ground" className="col-span-6" order={8} title={`Sources (${d.sourceLinks.length})`}>
+        <Tile color="ground" className="col-span-6 @max-3xl:order-1" order={8} title={`Sources (${d.sourceLinks.length})`}>
           <ul className="flex flex-wrap gap-x-5 gap-y-1">
             {d.sourceLinks.map((s) => (
               <li key={s.id} className="flex items-center gap-2">

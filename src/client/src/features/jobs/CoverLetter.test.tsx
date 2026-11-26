@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { CoverLetterDto, PostingDetail } from '../../../../shared/api';
 import { api } from '../../api/endpoints';
@@ -191,8 +191,9 @@ describe('cover letter', () => {
       [`POST ${LETTER_PATH}`]: () => letter(),
     });
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('The letter could not be written.');
-    expect(alert).toHaveTextContent('The claude command timed out.');
+    // A plain sentence first, and the technical error below it in small muted text.
+    expect(alert.firstElementChild).toHaveTextContent(/^The letter could not be written\. Try again\.$/);
+    expect(within(alert).getByText('The claude command timed out.')).toHaveClass('text-xs', 'text-muted');
     expect(screen.queryByLabelText('Cover letter text')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Generate cover letter' }));
@@ -248,5 +249,28 @@ describe('cover letter', () => {
     expect(await screen.findByText(/This takes up to a minute/)).toBeInTheDocument();
     expect(screen.getByLabelText('Cover letter text')).toBeDisabled();
     expect(screen.getByLabelText('Cover letter text')).toHaveValue(TEXT);
+  });
+});
+
+describe('cover letter field', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    resetToastsForTests();
+  });
+
+  it('grows with its text on load and on input, so only the panel scrolls', async () => {
+    // jsdom has no layout. The scroll height here follows the length of the text.
+    vi.spyOn(HTMLTextAreaElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLTextAreaElement) {
+      return 100 + this.value.length;
+    });
+    const { user } = setup(letter());
+    const field = await screen.findByLabelText('Cover letter text');
+    expect(field).toHaveClass('field-sizing-content', 'overflow-hidden', 'resize-none');
+    expect(field.style.height).toBe(`${100 + TEXT.length}px`);
+
+    await user.type(field, ' More.');
+    expect(field.style.height).toBe(`${100 + TEXT.length + 6}px`);
   });
 });
