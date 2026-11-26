@@ -124,7 +124,7 @@ describe('application board', () => {
   });
 
   it('stores no half-typed year while the user types a year into a filled date, and stores what is left on blur', async () => {
-    let stored = { ...app('1', 'interview'), interviewAt: new Date(2026, 11, 10, 10, 30).toISOString() };
+    let stored: ApplicationDto = { ...app('1', 'interview'), interviewAt: new Date(2026, 11, 10, 10, 30).toISOString() };
     const api = mockApi({
       ...base,
       'GET /api/applications': () => [stored],
