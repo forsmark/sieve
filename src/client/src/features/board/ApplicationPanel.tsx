@@ -11,6 +11,15 @@ import { STAGE_LABEL, useMoveApplication, useRemoveApplication } from './stages'
 import { clearNotesDraft, notesDraft, useStoreApplicationField } from './notes';
 import { CoverLetterForPosting } from '../jobs/CoverLetter';
 
+/**
+ * True for a datetime-local value whose year has four digits and is at least 1900. While the user types a year
+ * into a filled field, the field holds the years in between, such as 0002, 0020 and 0202.
+ */
+function isWholeDate(value: string): boolean {
+  const year = /^(\d+)-/.exec(value)?.[1];
+  return !!year && year.length === 4 && Number(year) >= 1900;
+}
+
 export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClose: () => void }) {
   const qc = useQueryClient();
   const move = useMoveApplication();
@@ -149,8 +158,9 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
                 onChange={(e) => {
                   setInterview(e.target.value);
                   current.current.interview = e.target.value;
-                  // An empty value can be a date the user is still typing, so only a full date stores at once.
-                  if (e.target.value) storeDate();
+                  // An empty value, or a year of fewer than four digits, can be a date the user is still typing.
+                  // Only a whole date stores at once. Blur, close and page hide store the rest.
+                  if (isWholeDate(e.target.value)) storeDate();
                 }}
                 onBlur={storeDate}
               />

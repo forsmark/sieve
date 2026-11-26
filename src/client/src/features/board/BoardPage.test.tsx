@@ -123,6 +123,38 @@ describe('application board', () => {
     await waitFor(() => expect(within(card).getByText(`Interview ${date}`)).toBeInTheDocument());
   });
 
+  it('stores no half-typed year while the user types a year into a filled date, and stores what is left on blur', async () => {
+    let stored = { ...app('1', 'interview'), interviewAt: new Date(2026, 11, 10, 10, 30).toISOString() };
+    const api = mockApi({
+      ...base,
+      'GET /api/applications': () => [stored],
+      'GET /api/applications/1/events': () => [],
+      'PATCH /api/applications/1': (c) => {
+        stored = { ...stored, ...(c.body as Partial<ApplicationDto>) };
+        return stored;
+      },
+    });
+    const patches = () => api.calls.filter((c) => c.method === 'PATCH').map((c) => c.body);
+    renderApp('/board?app=1');
+    const panel = await screen.findByRole('complementary', { name: 'Application details' });
+    const field = await within(panel).findByLabelText('Interview date and time');
+    expect(field).toHaveValue('2026-12-10T10:30');
+
+    // The browser's year segment takes one digit after the other.
+    for (const year of ['0002', '0020', '0202']) fireEvent.change(field, { target: { value: `${year}-12-10T10:30` } });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(patches()).toEqual([]);
+
+    fireEvent.change(field, { target: { value: '2027-12-10T10:30' } });
+    await waitFor(() => expect(patches()).toEqual([{ interviewAt: new Date(2027, 11, 10, 10, 30).toISOString() }]));
+
+    // A year the user leaves as it is still stores when the field loses focus.
+    fireEvent.change(field, { target: { value: '0202-12-10T10:30' } });
+    fireEvent.blur(field);
+    await waitFor(() => expect(patches()).toHaveLength(2));
+    expect(patches()[1]).toEqual({ interviewAt: new Date('0202-12-10T10:30').toISOString() });
+  });
+
   it('removes an application from the panel after the confirmation, and the panel closes', async () => {
     let apps = [app('1', 'applied'), app('2', 'interview')];
     const api = mockApi({
