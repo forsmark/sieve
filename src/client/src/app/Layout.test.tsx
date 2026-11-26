@@ -81,11 +81,17 @@ describe('top bar', () => {
     expect(within(board).queryByLabelText(/5/)).not.toBeInTheDocument();
   });
 
+  it('names a single open application in the singular', async () => {
+    setup('/jobs', { status: { ...STATUS, counts: { ...STATUS.counts, applied: 1, openApplications: 1 } } });
+    const board = (await nav()).getByRole('link', { name: /^Board/ });
+    expect(await within(board).findByLabelText('1 open application')).toHaveTextContent('1');
+  });
+
   it('shows no count beside "Board" when no application is open', async () => {
     setup('/jobs', { status: { ...STATUS, counts: { ...STATUS.counts, applied: 3, openApplications: 0 } } });
     const n = await nav();
     // The unread count of Jobs shows, so the status has arrived.
     await n.findByLabelText('3 unread');
-    expect(within(n.getByRole('link', { name: /^Board/ })).queryByLabelText(/open applications/)).not.toBeInTheDocument();
+    expect(within(n.getByRole('link', { name: /^Board/ })).queryByLabelText(/open application/)).not.toBeInTheDocument();
   });
 });

@@ -24,6 +24,8 @@ export interface RequestOptions {
   /** A plain object becomes JSON. FormData is sent as multipart. */
   body?: unknown;
   signal?: AbortSignal;
+  /** Let the request outlive the page, as for a store on `pagehide`. Browsers refuse it for bodies over 64 KB. */
+  keepalive?: boolean;
   /** Return the body of these error statuses instead of throwing. */
   acceptStatus?: number[];
 }
@@ -59,7 +61,8 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   }
   let res: Response;
   try {
-    res = await fetch(apiPath(path), { method: opts.method ?? 'GET', headers, body, signal: opts.signal, credentials: 'same-origin' });
+    const keepalive = opts.keepalive === true && (body === undefined || (typeof body === 'string' && body.length < 60_000));
+    res = await fetch(apiPath(path), { method: opts.method ?? 'GET', headers, body, signal: opts.signal, credentials: 'same-origin', keepalive });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
     throw new ApiRequestError(0, 'The server cannot be reached. Check that it is running.', null);

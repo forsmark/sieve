@@ -232,7 +232,7 @@ export async function runKeyboardTriage({ page, api, t, base }) {
       [[ids[2], 'applied']],
       'GET /api/applications',
     );
-    await page.waitFor('!!document.querySelector(\'nav[aria-label="Main"] [aria-label="1 applications"]\')', {
+    await page.waitFor('!!document.querySelector(\'nav[aria-label="Main"] [aria-label="1 open application"]\')', {
       message: 'the count 1 beside "Board" in the navigation',
     });
   });

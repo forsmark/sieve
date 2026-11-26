@@ -145,7 +145,7 @@ export const api = {
   createApplication: (postingId: string) => request<ApplicationDto>('/api/applications', { method: 'POST', body: { postingId } }),
   applicationEvents: (id: string) => request<ApplicationEventDto[]>(`/api/applications/${encodeURIComponent(id)}/events`),
   updateApplication: (id: string, patch: { stage?: ApplicationStage; notes?: string | null; interviewAt?: string | null }) =>
-    request<ApplicationDto>(`/api/applications/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch }),
+    request<ApplicationDto>(`/api/applications/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch, keepalive: true }),
   removeApplication: (id: string) => request<{ ok: true }>(`/api/applications/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   // Activity, logs, backups

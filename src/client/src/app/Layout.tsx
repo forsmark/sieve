@@ -1,3 +1,4 @@
+import { plural } from '../lib/format';
 import { Link, Outlet } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/endpoints';
@@ -73,7 +74,7 @@ function Shell({ authRequired }: { authRequired: boolean }) {
                 </span>
               )}
               {n.to === '/board' && counts && counts.openApplications > 0 && (
-                <span className="tabular ml-1 bg-field-pink px-1 text-xs font-bold text-ink" aria-label={`${counts.openApplications} open applications`}>
+                <span className="tabular ml-1 bg-field-pink px-1 text-xs font-bold text-ink" aria-label={plural(counts.openApplications, 'open application')}>
                   {counts.openApplications}
                 </span>
               )}

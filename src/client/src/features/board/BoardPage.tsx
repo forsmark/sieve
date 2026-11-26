@@ -134,7 +134,7 @@ export function BoardPage() {
       {search.app && (
         <aside
           aria-label="Application details"
-          className="fixed inset-0 z-30 flex flex-col bg-bg lg:static lg:z-auto lg:w-[30rem] lg:shrink-0 lg:border-l lg:border-fg"
+          className="fixed inset-0 z-30 flex flex-col bg-bg pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] lg:static lg:p-0 lg:z-auto lg:w-[30rem] lg:shrink-0 lg:border-l lg:border-fg"
         >
           {selected ? (
             <ApplicationPanel key={selected.postingId} app={selected} onClose={() => open(undefined)} />

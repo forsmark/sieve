@@ -54,12 +54,14 @@ export function useMoveApplication() {
             throw err;
           } finally {
             void qc.invalidateQueries({ queryKey: qk.applicationEvents(id) });
+            void qc.invalidateQueries({ queryKey: qk.status });
           }
         },
       });
     },
     onSettled: (_d, _e, { id }) => {
       void qc.invalidateQueries({ queryKey: qk.applicationEvents(id) });
+      void qc.invalidateQueries({ queryKey: qk.status });
     },
   });
 }

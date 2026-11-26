@@ -65,3 +65,23 @@ describe('errorText', () => {
     expect(errorText(new ApiRequestError(500, 'Database is locked.', null))).toBe('Database is locked.');
   });
 });
+
+describe('keepalive', () => {
+  it('lets a request outlive the page when the caller asks and the body is small', async () => {
+    const fetchMock = stubFetch();
+    await request('/api/applications/1', { method: 'PATCH', body: { notes: 'Call back on Monday.' }, keepalive: true });
+    expect(fetchMock).toHaveBeenCalledWith('/api/applications/1', expect.objectContaining({ keepalive: true }));
+  });
+
+  it('sends a large body without keepalive, which browsers refuse above 64 KB', async () => {
+    const fetchMock = stubFetch();
+    await request('/api/applications/1', { method: 'PATCH', body: { notes: 'x'.repeat(70_000) }, keepalive: true });
+    expect(fetchMock).toHaveBeenCalledWith('/api/applications/1', expect.objectContaining({ keepalive: false }));
+  });
+
+  it('sends no keepalive unless the caller asks', async () => {
+    const fetchMock = stubFetch();
+    await request('/api/status');
+    expect(fetchMock).toHaveBeenCalledWith('/api/status', expect.objectContaining({ keepalive: false }));
+  });
+});

@@ -123,3 +123,11 @@ The mutation's callbacks sit on the hook, so a store that starts on unmount stil
 ## Migration Plan
 
 Nothing to migrate. Deploy with `portal app deploy sieve`. Redeploying the earlier image rolls it back.
+
+## Changed during apply
+
+### 2026-11-26: An empty interview date is stored on blur, not on change
+The design stores the interview date on change. A date field also changes while the user types a date by hand, and its value is empty until the date is whole. A store on change would then clear a stored date in the middle of typing. A whole date is stored on change, as planned. An empty value is stored when the field loses focus, when the panel closes, and when the page is hidden. "Clear date" still clears at once.
+
+### 2026-11-26: The full-screen panels keep clear of the notch too
+p8 pads only the top bar by the top safe area. With `black-translucent`, the page runs under the iPhone's status bar, and the job detail view and the application panel cover the screen below 1024px, outside the top bar and the shell's side padding. Their headers and Close buttons would sit under the clock and the notch. Both panels pad by the top, left and right insets below 1024px, as the top bar and the shell do. Application stores also use `keepalive`, so a store that starts on `pagehide` survives the page closing. Browsers refuse `keepalive` for bodies over 64 KB, so a larger body goes without it.
