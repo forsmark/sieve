@@ -162,11 +162,21 @@ function PreferencesForm({ initial }: { initial: Preferences }) {
         </div>
         <div className="flex flex-col gap-2">
           {(Object.keys(WEIGHT_LABEL) as Array<keyof Weights>).map((k) => (
-            <div key={k} className="grid grid-cols-[6.5rem_1fr_4.5rem_3.5rem] items-center gap-3">
+            // Below 640px a weight takes two lines: the label and its share, then the slider and the number.
+            <div key={k} className="grid grid-cols-[1fr_4.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6.5rem_1fr_4.5rem_3.5rem] sm:gap-3">
               <label htmlFor={`w-${k}`} className="text-[13px]">
                 {WEIGHT_LABEL[k]}
               </label>
-              <input id={`w-${k}`} type="range" min={0} max={100} step={5} value={w[k]} onChange={(e) => setWeight(k, Number(e.target.value))} />
+              <input
+                id={`w-${k}`}
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={w[k]}
+                onChange={(e) => setWeight(k, Number(e.target.value))}
+                className="max-sm:order-3"
+              />
               <TextInput
                 aria-label={`${WEIGHT_LABEL[k]} weight`}
                 type="number"
@@ -174,8 +184,9 @@ function PreferencesForm({ initial }: { initial: Preferences }) {
                 max={100}
                 value={w[k]}
                 onChange={(e) => setWeight(k, Number(e.target.value))}
+                className="max-sm:order-4"
               />
-              <span className="tabular text-right text-xs text-muted">{weightSum > 0 ? `${Math.round((w[k] / weightSum) * 100)}%` : '–'}</span>
+              <span className="tabular text-right text-xs text-muted max-sm:order-2">{weightSum > 0 ? `${Math.round((w[k] / weightSum) * 100)}%` : '–'}</span>
             </div>
           ))}
         </div>

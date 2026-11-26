@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ProfileDto } from '../../../../shared/api';
 import { EMPTY_PROFILE, StructuredProfile } from '../../../../shared/schemas';
 import { api } from '../../api/endpoints';
 import { qk } from '../../api/keys';
 import { errorText } from '../../api/client';
-import { Badge, Button, ConfirmButton, Field, ListInput, Section, Select, TextArea, TextInput } from '../../components/ui';
+import { Badge, Button, ConfirmButton, Field, ListInput, Section, Select, TextArea, TextInput, cx } from '../../components/ui';
 import { showToast, toastError } from '../../lib/toast';
+import { useMediaQuery } from '../../lib/useMediaQuery';
+import { PHONE_QUERY } from '../../app/media';
 import { planText } from './plan';
 
 const LEVELS = ['basic', 'working', 'strong', 'expert'] as const;
@@ -17,8 +19,20 @@ function numOrNull(v: string): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
+/** A field of a skill row. Below 640px it shows its label above it; from 640px the header row names the column. */
+function SkillField({ label, phone, className, children }: { label: string; phone: boolean; className?: string; children: ReactNode }) {
+  if (!phone) return <div className={className}>{children}</div>;
+  return (
+    <label className={cx('flex min-w-0 flex-col gap-1', className)}>
+      <span className="text-[13px] font-medium text-fg">{label}</span>
+      {children}
+    </label>
+  );
+}
+
 export function ProfileEditor({ profile }: { profile: ProfileDto }) {
   const qc = useQueryClient();
+  const phone = useMediaQuery(PHONE_QUERY);
   const [draft, setDraft] = useState<StructuredProfile>(profile.effective ?? EMPTY_PROFILE);
   const [error, setError] = useState<string | null>(null);
   const dirty = JSON.stringify(draft) !== JSON.stringify(profile.effective);
@@ -83,63 +97,64 @@ export function ProfileEditor({ profile }: { profile: ProfileDto }) {
 
         <fieldset>
           <legend className="mb-2 text-[13px] font-semibold">Skills ({draft.skills.length})</legend>
-          <div className="flex flex-col gap-1.5">
-            {draft.skills.map((s, i) => (
-              <div key={i} className="grid grid-cols-[1fr_7.5rem_5rem_auto] items-center gap-2">
-                <TextInput
-                  aria-label={`Skill ${i + 1} name`}
-                  value={s.name}
-                  onChange={(e) =>
-                    set(
-                      'skills',
-                      draft.skills.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)),
-                    )
-                  }
-                />
-                <Select
-                  aria-label={`Skill ${i + 1} level`}
-                  value={s.level}
-                  onChange={(e) =>
-                    set(
-                      'skills',
-                      draft.skills.map((x, j) => (j === i ? { ...x, level: e.target.value as (typeof LEVELS)[number] } : x)),
-                    )
-                  }
-                >
-                  {LEVELS.map((l) => (
-                    <option key={l} value={l}>
-                      {l[0]!.toUpperCase() + l.slice(1)}
-                    </option>
-                  ))}
-                </Select>
-                <TextInput
-                  aria-label={`Skill ${i + 1} years`}
-                  type="number"
-                  min={0}
-                  placeholder="Years"
-                  value={s.years ?? ''}
-                  onChange={(e) =>
-                    set(
-                      'skills',
-                      draft.skills.map((x, j) => (j === i ? { ...x, years: numOrNull(e.target.value) } : x)),
-                    )
-                  }
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  aria-label={`Remove skill ${s.name || i + 1}`}
-                  onClick={() =>
-                    set(
-                      'skills',
-                      draft.skills.filter((_, j) => j !== i),
-                    )
-                  }
-                >
-                  Remove
-                </Button>
+          {/*
+            From 640px the rows share the columns of one grid, under a header row. Below 640px each row puts the name on
+            a line of its own above the level and the years, and each field shows its label.
+          */}
+          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[1fr_7.5rem_5rem_auto] sm:items-center sm:gap-x-2 sm:gap-y-1.5">
+            {!phone && draft.skills.length > 0 && (
+              <div aria-hidden className="col-span-4 grid grid-cols-subgrid text-xs font-medium text-muted">
+                <span>Skill</span>
+                <span>Level</span>
+                <span>Years</span>
               </div>
-            ))}
+            )}
+            {draft.skills.map((s, i) => {
+              const upd = (patch: Partial<typeof s>) =>
+                set(
+                  'skills',
+                  draft.skills.map((x, j) => (j === i ? { ...x, ...patch } : x)),
+                );
+              return (
+                <div key={i} className="grid grid-cols-[1fr_5rem_auto] items-end gap-2 sm:col-span-4 sm:grid-cols-subgrid sm:items-center">
+                  <SkillField label="Skill" phone={phone} className="col-span-3 sm:col-span-1">
+                    <TextInput aria-label={`Skill ${i + 1} name`} value={s.name} onChange={(e) => upd({ name: e.target.value })} />
+                  </SkillField>
+                  <SkillField label="Level" phone={phone}>
+                    <Select aria-label={`Skill ${i + 1} level`} value={s.level} onChange={(e) => upd({ level: e.target.value as (typeof LEVELS)[number] })}>
+                      {LEVELS.map((l) => (
+                        <option key={l} value={l}>
+                          {l[0]!.toUpperCase() + l.slice(1)}
+                        </option>
+                      ))}
+                    </Select>
+                  </SkillField>
+                  <SkillField label="Years" phone={phone}>
+                    <TextInput
+                      aria-label={`Skill ${i + 1} years`}
+                      type="number"
+                      min={0}
+                      placeholder="Years"
+                      value={s.years ?? ''}
+                      onChange={(e) => upd({ years: numOrNull(e.target.value) })}
+                    />
+                  </SkillField>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={`Remove skill ${s.name || i + 1}`}
+                    onClick={() =>
+                      set(
+                        'skills',
+                        draft.skills.filter((_, j) => j !== i),
+                      )
+                    }
+                  >
+                    Remove
+                  </Button>
+                </div>
+              );
+            })}
           </div>
           <Button size="sm" className="mt-2" onClick={() => set('skills', [...draft.skills, { name: '', level: 'working', years: null }])}>
             Add skill

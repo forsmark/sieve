@@ -7,10 +7,12 @@ import { errorText } from '../../api/client';
 import { Button, ErrorState, LoadingState, PageHeader, Section, Segmented, Spinner, TextArea } from '../../components/ui';
 import { relativeTime } from '../../lib/format';
 import { showToast, toastError } from '../../lib/toast';
+import { useDocumentTitle } from '../../lib/useDocumentTitle';
 import { ProfileEditor } from './ProfileEditor';
 import { PreferencesEditor } from './PreferencesEditor';
 
 export function ProfilePage() {
+  useDocumentTitle('Profile');
   const profile = useQuery({
     queryKey: qk.profile,
     queryFn: api.profile,
