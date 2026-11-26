@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { ClearPreviewDto, LlmSettingsDto, SourceDto } from '../../../../shared/api';
 import { STATUS, mockApi, renderApp } from '../../test-utils';
 import { resetToastsForTests } from '../../lib/toast';
+import { mockMedia } from '../../test/media';
 
 const LLM: LlmSettingsDto = {
   provider: 'local',
@@ -229,5 +230,80 @@ describe('postings', () => {
     expect(await section.findByText('10 postings are stored.')).toBeInTheDocument();
     await waitFor(() => expect(section.getByRole('button', { name: 'Delete 10 postings' })).toBeDisabled());
     expect(section.getByText('A fetch is running. Delete the postings when it ends.')).toBeInTheDocument();
+  });
+});
+
+describe('schedule and account', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetToastsForTests();
+  });
+
+  /** Opens the settings page with a stored schedule that the PUT changes, and with or without a password. */
+  function setupSchedule(paused: boolean, password = false) {
+    const server = { schedule: { intervalHours: 6, paused, nextRunAt: paused ? null : '2026-11-26T18:00:00Z' } };
+    let signedIn = true;
+    const api = mockApi({
+      'GET /api/auth/me': () => ({ authRequired: password, authenticated: signedIn }),
+      'POST /api/auth/logout': () => {
+        signedIn = false;
+        return { ok: true };
+      },
+      'GET /api/status': () => ({ ...STATUS, authRequired: password }),
+      'GET /api/schedule': () => server.schedule,
+      'PUT /api/schedule': (call) => {
+        server.schedule = { ...server.schedule, ...(call.body as object) };
+        return server.schedule;
+      },
+    });
+    const user = userEvent.setup();
+    renderApp('/settings');
+    const puts = () => api.calls.filter((c) => c.method === 'PUT' && c.path === '/api/schedule').map((c) => c.body);
+    const logouts = () => api.calls.filter((c) => c.method === 'POST' && c.path === '/api/auth/logout').length;
+    return { user, puts, logouts };
+  }
+
+  it('shows "Fetch on a schedule" on while the schedule runs, and stores paused when the user turns it off', async () => {
+    const { user, puts } = setupSchedule(false);
+    const section = within(await screen.findByRole('region', { name: 'Schedule' }));
+    const toggle = await section.findByRole('switch', { name: /^Fetch on a schedule/ });
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+    await user.click(toggle);
+    await waitFor(() => expect(puts()).toEqual([{ paused: true }]));
+    expect(await section.findByText('Scheduled fetching is paused.')).toBeInTheDocument();
+    expect(section.getByRole('switch', { name: /^Fetch on a schedule/ })).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('shows "Fetch on a schedule" off while the schedule is paused, and stores not paused when the user turns it on', async () => {
+    const { user, puts } = setupSchedule(true);
+    const section = within(await screen.findByRole('region', { name: 'Schedule' }));
+    const toggle = await section.findByRole('switch', { name: /^Fetch on a schedule/ });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+    await user.click(toggle);
+    await waitFor(() => expect(puts()).toEqual([{ paused: false }]));
+    expect(await section.findByRole('switch', { name: /^Fetch on a schedule/ })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('has an Account section with "Log out" when a password is set, and it logs out', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    const { user, logouts } = setupSchedule(false, true);
+    const account = within(await screen.findByRole('region', { name: 'Account' }));
+    expect(screen.getByRole('navigation', { name: 'Settings sections' })).toHaveTextContent('Account');
+    expect(document.title).toBe('Settings · sieve');
+    await user.click(account.getByRole('button', { name: 'Log out' }));
+    await waitFor(() => expect(logouts()).toBe(1));
+    expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument();
+  });
+
+  it('has no Account section when no password is set', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    setupSchedule(false, false);
+    await screen.findByRole('region', { name: 'Schedule' });
+    expect(screen.queryByRole('region', { name: 'Account' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Settings sections' })).not.toHaveTextContent('Account');
   });
 });

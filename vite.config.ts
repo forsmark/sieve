@@ -6,8 +6,9 @@ import tailwindcss from '@tailwindcss/vite';
 const base = process.env.APP_BASE ?? '/';
 
 /**
- * Behind the olympus-edge portal the head links the portal's web app manifest and the home screen icon.
- * Local builds leave them out, because `/_auth/manifest/...` exists only on the portal.
+ * Behind the olympus-edge portal the head links the portal's web app manifest. Local builds leave it out,
+ * because `/_auth/manifest/...` exists only on the portal. The home screen icon and the web-app meta tags
+ * stand in index.html for every build.
  */
 function edgeHead(): Plugin {
   const id = base.split('/').filter(Boolean).pop();
@@ -15,13 +16,7 @@ function edgeHead(): Plugin {
     name: 'sieve-edge-head',
     transformIndexHtml() {
       if (!id) return [];
-      return [
-        { tag: 'link', attrs: { rel: 'manifest', href: `/_auth/manifest/${id}.webmanifest`, crossorigin: 'use-credentials' }, injectTo: 'head' },
-        { tag: 'link', attrs: { rel: 'apple-touch-icon', href: `${base}icon.png` }, injectTo: 'head' },
-        { tag: 'meta', attrs: { name: 'apple-mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
-        { tag: 'meta', attrs: { name: 'apple-mobile-web-app-title', content: 'sieve' }, injectTo: 'head' },
-        { tag: 'meta', attrs: { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' }, injectTo: 'head' },
-      ];
+      return [{ tag: 'link', attrs: { rel: 'manifest', href: `/_auth/manifest/${id}.webmanifest`, crossorigin: 'use-credentials' }, injectTo: 'head' }];
     },
   };
 }

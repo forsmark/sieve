@@ -7,8 +7,14 @@ import { errorText } from '../../api/client';
 import { Badge, Button, ConfirmButton, ErrorState, Field, LoadingState, PageHeader, Section, Segmented, Switch, TextInput, Icon } from '../../components/ui';
 import { bytes, dateTime, relativeTime } from '../../lib/format';
 import { showToast, toastError } from '../../lib/toast';
+import { useDocumentTitle } from '../../lib/useDocumentTitle';
+import { useLogout } from '../../app/actions';
 
 export function SettingsPage() {
+  useDocumentTitle('Settings');
+  // With a password set, the Account section holds "Log out". Below 640px the top bar has none.
+  const auth = useQuery({ queryKey: qk.auth, queryFn: api.me, staleTime: Infinity });
+  const account = auth.data?.authRequired === true;
   return (
     <div className="h-full overflow-y-auto">
       <div className="flex max-w-4xl flex-col gap-4 p-3 sm:p-6">
@@ -22,6 +28,7 @@ export function SettingsPage() {
             ['notifications', 'Notifications'],
             ['backups', 'Backups'],
             ['postings', 'Postings'],
+            ...(account ? [['account', 'Account']] : []),
           ].map(([id, label]) => (
             <a key={id} href={`#${id}`} className="font-medium text-muted underline decoration-line-strong hover:text-fg hover:decoration-fg">
               {label}
@@ -35,6 +42,7 @@ export function SettingsPage() {
         <NotificationsSection />
         <BackupsSection />
         <PostingsSection />
+        {account && <AccountSection />}
       </div>
     </div>
   );
@@ -227,7 +235,8 @@ function ScheduleForm({ initial }: { initial: ScheduleDto }) {
   const valid = Number.isFinite(n) && n >= 1 && n <= 168;
   return (
     <div className="flex flex-col gap-4">
-      <Switch label="Pause scheduled fetching" checked={initial.paused} onChange={(v) => save.mutate({ paused: v })} description="Manual fetch still works." />
+      {/* The switch is on while the schedule runs. The stored setting stays `paused`, its opposite. */}
+      <Switch label="Fetch on a schedule" checked={!initial.paused} onChange={(on) => save.mutate({ paused: !on })} description="Manual fetch still works." />
       <div className="flex flex-wrap items-end gap-2">
         <Field label="Fetch every" hint="Hours, from 1 to 168." className="w-32">
           {(id) => (
@@ -657,6 +666,19 @@ function PostingsSection() {
           </p>
         </div>
       )}
+    </Section>
+  );
+}
+
+// ---- Account
+
+function AccountSection() {
+  const logout = useLogout();
+  return (
+    <Section id="account" title="Account" description="Log out ends the session on this device.">
+      <Button onClick={() => logout.mutate()} busy={logout.isPending}>
+        Log out
+      </Button>
     </Section>
   );
 }
