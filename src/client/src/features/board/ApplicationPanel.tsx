@@ -93,12 +93,17 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-10 shrink-0 items-center justify-between border-b border-line px-3">
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-line px-3 touch:h-12">
         <Button size="sm" variant="ghost" onClick={close}>
           <Icon name="arrow-left" /> Close
         </Button>
         {!expired && (
-          <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold underline decoration-accent decoration-2">
+          <a
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] font-semibold underline decoration-accent decoration-2 touch:inline-flex touch:min-h-11 touch:items-center touch:gap-1"
+          >
             Open posting <Icon name="arrow-up-right" />
             <span className="sr-only"> (opens in a new tab)</span>
           </a>
@@ -111,7 +116,8 @@ export function ApplicationPanel({ app, onClose }: { app: ApplicationDto; onClos
           <p className="text-muted">{[s.company, s.location].filter(Boolean).join(' · ')}</p>
           <p className="mt-1 text-xs text-muted">
             Applied {dateOnly(app.appliedAt)} · updated {dateTime(app.updatedAt)} ·{' '}
-            <Link to="/jobs" search={{ id: app.postingId, status: 'all' }} className="font-semibold underline decoration-accent decoration-2">
+            {/* On a touch screen the padding gives the link a 44px area without moving the line. */}
+            <Link to="/jobs" search={{ id: app.postingId, status: 'all' }} className="font-semibold underline decoration-accent decoration-2 touch:py-3">
               Show in job list
             </Link>
           </p>

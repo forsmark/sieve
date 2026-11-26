@@ -452,4 +452,30 @@ describe('application board', () => {
     expect(patches()).toEqual([{ stage: 'offer' }, { stage: 'applied' }]);
     expect(within(column('Offer')).getByText('Role 1')).toBeInTheDocument();
   });
+
+  it('names the page Board in its heading and in the document title', async () => {
+    mockApi({ ...base, 'GET /api/applications': () => [app('1', 'applied')] });
+    renderApp('/board');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Board' })).toBeInTheDocument();
+    expect(document.title).toBe('Board · sieve');
+  });
+
+  it('hides the drag hint on a touch screen and gives the board controls 44px', async () => {
+    mockApi({ ...base, 'GET /api/applications': () => [app('1', 'applied')], 'GET /api/applications/1/events': () => [] });
+    renderApp('/board?app=1');
+    await screen.findByText('Role 1', { selector: 'span' });
+    expect(screen.getByText(/^Drag a card to another column/)).toHaveClass('touch:hidden');
+    // The stage menu is 28px with a mouse. Its own height must not take away the 44px and 16px text of a touch screen.
+    const menu = screen.getByLabelText('Stage of Role 1');
+    expect(menu).toHaveClass('h-7', 'text-xs', 'touch:h-11', 'touch:text-base');
+    expect(within(column('Applied')).getByRole('button', { name: /Role 1/ })).toHaveClass('touch:min-h-11');
+    const panel = await screen.findByRole('complementary', { name: 'Application details' });
+    const close = within(panel).getByRole('button', { name: /Close/ });
+    expect(close).toHaveClass('touch:h-11');
+    expect(close.parentElement).toHaveClass('touch:h-12');
+    expect(within(panel).getByRole('link', { name: /Open posting/ })).toHaveClass('touch:min-h-11');
+    expect(within(panel).getByRole('link', { name: 'Show in job list' })).toHaveClass('touch:py-3');
+    expect(within(panel).getByLabelText('Notes')).toHaveClass('touch:text-base');
+    expect(within(panel).getByLabelText('Interview date and time')).toHaveClass('touch:h-11', 'touch:text-base');
+  });
 });
