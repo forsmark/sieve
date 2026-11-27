@@ -47,7 +47,7 @@
 
 ## 7. Ship
 
-- [ ] 7.1 After the owner approves the diff, merge to `main`, push, and run `portal app deploy sieve`. Verify that the deploy reports healthy, and ask the owner to confirm on the iPhone that tapping into the search field doesn't zoom the page.
+- [x] 7.1 After the owner approves the diff, merge to `main`, push, and run `portal app deploy sieve`. Verify that the deploy reports healthy, and ask the owner to confirm on the iPhone that tapping into the search field doesn't zoom the page.
 
 ## Workflow follow-up
 

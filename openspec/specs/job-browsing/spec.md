@@ -88,7 +88,7 @@ By default the list SHALL hide dismissed postings, excluded postings, and duplic
 - **THEN** the postings of that group appear in the list
 
 ### Requirement: Unread tracking
-The system SHALL mark a posting as unread until the user opens it. The system SHALL let the user filter by unread.
+The system SHALL mark a posting as unread until the user opens it. A posting that the detail view opens by itself after a triage action SHALL count as opened only after it stays open for 1.5 seconds. The system SHALL let the user filter by unread.
 
 #### Scenario: New postings since the last visit
 - **WHEN** a fetch run adds postings
@@ -102,15 +102,28 @@ The system SHALL mark a posting as unread until the user opens it. The system SH
 - **WHEN** the user enables the unread filter
 - **THEN** the list shows only unread postings
 
+#### Scenario: Next posting opens after a triage action
+- **WHEN** the user triages the posting in the detail view, the detail view opens the next posting by itself, and that posting is unread
+- **THEN** the next posting stays unread while it is open for less than 1.5 seconds
+- **AND** it is no longer marked as unread once it has been open for 1.5 seconds
+
 ### Requirement: Bulk actions
-The system SHALL let the user select several postings and apply one triage action or one rescore request to all of them.
+The system SHALL let the user select several postings and apply one triage action or one rescore request to all of them. When part of the list is selected, the select-all control SHALL show a mixed state. Using the select-all control in the mixed state SHALL clear the selection.
 
 #### Scenario: User dismisses a selection
 - **WHEN** the user selects five postings and chooses dismiss
 - **THEN** the system dismisses all five and offers one undo action for the group
 
+#### Scenario: Part of the list is selected
+- **WHEN** the user selects some but not all of the postings in the list
+- **THEN** the select-all control shows a mixed state, distinct from both checked and unchecked
+
+#### Scenario: User clears a partial selection
+- **WHEN** part of the list is selected and the user uses the select-all control
+- **THEN** no posting is selected
+
 ### Requirement: Keyboard operation
-The system SHALL let the user move through the list and apply every triage action with the keyboard. The system SHALL list the shortcuts in the interface.
+The system SHALL let the user move through the list and apply every triage action with the keyboard. The system SHALL list the shortcuts in the interface. When the user closes the detail view, the system SHALL move focus to the card of the posting that the detail view showed.
 
 #### Scenario: User triages with the keyboard
 - **WHEN** the user moves to the next posting and presses the save shortcut
@@ -123,6 +136,10 @@ The system SHALL let the user move through the list and apply every triage actio
 #### Scenario: User reads the shortcut list
 - **WHEN** the user opens the shortcut list from the job list
 - **THEN** the interface lists the keys that move through the list and the key of each triage action
+
+#### Scenario: User closes the detail view
+- **WHEN** the user opens a posting, moves focus into the detail view, and closes it
+- **THEN** focus is on the card of that posting in the list
 
 ### Requirement: Swipe triage
 On touch input, the system SHALL let the user move a posting one step along the statuses dismissed, new, saved, and applied by swiping its card in the list: to the right toward applied, to the left toward dismissed. A swipe from applied to saved SHALL remove the application only after the user confirms. Every other swipe SHALL offer the same undo as the other triage actions. A mouse drag SHALL NOT triage a posting.
@@ -198,6 +215,24 @@ While a card moves under the finger, the system SHALL name the action that a rel
 - **WHEN** the user drags a card mostly up or down with a finger
 - **THEN** the list scrolls and no posting changes its status
 
+### Requirement: Undo after the message
+The system SHALL keep the latest triage action undoable after its undo message closes, until the user takes another triage action. While that action can be undone and its message is closed, the job list SHALL show an undo control.
+
+#### Scenario: Message has closed
+- **WHEN** the undo message of a triage action has closed and the user uses the undo control in the job list
+- **THEN** the system undoes that triage action
+
+#### Scenario: Undo control in the job list
+- **WHEN** the undo message of a triage action closes
+- **THEN** the job list shows an undo control that names the action it undoes
+
+### Requirement: Undo returns to the posting
+When the user undoes a triage action after which the detail view moved on to another posting, and the job list is still open, the system SHALL show the posting of that action in the detail view again.
+
+#### Scenario: User undoes a triage action from the detail view
+- **WHEN** the user dismisses the posting in the detail view, the detail view moves on to the next posting, and the user undoes the dismissal
+- **THEN** the detail view shows the dismissed posting again, with its earlier status
+
 ### Requirement: Live progress
 The system SHALL update the list and the status display without a page reload when a fetch run changes state, when a score arrives, or when the language model endpoint changes availability.
 
@@ -210,6 +245,18 @@ The system SHALL update the list and the status display without a page reload wh
 #### Scenario: Fetch run is active
 - **WHEN** a fetch run is active
 - **THEN** the interface shows the run and the progress of each source
+
+### Requirement: Offline state
+When the device has no network connection, the system SHALL say so in the status display. An action that the user takes while the device is offline SHALL fail with a message instead of waiting.
+
+#### Scenario: Connection is lost
+- **WHEN** the device loses its network connection
+- **THEN** the status display states that the system is offline
+
+#### Scenario: Action while offline
+- **WHEN** the user takes an action that changes data while the device is offline
+- **THEN** the system reports that the action failed
+- **AND** the interface shows the state from before the action
 
 ### Requirement: Settings screens
 The system SHALL provide screens to manage the CV and profile, the preferences and weights, the sources and search terms, the schedule, the language model provider, and the notifications.

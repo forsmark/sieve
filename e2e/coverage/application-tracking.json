@@ -28,7 +28,8 @@
       "unit": "src/client/src/features/board/BoardPage.test.tsx › sets an interview date in the panel and shows it on the card"
     },
     "User edits the notes": {
-      "unit": "src/client/src/features/board/BoardPage.test.tsx › stores the notes when the user leaves the field, and shows them when the application is opened again"
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › stores the notes when the user leaves the field, and shows them when the application is opened again",
+      "checked": "The test was rewritten for this text in 8565dc7: it types the notes, asserts that nothing is stored before the field loses focus, leaves the field with Tab, then expects one PATCH with the notes and the notes again after a fresh render."
     },
     "User closes the application while typing": {
       "unit": "src/client/src/features/board/BoardPage.test.tsx › stores the notes when the application closes while the user is still typing"
