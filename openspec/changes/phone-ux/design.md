@@ -123,3 +123,26 @@ The mutation's callbacks sit on the hook, so a store that starts on unmount stil
 ## Migration Plan
 
 Nothing to migrate. Deploy with `portal app deploy sieve`. Redeploying the earlier image rolls it back.
+
+## Changed during apply
+
+### 2026-11-26: An empty interview date is stored on blur, not on change
+The design stores the interview date on change. A date field also changes while the user types a date by hand, and its value is empty until the date is whole. A store on change would then clear a stored date in the middle of typing. A whole date is stored on change, as planned. An empty value is stored when the field loses focus, when the panel closes, and when the page is hidden. "Clear date" still clears at once.
+
+### 2026-11-26: The full-screen panels keep clear of the notch too
+p8 pads only the top bar by the top safe area. With `black-translucent`, the page runs under the iPhone's status bar, and the job detail view and the application panel cover the screen below 1024px, outside the top bar and the shell's side padding. Their headers and Close buttons would sit under the clock and the notch. Both panels pad by the top, left and right insets below 1024px, as the top bar and the shell do. Application stores also use `keepalive`, so a store that starts on `pagehide` survives the page closing. Browsers refuse `keepalive` for bodies over 64 KB, so a larger body goes without it.
+
+### 2026-11-26: `--bottom-bar` holds how far a bar rises above the status bar
+The design sets `--bottom-bar` to the bar's height. The toasts stand above the status bar, and the full-screen detail covers the status bar, so its action bar's whole height raised the toasts by the status bar's height too much. The variable now holds how far the bar's top edge stands above the status bar's top edge: the whole height for the bulk bar, which stands above the status bar, and the height less the status bar's for the detail action bar.
+
+### 2026-11-26: One latest undo for each kind, not one shared latest undo
+The design keeps one latest undo, which a triage and a stage move both replace. A stage move on the board then took the place of the job list's triage undo: the job list lost its undo control, and `u` on the job page undid the stage move instead. The store now keeps the latest entry of each kind. A new entry replaces only the entry of its kind. The `u` key and the undo control of the job list run the latest triage. A stage move keeps its own toast. An undo that fails counts as not done: its entry comes back, with its toast closed, unless a newer action of its kind took its place meanwhile. The requirement *Undo after the message* changes to match: the triage undo lasts until the user takes another triage action, not another undoable action.
+
+### 2026-11-26: An application store writes only its field into the board cache
+The design, under Risks, has the store write the returned application into the cache. A notes store that answered after a stage move carried the old stage, and put the card back in its old column. A store now writes only the field it stored, with the later of the two `updatedAt` times.
+
+### 2026-11-26: A typed interview date is stored on change only once its year is whole
+Typing a year into a filled date field changes its value at every digit, to the years 2, 20 and 202, and each one was stored. A change now stores a date only when its year has four digits and is 1900 or later. Blur, close and page hide store the rest, as the entry on the empty date says.
+
+### 2026-11-26: A store the browser refuses with `keepalive` goes once more without it
+The entry on the notch sends a body over 64 KB without `keepalive`. Browsers also share one 64 KB `keepalive` budget across the requests in flight, and a refused request fails like a lost network. A request sent with `keepalive` that fails that way now goes once more without it, and the error shows only when that fails too. A store made while the network is lost therefore also sends two requests, which both fail at once.

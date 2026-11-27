@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { CoverLetterDto, PostingDetail } from '../../../../shared/api';
 import { api } from '../../api/endpoints';
@@ -144,7 +144,8 @@ describe('cover letter', () => {
     expect(screen.getByLabelText('Cover letter text')).toHaveValue('A shorter letter.');
     expect(screen.queryByText(/You have changes that are not saved\./)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
-    expect(screen.getByRole('link', { name: 'Download PDF' })).toBeInTheDocument();
+    // The link stands beside the buttons, so it takes their 44px height on a touch screen.
+    expect(screen.getByRole('link', { name: 'Download PDF' })).toHaveClass('h-7', 'touch:h-11');
   });
 
   it('keeps the edit and reports the error when the save fails', async () => {
@@ -191,8 +192,9 @@ describe('cover letter', () => {
       [`POST ${LETTER_PATH}`]: () => letter(),
     });
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('The letter could not be written.');
-    expect(alert).toHaveTextContent('The claude command timed out.');
+    // A plain sentence first, and the technical error below it in small muted text.
+    expect(alert.firstElementChild).toHaveTextContent(/^The letter could not be written\. Try again\.$/);
+    expect(within(alert).getByText('The claude command timed out.')).toHaveClass('text-xs', 'text-muted');
     expect(screen.queryByLabelText('Cover letter text')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Generate cover letter' }));
@@ -204,7 +206,7 @@ describe('cover letter', () => {
   it('keeps the earlier text when a later generation failed', async () => {
     setup(letter({ error: 'The model is not available.' }));
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('The last generation failed. The earlier letter is kept.');
+    expect(alert).toHaveTextContent('The new letter could not be written. The earlier letter is kept.');
     expect(alert).toHaveTextContent('The model is not available.');
     expect(screen.getByLabelText('Cover letter text')).toHaveValue(TEXT);
   });
@@ -248,5 +250,63 @@ describe('cover letter', () => {
     expect(await screen.findByText(/This takes up to a minute/)).toBeInTheDocument();
     expect(screen.getByLabelText('Cover letter text')).toBeDisabled();
     expect(screen.getByLabelText('Cover letter text')).toHaveValue(TEXT);
+  });
+});
+
+describe('cover letter field', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    resetToastsForTests();
+  });
+
+  it('grows with its text on load and on input, so only the panel scrolls', async () => {
+    // jsdom has no layout. The scroll height here follows the length of the text.
+    vi.spyOn(HTMLTextAreaElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLTextAreaElement) {
+      return 100 + this.value.length;
+    });
+    const { user } = setup(letter());
+    const field = await screen.findByLabelText('Cover letter text');
+    expect(field).toHaveClass('field-sizing-content', 'overflow-hidden', 'resize-none');
+    expect(field.style.height).toBe(`${100 + TEXT.length}px`);
+
+    await user.type(field, ' More.');
+    expect(field.style.height).toBe(`${100 + TEXT.length + 6}px`);
+  });
+
+  it('measures its height again when its width changes, so a narrower field shows the end of the letter', async () => {
+    const observers: Array<{ cb: () => void; targets: Element[] }> = [];
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      private readonly entry: { cb: () => void; targets: Element[] };
+      constructor(cb: () => void) {
+        this.entry = { cb, targets: [] };
+        observers.push(this.entry);
+      }
+      observe(el: Element) {
+        this.entry.targets.push(el);
+      }
+      unobserve() {}
+      disconnect() {
+        this.entry.targets = [];
+      }
+    } as unknown as typeof ResizeObserver;
+    try {
+      // jsdom has no layout. The scroll height here grows as the field gets narrower, as wrapped text does.
+      let width = 800;
+      vi.spyOn(HTMLTextAreaElement.prototype, 'scrollHeight', 'get').mockImplementation(() => 80_000 / width);
+      setup(letter());
+      const field = await screen.findByLabelText('Cover letter text');
+      Object.defineProperty(field, 'clientWidth', { configurable: true, get: () => width });
+      expect(field.style.height).toBe('100px');
+
+      // A rotation to a narrower width.
+      width = 400;
+      act(() => observers.filter((o) => o.targets.includes(field)).forEach((o) => o.cb()));
+      expect(field.style.height).toBe('200px');
+    } finally {
+      globalThis.ResizeObserver = original;
+    }
   });
 });

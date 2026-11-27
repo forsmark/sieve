@@ -61,6 +61,8 @@ export interface TriageVars {
   action: TriageAction;
   /** A short name for the toast, for example the posting title. */
   label?: string;
+  /** The posting the detail view showed, when this triage moved the detail view on to another posting. Its undo opens it again. */
+  returnTo?: string;
 }
 
 /**
@@ -79,15 +81,21 @@ export function useTriage() {
       if (ctx) restoreSnapshot(qc, ctx.snapshot);
       toastError(`The change was not saved. ${errorText(err)}`);
     },
-    onSuccess: (result, { ids, action, label }) => {
+    onSuccess: (result, { ids, action, label, returnTo }) => {
       const what = ids.length === 1 && label ? `“${label}”` : plural(ids.length, 'posting');
-      showUndoToast(`${PAST[action]} ${what}.`, async () => {
-        try {
-          await api.restore(result.previous);
-          showUndoDone(qc);
-        } catch (err) {
-          toastError(`Undo failed. ${errorText(err)}`);
-        }
+      showUndoToast({
+        kind: 'triage',
+        message: `${PAST[action]} ${what}.`,
+        returnTo,
+        undo: async () => {
+          try {
+            await api.restore(result.previous);
+            showUndoDone(qc);
+          } catch (err) {
+            toastError(`Undo failed. ${errorText(err)}`);
+            throw err;
+          }
+        },
       });
     },
     onSettled: (_r, _e, { action, ids }) => {

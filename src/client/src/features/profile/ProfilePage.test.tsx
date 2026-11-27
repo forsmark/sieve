@@ -5,6 +5,7 @@ import type { ProfileDto } from '../../../../shared/api';
 import { DEFAULT_PREFERENCES, type StructuredProfile } from '../../../../shared/schemas';
 import { STATUS, mockApi, renderApp } from '../../test-utils';
 import { resetToastsForTests } from '../../lib/toast';
+import { mockMedia } from '../../test/media';
 
 const STRUCTURED: StructuredProfile = {
   headline: 'Frontend developer',
@@ -192,5 +193,46 @@ describe('Hard and soft rules', () => {
     const saved = puts.find((p) => !p.dryRun)!.body;
     expect(saved).toMatchObject({ languageMode: 'hard', locationMode: 'soft', workArrangementMode: 'soft' });
     expect(await screen.findByText(/Preferences saved/)).toBeInTheDocument();
+  });
+});
+
+describe('Skill rows by width', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const TWO_SKILLS = profile({ effective: { ...STRUCTURED, skills: [...STRUCTURED.skills, { name: 'React', level: 'expert', years: null }] } });
+
+  it('names the columns once in a header row "Skill, Level, Years" at 1440px', async () => {
+    mockMedia({ width: 1440 });
+    await setup(TWO_SKILLS);
+    const section = within(await screen.findByRole('region', { name: 'Structured profile' }));
+    const header = section.getByText('Skill').parentElement!;
+    expect([...header.children].map((c) => c.textContent)).toEqual(['Skill', 'Level', 'Years']);
+    // The header names the columns, so the fields of a row show no label of their own.
+    expect(section.getAllByText('Level')).toHaveLength(1);
+    expect(section.getByLabelText('Skill 2 name')).toHaveValue('React');
+    expect(document.title).toBe('Profile · sieve');
+  });
+
+  it('puts a label above each field and shows no header row at 430px on a touch screen', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    await setup(TWO_SKILLS);
+    const section = within(await screen.findByRole('region', { name: 'Structured profile' }));
+    await section.findByLabelText('Skill 1 name');
+    expect(section.getAllByText('Skill')).toHaveLength(2);
+    expect(section.getAllByText('Level')).toHaveLength(2);
+    expect(section.getAllByText('Years')).toHaveLength(2);
+    // Each label holds its field; the field keeps the name with the row number.
+    const level = section.getByLabelText('Skill 2 level');
+    expect(level).toHaveValue('expert');
+    expect(level.closest('label')).toHaveTextContent(/^Level/);
+    expect(section.getByLabelText('Skill 1 name').closest('label')).toHaveTextContent(/^Skill/);
+  });
+
+  it('gives the work arrangement checkboxes and the file button a 44px row on a touch screen', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    await setup(TWO_SKILLS);
+    // The labels were 19px rows, and the file button 30px.
+    for (const name of ['Remote', 'Hybrid', 'On site']) expect((await screen.findByRole('checkbox', { name })).closest('label')).toHaveClass('touch:min-h-11');
+    expect(screen.getByLabelText('CV file')).toHaveClass('touch:file:min-h-11');
   });
 });

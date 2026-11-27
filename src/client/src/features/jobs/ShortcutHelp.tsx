@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui';
 
 export const SHORTCUTS: Array<[string, string]> = [
@@ -11,7 +11,7 @@ export const SHORTCUTS: Array<[string, string]> = [
   ['r', 'Restore to new'],
   ['a', 'Mark as applied'],
   ['o', 'Open the source link in a new tab'],
-  ['u', 'Undo the last action'],
+  ['u', 'Undo the last triage action'],
   ['x', 'Select or unselect the posting'],
   ['/', 'Search'],
   ['?', 'Show or hide this help'],
@@ -20,13 +20,20 @@ export const SHORTCUTS: Array<[string, string]> = [
 
 export function ShortcutHelp({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // The control that opened the list takes focus again when it closes, however it closes.
+  const [opener] = useState(() => document.activeElement);
   useEffect(() => {
     const d = ref.current;
     if (d && !d.open) {
       if (typeof d.showModal === 'function') d.showModal();
       else d.setAttribute('open', '');
     }
-  }, []);
+    return () => {
+      // The dialog is still in the document when StrictMode runs the effect twice; it has gone on a real close.
+      if (d?.isConnected) return;
+      if (opener instanceof HTMLElement && opener !== document.body && opener.isConnected) opener.focus();
+    };
+  }, [opener]);
   return (
     <dialog
       ref={ref}
@@ -35,6 +42,10 @@ export function ShortcutHelp({ onClose }: { onClose: () => void }) {
       onCancel={(e) => {
         e.preventDefault();
         onClose();
+      }}
+      // A click on the backdrop lands on the dialog itself and closes it.
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
       }}
       className="m-auto w-[min(26rem,calc(100vw-2rem))] border border-fg bg-bg p-0 text-fg backdrop:bg-ink/70"
     >

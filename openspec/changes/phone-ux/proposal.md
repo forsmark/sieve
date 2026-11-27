@@ -97,5 +97,5 @@ None.
 - application-tracking › Stage history ("record every stage change"): the undo move is recorded like any other move, as *Stage change feedback* says. No conflict.
 - job-browsing › Job detail view (the list of parts the detail view shows): the parts stay. m2 changes their order on narrow mosaics, and p4 shows an empty "Missing skills" tile as one line, which still shows missing skills. No conflict.
 - job-browsing › Keyboard operation ("apply every triage action with the keyboard"): unchanged. No conflict.
-- job-browsing › Swipe triage ("Every other swipe SHALL offer the same undo as the other triage actions"): swipes share the triage undo, so they also get the undo control of *Undo after the message*. No conflict.
+- job-browsing › Swipe triage ("Every other swipe SHALL offer the same undo as the other triage actions"): swipes share the triage undo, so they also get the undo control of *Undo after the message*. No conflict. Read again after *Undo after the message* changed during apply to "another triage action": swipes are triage actions, so still no conflict.
 - notifications › Notification content ("only the posting title, ..."), and the three "whatever provider" sentences in candidate-profile, cover-letters and match-analysis: these share only a word with this change. No conflict.

@@ -14,7 +14,9 @@ export function createQueryClient(): QueryClient {
         refetchOnWindowFocus: false,
         retry: (count, err) => !(err instanceof ApiRequestError && err.status >= 400 && err.status < 500) && count < 2,
       },
-      mutations: { retry: false },
+      // A change fails at once when the device is offline, instead of waiting for the network with a spinner.
+      // Queries keep the default and wait.
+      mutations: { retry: false, networkMode: 'always' },
     },
   });
 }

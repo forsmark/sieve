@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { StatusDto } from '../../../shared/api';
 import { api } from '../api/endpoints';
@@ -8,26 +8,21 @@ import { connectionStore } from '../api/events';
 import { Button, Spinner, cx } from '../components/ui';
 import { relativeTime, sourceName } from '../lib/format';
 import { useStore } from '../lib/store';
-import { showToast, toastError } from '../lib/toast';
+import { useMediaQuery } from '../lib/useMediaQuery';
+import { useOnline } from '../lib/useOnline';
+import { useFetchNow, useMatchingPause } from './actions';
+import { PHONE_QUERY } from './media';
 
 function Item({ children, className }: { children: React.ReactNode; className?: string }) {
   return <span className={cx('flex items-center gap-1.5 whitespace-nowrap', className)}>{children}</span>;
 }
-
-/**
- * An item that holds an action. Below 640px the item dissolves, its text stays in the status row, and the
- * button moves to the last row as a bordered touch target of 44px that takes half the width.
- */
-const ACTION_ITEM = 'max-sm:contents';
-const ACTION_BUTTON =
-  'h-6 text-xs max-sm:order-last max-sm:mt-1.5 max-sm:h-11 max-sm:grow max-sm:basis-[calc(50%-0.375rem)] max-sm:border-line-strong max-sm:text-sm';
 
 function Dot({ tone }: { tone: 'ok' | 'bad' | 'idle' | 'busy' }) {
   return (
     <span
       aria-hidden
       className={cx(
-        'inline-block size-2',
+        'inline-block size-2 shrink-0',
         tone === 'ok' && 'bg-fg',
         tone === 'bad' && 'bg-danger',
         tone === 'idle' && 'bg-faint',
@@ -37,65 +32,125 @@ function Dot({ tone }: { tone: 'ok' | 'bad' | 'idle' | 'busy' }) {
   );
 }
 
-export function StatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
-  const qc = useQueryClient();
+function ModelDot({ s }: { s: StatusDto }) {
+  return <Dot tone={s.llmAvailable === null ? 'idle' : s.llmAvailable ? 'ok' : 'bad'} />;
+}
+
+function modelText(s: StatusDto): string {
+  return s.llmAvailable === null ? 'Model status unknown' : s.llmAvailable ? 'Model available' : 'Model unavailable';
+}
+
+/** "Live", "Connecting" or "Reconnecting" for the event stream, or "Offline" while the device has no network. */
+function Connection() {
   const connection = useStore(connectionStore);
+  const online = useOnline();
+  return online ? (
+    <>
+      <Dot tone={connection === 'open' ? 'ok' : connection === 'connecting' ? 'busy' : 'bad'} />
+      <span>{connection === 'open' ? 'Live' : connection === 'connecting' ? 'Connecting' : 'Reconnecting'}</span>
+    </>
+  ) : (
+    <>
+      <Dot tone="bad" />
+      <span className="text-fg">Offline</span>
+    </>
+  );
+}
+
+export function StatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
+  const phone = useMediaQuery(PHONE_QUERY);
+  return phone ? <PhoneStatusBar status={status} /> : <WideStatusBar status={status} />;
+}
+
+/**
+ * Below 640px: one line of status, and the whole bar is a link to Activity, whose header holds "Fetch now" and
+ * "Pause matching". The line is at least 44px high, and the device's safe area adds to that below it.
+ * The first item gives way when the line is full; the faults and the connection stay whole.
+ */
+function PhoneStatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
+  const s = status.data;
+  return (
+    <footer aria-label="System status" className="shrink-0 border-t border-line text-xs text-muted">
+      <Link to="/activity" className="box-content flex min-h-11 items-center gap-3 px-3 pb-[env(safe-area-inset-bottom)] whitespace-nowrap hover:text-fg">
+        {status.isError ? (
+          <span className="min-w-0 truncate text-danger">Status unavailable: {errorText(status.error)}</span>
+        ) : s?.activeRunId != null ? (
+          <Item className="min-w-0">
+            <Spinner small />
+            <span className="text-fg">Fetching</span>
+          </Item>
+        ) : (
+          s && (
+            <span className="min-w-0 truncate">
+              Last fetch {relativeTime(s.lastRunAt)}
+              {s.schedule.paused && ' · schedule paused'}
+            </span>
+          )
+        )}
+        {s?.matchingPaused && <span className="shrink-0 border border-fg px-1.5 font-semibold text-fg">Matching paused</span>}
+        {s && (
+          <Item className="shrink-0">
+            <ModelDot s={s} />
+            <span>{modelText(s)}</span>
+          </Item>
+        )}
+        {s && (
+          <Item className="shrink-0">
+            <span>
+              Queue <span className="tabular text-fg">{s.queueTotal}</span>
+            </span>
+          </Item>
+        )}
+        <Item className="ml-auto shrink-0">
+          <Connection />
+        </Item>
+        <span className="sr-only">, open Activity</span>
+      </Link>
+    </footer>
+  );
+}
+
+/** From 640px: the status items in a row, each button beside what it changes. */
+function WideStatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
   const s = status.data;
   const runs = useQuery({ queryKey: qk.runs, queryFn: api.runs, enabled: s?.activeRunId != null });
   const activeRun = s?.activeRunId != null ? runs.data?.find((r) => r.id === s.activeRunId) : undefined;
-
-  const fetchNow = useMutation({
-    mutationFn: api.fetchNow,
-    onSuccess: (r) => {
-      showToast({ message: r.started ? 'Fetch run started.' : 'A fetch run is already active.', tone: 'info' });
-      void qc.invalidateQueries({ queryKey: qk.status });
-      void qc.invalidateQueries({ queryKey: qk.runs });
-    },
-    onError: (e) => toastError(errorText(e)),
-  });
-  const pause = useMutation({
-    mutationFn: (paused: boolean) => (paused ? api.pauseMatching() : api.resumeMatching()),
-    onSuccess: (r) => qc.setQueryData<StatusDto>(qk.status, (old) => (old ? { ...old, matchingPaused: r.paused } : old)),
-    onError: (e) => toastError(errorText(e)),
-  });
+  const fetchNow = useFetchNow();
+  const pause = useMatchingPause();
 
   return (
     <footer
       aria-label="System status"
-      className="flex min-h-9 shrink-0 flex-wrap items-center gap-x-3 border-t border-line px-3 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-xs text-muted sm:gap-x-5 sm:gap-y-1 sm:px-6 sm:pt-1 sm:pb-[max(0.25rem,env(safe-area-inset-bottom))]"
+      className="flex min-h-9 shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-line px-6 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] text-xs text-muted"
     >
       {status.isError && <span className="text-danger">Status unavailable: {errorText(status.error)}</span>}
       {s && (
         <>
-          {/* Below 640px this breaks the line, so the two actions share a row of their own under the status text. */}
-          <span aria-hidden className="hidden max-sm:order-last max-sm:block max-sm:basis-full" />
-          <Item className={ACTION_ITEM}>
-            <span className="flex items-center gap-1.5 max-sm:py-0.5">
-              {s.activeRunId != null ? (
-                <>
-                  <Spinner small />
-                  <span className="text-fg">Fetching</span>
-                  {activeRun && (
-                    <span className="hidden sm:inline">
-                      {activeRun.sources.map((src) => `${sourceName(src.source)} ${src.state === 'running' ? 'running' : `${src.found} found`}`).join(', ')}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <span>Last fetch {relativeTime(s.lastRunAt)}</span>
-                  {s.schedule.paused ? (
-                    <span>· schedule paused</span>
-                  ) : (
-                    s.schedule.nextRunAt && <span className="hidden md:inline">· next {relativeTime(s.schedule.nextRunAt)}</span>
-                  )}
-                </>
-              )}
-            </span>
+          <Item>
+            {s.activeRunId != null ? (
+              <>
+                <Spinner small />
+                <span className="text-fg">Fetching</span>
+                {activeRun && (
+                  <span>
+                    {activeRun.sources.map((src) => `${sourceName(src.source)} ${src.state === 'running' ? 'running' : `${src.found} found`}`).join(', ')}
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <span>Last fetch {relativeTime(s.lastRunAt)}</span>
+                {s.schedule.paused ? (
+                  <span>· schedule paused</span>
+                ) : (
+                  s.schedule.nextRunAt && <span className="hidden md:inline">· next {relativeTime(s.schedule.nextRunAt)}</span>
+                )}
+              </>
+            )}
             <Button
               size="sm"
               variant="ghost"
-              className={ACTION_BUTTON}
+              className="h-6 text-xs"
               onClick={() => fetchNow.mutate()}
               busy={fetchNow.isPending}
               disabled={s.activeRunId != null}
@@ -104,7 +159,7 @@ export function StatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
             </Button>
           </Item>
 
-          <Item className="max-sm:py-0.5">
+          <Item>
             <span
               title={
                 Object.entries(s.queue)
@@ -116,30 +171,28 @@ export function StatusBar({ status }: { status: UseQueryResult<StatusDto> }) {
             </span>
           </Item>
 
-          <Item className="max-sm:py-0.5">
-            <Dot tone={s.llmAvailable === null ? 'idle' : s.llmAvailable ? 'ok' : 'bad'} />
-            <Link to="/settings" hash="model" className="hover:text-fg hover:underline">
-              {s.llmAvailable === null ? 'Model status unknown' : s.llmAvailable ? 'Model available' : 'Model unavailable'}
-              <span className="hidden sm:inline"> ({s.llmProvider === 'claude-code' ? 'Claude Code' : 'local'})</span>
+          <Item>
+            <ModelDot s={s} />
+            {/* On a touch screen an invisible area of 44px height around the 12px text takes the tap. */}
+            <Link
+              to="/settings"
+              hash="model"
+              className="relative hover:text-fg hover:underline touch:after:absolute touch:after:-inset-x-1 touch:after:-inset-y-3.5"
+            >
+              {modelText(s)}
+              <span> ({s.llmProvider === 'claude-code' ? 'Claude Code' : 'local'})</span>
             </Link>
           </Item>
 
-          <Item className={ACTION_ITEM}>
-            <span className="max-sm:py-0.5">
-              {s.matchingPaused ? <span className="border border-fg px-1.5 font-semibold text-fg">Matching paused</span> : <span>Matching on</span>}
-            </span>
-            <Button size="sm" variant="ghost" className={ACTION_BUTTON} busy={pause.isPending} onClick={() => pause.mutate(!s.matchingPaused)}>
-              {/* Below 640px the button sits away from its label, so it names what it pauses. One span keeps one space. */}
-              <span>
-                {s.matchingPaused ? 'Resume' : 'Pause'}
-                <span className="sm:hidden"> matching</span>
-              </span>
+          <Item>
+            {s.matchingPaused ? <span className="border border-fg px-1.5 font-semibold text-fg">Matching paused</span> : <span>Matching on</span>}
+            <Button size="sm" variant="ghost" className="h-6 text-xs" busy={pause.isPending} onClick={() => pause.mutate(!s.matchingPaused)}>
+              {s.matchingPaused ? 'Resume' : 'Pause'}
             </Button>
           </Item>
 
-          <Item className="ml-auto max-sm:py-0.5">
-            <Dot tone={connection === 'open' ? 'ok' : connection === 'connecting' ? 'busy' : 'bad'} />
-            <span>{connection === 'open' ? 'Live' : connection === 'connecting' ? 'Connecting' : 'Reconnecting'}</span>
+          <Item className="ml-auto">
+            <Connection />
           </Item>
         </>
       )}

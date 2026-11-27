@@ -96,6 +96,14 @@ describe('expanded match analysis', () => {
     expect(screen.getByRole('button', { name: 'Run again' })).toBeEnabled();
   });
 
+  it('says in a plain sentence that the analysis could not be made, with the technical error below it', async () => {
+    setup(analysis({ state: 'failed', content: null, error: 'The claude command timed out.' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert.firstElementChild).toHaveTextContent(/^The analysis could not be made\. Try again\.$/);
+    expect(within(alert).getByText('The claude command timed out.')).toHaveClass('text-xs', 'text-muted');
+    expect(screen.getByRole('button', { name: 'Run expanded analysis' })).toBeEnabled();
+  });
+
   it('shows the cause of a failure and keeps the earlier analysis', async () => {
     setup(analysis({ error: 'The claude command timed out.' }));
     const alert = await screen.findByRole('alert');

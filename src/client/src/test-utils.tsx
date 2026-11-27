@@ -70,7 +70,7 @@ export const STATUS: StatusDto = {
   llmAvailable: true,
   llmProvider: 'local',
   searchTermCount: 1,
-  counts: { new: 3, saved: 0, applied: 0, dismissed: 0, unread: 3, excluded: 0 },
+  counts: { new: 3, saved: 0, applied: 0, dismissed: 0, unread: 3, excluded: 0, openApplications: 0 },
 };
 
 export class SilentEventSource {

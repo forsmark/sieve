@@ -28,7 +28,21 @@
       "unit": "src/client/src/features/board/BoardPage.test.tsx › sets an interview date in the panel and shows it on the card"
     },
     "User edits the notes": {
-      "unit": "src/client/src/features/board/BoardPage.test.tsx › saves the notes and shows them when the application is opened again"
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › stores the notes when the user leaves the field, and shows them when the application is opened again"
+    },
+    "User closes the application while typing": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › stores the notes when the application closes while the user is still typing"
+    },
+    "Notes cannot be stored": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › reports a failed store of the notes and shows the typed notes when the application opens again"
+    }
+  },
+  "Stage change feedback": {
+    "User moves an application": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › names the new stage and offers undo after a move by menu, by drag and by keyboard"
+    },
+    "User undoes a stage change": {
+      "unit": "src/client/src/features/board/BoardPage.test.tsx › moves the application back with the undo, and the stage history holds both changes"
     }
   },
   "Stage history": {

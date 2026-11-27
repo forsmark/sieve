@@ -185,7 +185,11 @@ describe('jobs list with 2000 postings', () => {
     const { el, title, titles } = await openCardInTheMiddle();
     expect(screen.getByRole('complementary', { name: 'Posting details' })).toBeInTheDocument();
     expect(list()).toBe(el);
-    await waitFor(() => expect(titles()).toContain(title));
+    // A browser sends a scroll event after the page sets scrollTop; jsdom does not, so the test does.
+    await waitFor(() => {
+      fireEvent.scroll(el);
+      expect(titles()).toContain(title);
+    });
   });
 
   it('shows title, company, score, and the label of the score band on a card', async () => {

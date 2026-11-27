@@ -59,7 +59,7 @@ The system SHALL let the user move through the list and apply every triage actio
 ## ADDED Requirements
 
 ### Requirement: Undo after the message
-The system SHALL keep the latest triage action undoable after its undo message closes, until the user takes another undoable action. While that action can be undone and its message is closed, the job list SHALL show an undo control.
+The system SHALL keep the latest triage action undoable after its undo message closes, until the user takes another triage action. While that action can be undone and its message is closed, the job list SHALL show an undo control.
 
 #### Scenario: Message has closed
 - **WHEN** the undo message of a triage action has closed and the user uses the undo control in the job list

@@ -2,6 +2,12 @@
 @import '@fontsource-variable/schibsted-grotesk/wght.css';
 
 /*
+ * `touch:` styles a touch screen: a coarse pointer, whatever the width.
+ * Hit areas of 44px and 16px form text use it. Layouts that need room use the width breakpoints instead.
+ */
+@custom-variant touch (@media (pointer: coarse));
+
+/*
  * Design tokens. One theme on a dark grey ground.
  * Four flat color fields carry near-black text. Each field names one kind of content:
  * yellow = score and primary action, blue = facts and skills, pink = cover letter and applications, beige = posting text.
@@ -13,7 +19,7 @@
   --surface-2: #323337;
   --surface-3: #3a3b40;
   --border: #48494e;
-  --border-strong: #6e6f75;
+  --border-strong: #76777d;
   --text: #f5f3ee;
   --muted: #b9b8b2;
   --faint: #a3a29c;
@@ -245,6 +251,74 @@ input[type='checkbox']:checked {
 }
 .field input[type='checkbox']:checked {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23f5f3ee' stroke-width='2' stroke-linecap='square'%3E%3Cpath d='M2.5 6.5 5 9l4.5-5.5'/%3E%3C/svg%3E");
+}
+
+/* The mixed state: part of a group is checked. A 2px dash in the text color. */
+input[type='checkbox']:indeterminate {
+  border-color: var(--text);
+  background-image: linear-gradient(var(--text), var(--text));
+  background-size: 8px 2px;
+}
+
+/*
+ * The slider: a square 20px thumb in the accent color on a 1px strong hairline track.
+ * On a touch screen the row is 44px high, so the whole row takes the finger.
+ */
+input[type='range'] {
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 1px;
+  background: var(--border-strong);
+}
+input[type='range']::-moz-range-track {
+  height: 1px;
+  background: var(--border-strong);
+}
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -9.5px;
+  border: 0;
+  border-radius: 0;
+  background: var(--accent);
+}
+input[type='range']::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 0;
+  background: var(--accent);
+}
+input[type='range']:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (pointer: coarse) {
+  input[type='range'] {
+    height: 44px;
+  }
+
+  /* A summary row keeps its text size and gets its 44px from padding. */
+  summary {
+    min-height: 44px;
+    padding-block: max(0px, calc((44px - 1lh) / 2));
+  }
+
+  /*
+   * Safari on iOS zooms the page when a field with text under 16px gets focus.
+   * This rule is unlayered, so it wins over a smaller text utility on any field.
+   */
+  input:not([type='checkbox'], [type='radio'], [type='range']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* The popup list of a select is drawn by the browser, so it gets a fixed readable pair. */

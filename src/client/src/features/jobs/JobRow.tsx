@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useId } from 'react';
 import type { PostingListItem } from '../../../../shared/api';
 import { scoreBand } from '../../../../shared/schemas';
 import { VERDICT_LABEL } from './MatchAnalysis';
@@ -101,6 +101,16 @@ export const JobRow = memo(function JobRow({
       if (action) onSwipe?.(item, action);
     },
   });
+  // The card's name starts with the title, then the company, the score and its band. The foot describes it.
+  const uid = useId();
+  const titleId = `${uid}-title`;
+  const metaId = `${uid}-meta`;
+  const scoreId = `${uid}-score`;
+  const bandId = `${uid}-band`;
+  const flagsId = `${uid}-flags`;
+  const unreadId = `${uid}-unread`;
+  const footId = `${uid}-foot`;
+  const excludedId = `${uid}-excluded`;
   const swipeDirection = swipe.state.direction;
   const swipeAction = swipeDirection ? actions[swipeDirection] : null;
   return (
@@ -127,7 +137,8 @@ export const JobRow = memo(function JobRow({
             style={{ animation: 'tile-in 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards' }}
           />
         )}
-        <label className="absolute top-0 right-0 z-10 flex size-10 cursor-pointer items-center justify-center">
+        {/* The corner area takes the tap: 40px with a mouse, 44px on a touch screen. */}
+        <label className="absolute top-0 right-0 z-10 flex size-10 cursor-pointer items-center justify-center touch:size-11">
           <input
             type="checkbox"
             className="size-4"
@@ -143,12 +154,15 @@ export const JobRow = memo(function JobRow({
           data-row-button={index}
           onClick={() => onOpen(item.id, index)}
           onFocus={() => onFocusRow(index)}
+          aria-labelledby={[titleId, metaId, scoreId, hasScore && bandId, item.unread && unreadId].filter(Boolean).join(' ')}
+          aria-describedby={[hasScore && flagsId, state === 'excluded' && m?.excludedReason && excludedId, footId].filter(Boolean).join(' ')}
           className="relative flex min-h-0 flex-1 flex-col p-3.5 text-left focus-visible:outline-offset-[-2px]"
         >
           <span className="flex h-11 items-start gap-2.5 pr-8">
             {hasScore ? (
               <>
                 <span
+                  id={scoreId}
                   className={cx(
                     'tabular flex h-11 min-w-14 items-center justify-center px-1.5 text-[2rem] leading-none font-extrabold tracking-tight',
                     open && 'bg-ink text-field-yellow',
@@ -161,12 +175,14 @@ export const JobRow = memo(function JobRow({
                   {score}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
-                  <span className="text-xs leading-none text-muted">{label}</span>
+                  <span id={bandId} className="text-xs leading-none text-muted">
+                    {label}
+                  </span>
                   {/* The score as a bar, so the band reads without the numeral. */}
                   <span aria-hidden className={cx('block h-1 w-full max-w-28', open ? 'bg-ink/20' : 'bg-bg')}>
                     <span className={cx('block h-full', open ? 'bg-ink' : 'bg-field-yellow')} style={{ width: `${score}%` }} />
                   </span>
-                  <span className="flex gap-1">
+                  <span id={flagsId} className="flex gap-1">
                     {m?.stale && (
                       <Badge tone="warn" title="This score comes from an older profile or preferences">
                         Stale
@@ -178,7 +194,7 @@ export const JobRow = memo(function JobRow({
                 </span>
               </>
             ) : (
-              <span className="flex h-11 items-center">
+              <span id={scoreId} className="flex h-11 items-center">
                 <MatchCell match={m} compact />
               </span>
             )}
@@ -188,15 +204,25 @@ export const JobRow = memo(function JobRow({
             {item.unread && (
               <>
                 <span aria-hidden className={cx('mt-[7px] inline-block size-2 shrink-0', open ? 'bg-ink' : 'bg-fg')} />
-                <span className="sr-only">Unread. </span>
+                <span id={unreadId} className="sr-only">
+                  Unread.
+                </span>
               </>
             )}
-            <span className={cx('line-clamp-2 text-[15px] leading-snug', item.unread || open ? 'font-bold' : 'font-medium text-muted')}>{item.title}</span>
+            <span id={titleId} className={cx('line-clamp-2 text-[15px] leading-snug', item.unread || open ? 'font-bold' : 'font-medium text-muted')}>
+              {item.title}
+            </span>
           </span>
-          <span className="mt-1 block truncate text-[13px] text-muted">{meta}</span>
-          {state === 'excluded' && m?.excludedReason && <span className="mt-0.5 block truncate text-xs text-danger">Excluded: {m.excludedReason}</span>}
+          <span id={metaId} className="mt-1 block truncate text-[13px] text-muted">
+            {meta}
+          </span>
+          {state === 'excluded' && m?.excludedReason && (
+            <span id={excludedId} className="mt-0.5 block truncate text-xs text-danger">
+              Excluded: {m.excludedReason}
+            </span>
+          )}
 
-          <span className="mt-auto flex items-center gap-1.5 pt-2 text-xs text-faint">
+          <span id={footId} className="mt-auto flex items-center gap-1.5 pt-2 text-[13px] text-faint">
             {item.triageStatus !== 'new' && (
               <Badge tone={item.triageStatus === 'applied' ? 'ok' : item.triageStatus === 'saved' ? 'accent' : 'neutral'}>
                 {capitalize(item.triageStatus)}

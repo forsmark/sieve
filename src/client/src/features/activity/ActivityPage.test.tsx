@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ActivityDto, FailedTaskDto, LogDto, RunDto } from '../../../../shared/api';
+import type { ActivityDto, FailedTaskDto, LogDto, RunDto, StatusDto } from '../../../../shared/api';
 import { STATUS, mockApi, renderApp } from '../../test-utils';
 import { resetToastsForTests } from '../../lib/toast';
+import { mockMedia } from '../../test/media';
 
 const RUNS: RunDto[] = [
   {
@@ -43,11 +44,11 @@ const EMPTY: ActivityDto = { runs: [], failedTasks: [], notifications: [] };
 
 type Routes = Parameters<typeof mockApi>[0];
 
-function setup(activity: () => ActivityDto, routes: Routes = {}) {
+function setup(activity: () => ActivityDto, routes: Routes = {}, status: StatusDto = STATUS) {
   const logLevels: Array<string | null> = [];
   const api = mockApi({
     'GET /api/auth/me': () => ({ authRequired: false, authenticated: true }),
-    'GET /api/status': () => STATUS,
+    'GET /api/status': () => status,
     'GET /api/activity': () => activity(),
     'GET /api/logs': (_c, url) => {
       const level = url.searchParams.get('level');
@@ -109,7 +110,7 @@ describe('activity page', () => {
 
   it('says so when there are no runs, no failed work, and no notifications', async () => {
     setup(() => EMPTY);
-    expect((await region('Fetch runs')).getByText(/No fetch runs yet/)).toBeInTheDocument();
+    expect((await region('Fetch runs')).getByText('No fetch runs yet. Use Fetch now above to start one.')).toBeInTheDocument();
     expect((await region('Failed work')).getByText('Nothing failed.')).toBeInTheDocument();
     expect((await region('Notifications')).getByText('No notifications sent yet.')).toBeInTheDocument();
   });
@@ -229,5 +230,69 @@ describe('activity page', () => {
     await user.click(within(alert).getByRole('button', { name: 'Try again' }));
     expect(await (await region('Fetch runs')).findAllByRole('table')).toHaveLength(2);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('activity header and runs by width', () => {
+  beforeEach(() => resetToastsForTests());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetToastsForTests();
+  });
+
+  /** The header of the page: the title and its buttons. */
+  const header = async () => within((await screen.findByRole('heading', { level: 1, name: 'Activity' })).parentElement!);
+
+  for (const device of [
+    { name: 'at 430px on a touch screen', coarse: true, width: 430 },
+    { name: 'at 1440px with a mouse', coarse: false, width: 1440 },
+  ]) {
+    it(`starts a fetch run and pauses matching from the header ${device.name}`, async () => {
+      mockMedia({ coarse: device.coarse, width: device.width });
+      const { user, count } = setup(() => EMPTY, {
+        'POST /api/fetch': () => ({ started: true, runId: 9 }),
+        'POST /api/matching/pause': () => ({ paused: true }),
+      });
+      const h = await header();
+      expect(document.title).toBe('Activity · sieve');
+      await user.click(await h.findByRole('button', { name: 'Fetch now' }));
+      await waitFor(() => expect(count('POST', '/api/fetch')).toBe(1));
+      expect(await screen.findByText('Fetch run started.')).toBeInTheDocument();
+
+      await user.click(h.getByRole('button', { name: 'Pause matching' }));
+      await waitFor(() => expect(count('POST', '/api/matching/pause')).toBe(1));
+      expect(await h.findByRole('button', { name: 'Resume matching' })).toBeInTheDocument();
+    });
+  }
+
+  it('resumes matching while it is paused, and offers no fetch while a run is active', async () => {
+    const { user, count } = setup(
+      () => EMPTY,
+      { 'POST /api/matching/resume': () => ({ paused: false }), 'GET /api/runs': () => [] },
+      {
+        ...STATUS,
+        matchingPaused: true,
+        activeRunId: 3,
+      },
+    );
+    const h = await header();
+    expect(await h.findByRole('button', { name: 'Fetch now' })).toBeDisabled();
+    await user.click(h.getByRole('button', { name: 'Resume matching' }));
+    await waitFor(() => expect(count('POST', '/api/matching/resume')).toBe(1));
+    expect(await h.findByRole('button', { name: 'Pause matching' })).toBeInTheDocument();
+  });
+
+  it('shows each source of a run in two lines at 430px: the source and its state, then the counts', async () => {
+    mockMedia({ coarse: true, width: 430 });
+    setup(() => ({ ...EMPTY, runs: RUNS }));
+    const runs = await region('Fetch runs');
+    await runs.findByText('Jobindex');
+    expect(runs.queryByRole('table')).not.toBeInTheDocument();
+
+    const row = (source: string) => runs.getByText(source).closest('li') as HTMLElement;
+    const lines = (source: string) => [...row(source).querySelectorAll('p')].map((p) => p.textContent);
+    expect(lines('Jobindex')).toEqual(['JobindexCompleted', '41 found · 7 new · 2 invalid']);
+    expect(lines('LinkedIn')).toEqual(['LinkedInFailed', '0 found · 0 new · 0 invalid', 'The site answered 429.']);
+    expect(lines('Remote OK')).toEqual(['Remote OKRunning', '13 found · 4 new · 0 invalid']);
   });
 });

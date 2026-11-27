@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CoverLetterDto, PostingDetail } from '../../../../shared/api';
 import { api } from '../../api/endpoints';
@@ -6,6 +6,13 @@ import { qk } from '../../api/keys';
 import { errorText } from '../../api/client';
 import { Button, ConfirmButton, Field, Spinner, TextArea } from '../../components/ui';
 import { showToast, toastError } from '../../lib/toast';
+
+/** Sets the height of a textarea to the height of its text. */
+function fitHeight(el: HTMLTextAreaElement): void {
+  el.style.height = 'auto';
+  // The height includes the border; the scroll height does not.
+  el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
+}
 
 /** The cover letter of one posting: generate, edit, copy, and download. */
 export function CoverLetter({ postingId, letter }: { postingId: string; letter: CoverLetterDto | null }) {
@@ -37,6 +44,27 @@ export function CoverLetter({ postingId, letter }: { postingId: string; letter: 
 
   const pending = letter?.state === 'pending' || generate.isPending;
   const hasText = !!letter?.text;
+
+  // The letter field grows with its text, so only the panel scrolls. `field-sizing: content` does the same where the browser has it.
+  const letterId = `letter-${postingId}`;
+  useLayoutEffect(() => {
+    const el = document.getElementById(letterId);
+    if (el instanceof HTMLTextAreaElement) fitHeight(el);
+  }, [draft, hasText, letterId]);
+  // A narrower field wraps the text into more lines, after a resize or a rotation. The field hides its overflow,
+  // so it measures again, or the end of the letter is cut off. Only a change of width counts: the height is its own.
+  useEffect(() => {
+    const el = document.getElementById(letterId);
+    if (!hasText || !(el instanceof HTMLTextAreaElement)) return;
+    let width = el.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (el.clientWidth === width) return;
+      width = el.clientWidth;
+      fitHeight(el);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasText, letterId]);
   const dirty = hasText && draft !== letter?.text;
 
   const copy = async () => {
@@ -74,23 +102,25 @@ export function CoverLetter({ postingId, letter }: { postingId: string; letter: 
 
       {!pending && letter?.error && (
         <div role="alert" className="border border-danger bg-danger-soft px-3 py-2 text-[13px]">
-          <p className="font-medium text-danger">{hasText ? 'The last generation failed. The earlier letter is kept.' : 'The letter could not be written.'}</p>
-          <p className="mt-1 break-words">{letter.error}</p>
+          <p className="font-medium text-danger">
+            {hasText ? 'The new letter could not be written. The earlier letter is kept.' : 'The letter could not be written. Try again.'}
+          </p>
+          <p className="mt-1 text-xs break-words text-muted">{letter.error}</p>
         </div>
       )}
 
       {hasText && (
         <>
-          <label className="sr-only" htmlFor={`letter-${postingId}`}>
+          <label className="sr-only" htmlFor={letterId}>
             Cover letter text
           </label>
           <TextArea
-            id={`letter-${postingId}`}
+            id={letterId}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             disabled={pending}
             rows={16}
-            className="min-h-72 text-[15px] leading-relaxed"
+            className="field-sizing-content min-h-72 resize-none overflow-hidden text-[15px] leading-relaxed"
           />
           <p className="text-xs text-muted">
             {letter?.language ? `${letter.language}. ` : ''}
@@ -111,7 +141,7 @@ export function CoverLetter({ postingId, letter }: { postingId: string; letter: 
               </Button>
             ) : (
               <a
-                className="inline-flex h-7 items-center border border-line-strong px-2.5 text-[13px] font-semibold hover:border-fg hover:bg-surface-2"
+                className="inline-flex h-7 items-center border border-line-strong px-2.5 text-[13px] font-semibold hover:border-fg hover:bg-surface-2 touch:h-11"
                 href={api.coverLetterPdfUrl(postingId)}
                 download
               >
